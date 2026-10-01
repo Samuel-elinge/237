@@ -137,7 +137,7 @@ $topListings = db()->query("
 
 // Listings dropdown for write-review form
 $allListings = db()->query("
-    SELECT id, title, c.name_en AS cat_en, loc.name_en AS city
+    SELECT l.id, l.title, c.name_en AS cat_en, loc.name_en AS city
     FROM listings l
     JOIN categories c  ON c.id=l.category_id
     JOIN locations loc ON loc.id=l.location_id
