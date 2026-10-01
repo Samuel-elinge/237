@@ -4,8 +4,8 @@ require_once __DIR__ . '/includes/config.php';
 $slug = trim($_GET['slug'] ?? '');
 $st = db()->prepare("SELECT * FROM locations WHERE slug = ?");
 $st->execute([$slug]);
-$loc = $st->fetch();
-if (!$loc) redirect(SITE_URL . '/listings');
+$currentLoc = $st->fetch();
+if (!$currentLoc) redirect(SITE_URL . '/listings');
 
 $listings = db()->prepare("
     SELECT l.*, c.name_en AS cat_en, c.name_fr AS cat_fr, c.icon AS cat_icon
@@ -15,17 +15,17 @@ $listings = db()->prepare("
     ORDER BY l.featured DESC, l.created_at DESC
     LIMIT 18
 ");
-$listings->execute([$loc['id']]);
+$listings->execute([$currentLoc['id']]);
 $listings = $listings->fetchAll();
 
 // Custom SEO content for this location (location-only row: category_id IS NULL)
 $seoSt = db()->prepare("SELECT * FROM seo_content WHERE location_id = ? AND category_id IS NULL");
-$seoSt->execute([$loc['id']]);
+$seoSt->execute([$currentLoc['id']]);
 $seoContent = $seoSt->fetch();
 $seoIntro = $seoContent ? (lang() === 'fr' ? $seoContent['intro_fr'] : $seoContent['intro_en']) : null;
 
-$pageTitle = $loc['name_en'] . ' Business Directory — 237Biz';
-$pageDesc  = 'Find verified businesses in ' . $loc['name_en'] . ', Cameroon. Free listings on 237Biz.';
+$pageTitle = $currentLoc['name_en'] . ' Business Directory — 237Biz';
+$pageDesc  = 'Find verified businesses in ' . $currentLoc['name_en'] . ', Cameroon. Free listings on 237Biz.';
 
 if ($seoContent) {
     $customTitle = lang() === 'fr' ? $seoContent['meta_title_fr'] : $seoContent['meta_title_en'];
@@ -39,7 +39,7 @@ if (file_exists(__DIR__ . '/includes/schema.php')) {
     require_once __DIR__ . '/includes/schema.php';
     $extraHead = '<script type="application/ld+json">' . schemaBreadcrumb([
         ['name' => t('Home','Accueil'), 'url' => SITE_URL . '/'],
-        ['name' => $loc['name_en']],
+        ['name' => $currentLoc['name_en']],
     ]) . '</script>' . "\n";
 }
 
@@ -50,10 +50,10 @@ require_once __DIR__ . '/includes/header.php';
   <div class="container">
     <nav class="breadcrumb">
       <a href="<?= SITE_URL ?>/"><?= t('Home','Accueil') ?></a> ›
-      <span><?= e($loc['name_en']) ?> <?= t('Directory','Annuaire') ?></span>
+      <span><?= e($currentLoc['name_en']) ?> <?= t('Directory','Annuaire') ?></span>
     </nav>
     <h1 style="font-family:'Fraunces',serif;font-weight:900;font-size:clamp(2rem,4vw,3rem);">
-      📍 <?= e($loc['name_en']) ?> <?= t('Business Directory','Annuaire des Entreprises') ?>
+      📍 <?= e($currentLoc['name_en']) ?> <?= t('Business Directory','Annuaire des Entreprises') ?>
     </h1>
     <p style="color:var(--muted);margin-top:0.5rem;"><?= count($listings) ?> <?= t('businesses found','entreprises trouvées') ?></p>
     <?php if ($seoIntro): ?>
@@ -79,7 +79,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <p class="listing-desc"><?= e(mb_substr($l['description'] ?? '', 0, 120)) ?>...</p>
             <div class="listing-meta">
-              <span class="listing-meta-item">📍 <?= e($loc['name_en']) ?></span>
+              <span class="listing-meta-item">📍 <?= e($currentLoc['name_en']) ?></span>
               <?php if ($l['phone']): ?><span class="listing-meta-item">📞 <?= e($l['phone']) ?></span><?php endif; ?>
             </div>
             <?php if ($l['verified']): ?><span class="listing-verified">✓ <?= t('Verified','Vérifié') ?></span><?php endif; ?>
@@ -89,7 +89,7 @@ require_once __DIR__ . '/includes/header.php';
     <?php else: ?>
       <div style="text-align:center;padding:4rem;background:var(--card);border:1px solid var(--border);border-radius:14px;">
         <div style="font-size:3rem;margin-bottom:1rem;">🔍</div>
-        <h3 style="font-family:'Fraunces',serif;margin-bottom:0.5rem;"><?= t('No listings yet in','Aucune annonce à') ?> <?= e($loc['name_en']) ?></h3>
+        <h3 style="font-family:'Fraunces',serif;margin-bottom:0.5rem;"><?= t('No listings yet in','Aucune annonce à') ?> <?= e($currentLoc['name_en']) ?></h3>
         <a href="<?= SITE_URL ?>/add-listing" class="btn btn-primary" style="margin-top:1rem;">+ <?= t('Be the first to list','Soyez le premier à lister') ?></a>
       </div>
     <?php endif; ?>
