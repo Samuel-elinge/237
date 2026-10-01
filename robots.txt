@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /includes/
+Disallow: /assets/uploads/
+Disallow: /login
+Disallow: /dashboard
+Disallow: /edit-listing
+Disallow: /upgrade-listing
+Disallow: /submit-review
+
+Sitemap: https://237biz.net/sitemap.xml
