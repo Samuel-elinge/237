@@ -1,0 +1,6 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/biz97h/public_html/
+    - /bin/cp -R . $DEPLOYPATH
+    - find $DEPLOYPATH -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
