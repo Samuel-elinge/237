@@ -1,0 +1,27 @@
+# Sensitive config — never commit
+includes/config.php
+
+# Dependencies
+vendor/
+
+# Diagnostic/test scripts
+smtp-test.php
+check-config.php
+diagnostic.php
+admin/reset-admin*.php
+
+# Logs
+*.log
+error_log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp/uploads (keep structure, not files)
+uploads/*.jpg
+uploads/*.jpeg
+uploads/*.png
+uploads/*.gif
+uploads/*.webp
+uploads/*.pdf
