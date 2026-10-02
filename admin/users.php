@@ -27,9 +27,10 @@ function roleBadgeStyle(string $role): string {
 
 function roleLabel(string $role): string {
     $map = [
-        'admin'       => '🔑 Admin',
-        'sales_staff' => '👔 Agent',
-        'creator'     => '🎬 Creator',
+        'admin'          => '🔑 Admin',
+        'sales_staff'    => '👔 Agent',
+        'creator'        => '🎬 Creator',
+        'growth_partner' => '🤝 Partner',
     ];
     return $map[$role] ?? '👤 User';
 }
@@ -359,6 +360,7 @@ require_once __DIR__ . '/../includes/header.php';
               <option value="user">👤 User</option>
               <option value="sales_staff">👔 Sales Agent</option>
               <option value="creator">🎬 Creator</option>
+              <option value="growth_partner">🤝 Growth Partner</option>
               <option value="admin">🔑 Admin</option>
             </select>
           </div>
@@ -499,7 +501,7 @@ require_once __DIR__ . '/../includes/header.php';
                   <input type="hidden" name="action" value="change_role">
                   <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
                   <select name="new_role" style="flex:1;padding:4px 6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:var(--white);font-size:12px;">
-                    <?php foreach (['user'=>'👤 User','sales_staff'=>'👔 Agent','creator'=>'🎬 Creator','admin'=>'🔑 Admin'] as $rv=>$rl): ?>
+                    <?php foreach (['user'=>'👤 User','sales_staff'=>'👔 Agent','creator'=>'🎬 Creator','growth_partner'=>'🤝 Partner','admin'=>'🔑 Admin'] as $rv=>$rl): ?>
                     <option value="<?= $rv ?>" <?= $u['role']===$rv?'selected':'' ?>><?= $rl ?></option>
                     <?php endforeach; ?>
                   </select>
