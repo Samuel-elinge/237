@@ -1,7 +1,10 @@
 -- =============================================================
 -- 237Biz Growth Partner — Phase 2 Migration
 -- Run AFTER growth-partner-migration.sql (Phase 1)
+-- Import via phpMyAdmin: use the Import tab, select this file.
 -- =============================================================
+
+SET FOREIGN_KEY_CHECKS=0;
 
 -- ─────────────────────────────────────────────
 -- 1. CAMPAIGNS
@@ -65,7 +68,7 @@ CREATE TABLE IF NOT EXISTS campaign_metrics (
     bookings      INT UNSIGNED NOT NULL DEFAULT 0,
     conversions   INT UNSIGNED NOT NULL DEFAULT 0,
     notes         TEXT,
-    recorded_by   INT UNSIGNED,          -- users.id
+    recorded_by   INT UNSIGNED,
     created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_camp_date_source (campaign_id, metric_date, source),
     CONSTRAINT fk_cm_campaign FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
@@ -78,7 +81,7 @@ CREATE TABLE IF NOT EXISTS content_items (
     id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     partner_id      INT UNSIGNED NOT NULL,
     listing_id      INT UNSIGNED NOT NULL,
-    campaign_id     INT UNSIGNED,            -- optional link to campaign
+    campaign_id     INT UNSIGNED,
     content_type    ENUM(
                         'social_post','promotional_post','product_post','service_post',
                         'event_post','review_post','video','image','announcement'
@@ -86,7 +89,7 @@ CREATE TABLE IF NOT EXISTS content_items (
     title           VARCHAR(200),
     body            TEXT,
     media_url       VARCHAR(500),
-    platform        VARCHAR(50),             -- facebook, instagram, tiktok, linkedin, etc.
+    platform        VARCHAR(50),
     external_post_id VARCHAR(200),
     scheduled_date  DATETIME,
     published_date  DATETIME,
@@ -136,20 +139,20 @@ CREATE TABLE IF NOT EXISTS lead_activities (
                 ) NOT NULL DEFAULT 'note',
     notes        TEXT,
     follow_up_date DATE,
-    created_by   INT UNSIGNED,              -- users.id
+    created_by   INT UNSIGNED,
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_la_lead    FOREIGN KEY (lead_id)    REFERENCES partner_leads(id) ON DELETE CASCADE,
     CONSTRAINT fk_la_partner FOREIGN KEY (partner_id) REFERENCES partner_profiles(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ─────────────────────────────────────────────
--- 7. GROWTH OPPORTUNITIES (service upsell pipeline)
+-- 7. GROWTH OPPORTUNITIES
 -- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS growth_opportunities (
     id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     partner_id     INT UNSIGNED NOT NULL,
     listing_id     INT UNSIGNED NOT NULL,
-    service_type   VARCHAR(100) NOT NULL,   -- Website, SupportDesk, SEO, etc.
+    service_type   VARCHAR(100) NOT NULL,
     title          VARCHAR(200) NOT NULL,
     description    TEXT,
     status         ENUM('identified','discussing','proposal','won','lost')
@@ -173,12 +176,12 @@ CREATE TABLE IF NOT EXISTS growth_reports (
     period_start    DATE NOT NULL,
     period_end      DATE NOT NULL,
     title           VARCHAR(200) NOT NULL,
-    summary_json    JSON,          -- serialised metric snapshot at generation time
+    summary_json    JSON,
     status          ENUM('draft','generated','shared') NOT NULL DEFAULT 'draft',
     version         TINYINT UNSIGNED NOT NULL DEFAULT 1,
-    generated_at    TIMESTAMP,
-    shared_at       TIMESTAMP,
-    created_by      INT UNSIGNED,           -- users.id
+    generated_at    TIMESTAMP NULL,
+    shared_at       TIMESTAMP NULL,
+    created_by      INT UNSIGNED,
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_gr_partner  FOREIGN KEY (partner_id)  REFERENCES partner_profiles(id),
     CONSTRAINT fk_gr_listing  FOREIGN KEY (listing_id)  REFERENCES listings(id)
@@ -191,10 +194,10 @@ CREATE TABLE IF NOT EXISTS business_activity (
     id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     listing_id   INT UNSIGNED NOT NULL,
     partner_id   INT UNSIGNED,
-    actor_id     INT UNSIGNED,              -- users.id
-    activity_type VARCHAR(80) NOT NULL,     -- campaign_created, lead_received, review_posted, ...
+    actor_id     INT UNSIGNED,
+    activity_type VARCHAR(80) NOT NULL,
     description  TEXT NOT NULL,
-    ref_type     VARCHAR(40),               -- campaign / lead / review / task / report …
+    ref_type     VARCHAR(40),
     ref_id       INT UNSIGNED,
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_ba_listing FOREIGN KEY (listing_id) REFERENCES listings(id)
@@ -206,7 +209,7 @@ CREATE TABLE IF NOT EXISTS business_activity (
 CREATE TABLE IF NOT EXISTS partner_notifications (
     id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id         INT UNSIGNED NOT NULL,
-    partner_id      INT UNSIGNED,           -- null for business-owner notifications
+    partner_id      INT UNSIGNED,
     listing_id      INT UNSIGNED,
     type            VARCHAR(80) NOT NULL,
     title           VARCHAR(200) NOT NULL,
@@ -218,33 +221,23 @@ CREATE TABLE IF NOT EXISTS partner_notifications (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ─────────────────────────────────────────────
--- 11. Add follow_up_date to partner_leads (Phase 1 extension)
+-- 11. Extend partner_leads (Phase 1 table)
 -- ─────────────────────────────────────────────
 ALTER TABLE partner_leads
     ADD COLUMN IF NOT EXISTS follow_up_date DATE AFTER next_action,
     ADD COLUMN IF NOT EXISTS last_contacted  DATETIME AFTER follow_up_date;
 
--- ─────────────────────────────────────────────
--- 12. Auto-status transition event (campaigns)
---     Scheduled → Active → Completed based on dates.
---     Call this stored event from a cron/event scheduler.
--- ─────────────────────────────────────────────
-DELIMITER $$
-CREATE EVENT IF NOT EXISTS evt_campaign_status_advance
-ON SCHEDULE EVERY 1 HOUR
-DO
-BEGIN
-    UPDATE campaigns
-    SET status = 'active'
-    WHERE status = 'scheduled'
-      AND start_date <= CURDATE();
+SET FOREIGN_KEY_CHECKS=1;
 
-    UPDATE campaigns
-    SET status = 'completed'
-    WHERE status = 'active'
-      AND end_date < CURDATE();
-END$$
-DELIMITER ;
-
--- (Enable MySQL Event Scheduler if not already on)
+-- ─────────────────────────────────────────────
+-- 12. Campaign auto-status event
+--     Run this block separately in phpMyAdmin if needed,
+--     OR enable via MySQL Event Scheduler on your host.
+-- ─────────────────────────────────────────────
 -- SET GLOBAL event_scheduler = ON;
+--
+-- CREATE EVENT IF NOT EXISTS evt_campaign_status_advance
+-- ON SCHEDULE EVERY 1 HOUR
+-- DO
+--   UPDATE campaigns SET status='active'   WHERE status='scheduled' AND start_date <= CURDATE();
+--   UPDATE campaigns SET status='completed' WHERE status='active'    AND end_date < CURDATE();
