@@ -1,310 +1,329 @@
 <?php
 /**
- * partners.php — 237Biz Partner Programme
- * URL: /partners
+ * partners.php — Public Partner Discovery Marketplace (Task 45)
+ *
+ * Publicly browsable directory of approved Growth Partners.
+ * Filter by region, specialism, capacity, tier.
+ * Links to individual partner profile pages.
  */
 require_once __DIR__ . '/includes/config.php';
 
-$pageTitle = t('Partner Programme — 237Biz','Programme Partenaires — 237Biz');
-$pageDesc  = t('Earn commissions and rewards by helping Cameroon businesses grow on 237Biz.','Gagnez des commissions en aidant les entreprises camerounaises à grandir sur 237Biz.');
+$pdo = db();
+
+// ── Filters ───────────────────────────────────────────────
+$filterRegion   = trim($_GET['region']   ?? '');
+$filterSpecial  = trim($_GET['specialism'] ?? '');
+$filterTier     = trim($_GET['tier']     ?? '');
+$filterCapacity = trim($_GET['capacity'] ?? '');
+$search         = trim($_GET['q']        ?? '');
+$page           = max(1, (int)($_GET['page'] ?? 1));
+$perPage        = 12;
+$offset         = ($page - 1) * $perPage;
+
+// ── Build query ───────────────────────────────────────────
+$where  = ["pp.status IN ('approved','active')", "pp.public_profile = 1"];
+$params = [];
+
+if ($filterRegion) {
+    $where[]  = "EXISTS (SELECT 1 FROM partner_locations pl WHERE pl.partner_id=pp.id AND pl.region=?)";
+    $params[] = $filterRegion;
+}
+if ($filterSpecial) {
+    $where[]  = "JSON_SEARCH(pp.specialisms, 'one', ?) IS NOT NULL";
+    $params[] = $filterSpecial;
+}
+if ($filterTier) {
+    $where[]  = "t.slug = ?";
+    $params[] = $filterTier;
+}
+if ($filterCapacity === 'available') {
+    $where[]  = "pp.capacity_status IN ('accepting','limited')";
+}
+if ($search) {
+    $where[]  = "(pp.display_name LIKE ? OR pp.tagline LIKE ? OR pp.organisation LIKE ? OR pp.specialisms LIKE ?)";
+    $s = "%$search%";
+    array_push($params, $s, $s, $s, $s);
+}
+
+$whereSQL = 'WHERE ' . implode(' AND ', $where);
+
+// Count
+$countStmt = $pdo->prepare("
+    SELECT COUNT(DISTINCT pp.id)
+    FROM partner_profiles pp
+    LEFT JOIN partner_tiers t ON t.id = pp.tier_id
+    $whereSQL
+");
+$countStmt->execute($params);
+$totalCount = (int)$countStmt->fetchColumn();
+$totalPages = max(1, (int)ceil($totalCount / $perPage));
+
+// Partners
+$stmt = $pdo->prepare("
+    SELECT pp.id, pp.display_name, pp.avatar_url, pp.tagline, pp.specialisms,
+           pp.referral_code, pp.capacity_status, pp.max_businesses, pp.rating, pp.rating_count,
+           pp.verified, pp.profile_views,
+           t.name AS tier_name, t.slug AS tier_slug,
+           (SELECT GROUP_CONCAT(pl.region ORDER BY pl.is_primary DESC SEPARATOR ', ')
+            FROM partner_locations pl WHERE pl.partner_id=pp.id LIMIT 3) AS regions,
+           (SELECT COUNT(*) FROM partner_business_assignments pba WHERE pba.partner_id=pp.id AND pba.status='active') AS active_biz,
+           (SELECT COUNT(*) FROM partner_cert_awards pca WHERE pca.partner_id=pp.id AND pca.revoked_at IS NULL) AS cert_count
+    FROM partner_profiles pp
+    LEFT JOIN partner_tiers t ON t.id = pp.tier_id
+    $whereSQL
+    ORDER BY pp.rating DESC, pp.profile_views DESC, pp.id ASC
+    LIMIT $perPage OFFSET $offset
+");
+$stmt->execute($params);
+$partners = $stmt->fetchAll();
+
+// Filter options
+$regions = $pdo->query("
+    SELECT DISTINCT region FROM partner_locations
+    WHERE partner_id IN (SELECT id FROM partner_profiles WHERE status IN ('approved','active') AND public_profile=1)
+    ORDER BY region
+")->fetchAll(\PDO::FETCH_COLUMN);
+
+$tiers = $pdo->query("SELECT id, name, slug FROM partner_tiers ORDER BY id")->fetchAll();
+
+// All specialisms (aggregate from JSON columns)
+$allSpecs = [];
+$specRows = $pdo->query("SELECT specialisms FROM partner_profiles WHERE status IN ('approved','active') AND public_profile=1 AND specialisms IS NOT NULL")->fetchAll(\PDO::FETCH_COLUMN);
+foreach ($specRows as $row) {
+    $arr = json_decode($row, true) ?: [];
+    foreach ($arr as $s) {
+        $s = trim($s);
+        if ($s) $allSpecs[$s] = ($allSpecs[$s] ?? 0) + 1;
+    }
+}
+arsort($allSpecs);
+$topSpecs = array_slice(array_keys($allSpecs), 0, 20);
+
+$pageTitle = 'Find a Growth Partner';
 require_once __DIR__ . '/includes/header.php';
 ?>
-
 <style>
-.partners-hero { background:linear-gradient(135deg,#081C10,#0d2f18); padding:80px 0 60px; text-align:center; }
-.partners-hero h1 { font-family:'Fraunces',serif; font-weight:900; font-size:clamp(2rem,5vw,3.2rem); color:#fff; margin-bottom:12px; }
-.partners-hero p  { font-size:1.05rem; color:rgba(255,255,255,0.65); max-width:560px; margin:0 auto 32px; line-height:1.7; }
-
-.partner-tabs { display:flex; justify-content:center; gap:12px; margin-bottom:4px; }
-.partner-tab  { padding:10px 28px; border-radius:10px; font-size:14px; font-weight:700; text-decoration:none; transition:all .2s; border:2px solid transparent; }
-.partner-tab.agent   { background:rgba(138,180,248,0.15); color:#8ab4f8; border-color:rgba(138,180,248,0.3); }
-.partner-tab.creator { background:rgba(224,123,224,0.15); color:#e07be0; border-color:rgba(224,123,224,0.3); }
-.partner-tab:hover   { transform:translateY(-1px); }
-
-/* Section wrappers */
-.partner-section { padding:80px 0; }
-.partner-section + .partner-section { border-top:1px solid rgba(255,255,255,0.06); }
-
-/* Journey steps */
-.journey { display:flex; align-items:flex-start; gap:0; flex-wrap:wrap; justify-content:center; margin:40px 0; }
-.journey-step { flex:1; min-width:140px; max-width:200px; text-align:center; position:relative; padding:0 12px; }
-.journey-step:not(:last-child)::after {
-  content:'→'; position:absolute; right:-8px; top:22px;
-  font-size:1.1rem; color:rgba(255,255,255,0.2);
-}
-.journey-icon { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.2rem; margin:0 auto 10px; }
-.journey-label { font-size:12.5px; color:rgba(255,255,255,0.7); line-height:1.4; }
-.journey-title { font-size:13px; font-weight:700; color:#fff; margin-bottom:4px; }
-
-/* Feature grid */
-.feat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin-top:32px; }
-.feat-card { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:22px 24px; }
-.feat-card .fi { font-size:1.5rem; margin-bottom:10px; }
-.feat-card h3  { font-size:15px; font-weight:700; margin-bottom:6px; }
-.feat-card p   { font-size:13.5px; color:rgba(255,255,255,0.6); line-height:1.6; margin:0; }
-
-/* Commission table */
-.comm-table { width:100%; border-collapse:collapse; margin-top:24px; }
-.comm-table th { padding:10px 16px; text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); border-bottom:1px solid rgba(255,255,255,0.07); }
-.comm-table td { padding:13px 16px; font-size:14px; border-bottom:1px solid rgba(255,255,255,0.05); }
-.comm-table tr:hover td { background:rgba(255,255,255,0.02); }
-
-/* CTA buttons */
-.cta-pair { display:flex; gap:12px; flex-wrap:wrap; margin-top:32px; }
-.btn-agent   { padding:13px 28px; background:#8ab4f8; color:#0a1a2e; border-radius:10px; font-size:14px; font-weight:700; text-decoration:none; display:inline-block; transition:all .2s; }
-.btn-creator { padding:13px 28px; background:#e07be0; color:#0a1a2e; border-radius:10px; font-size:14px; font-weight:700; text-decoration:none; display:inline-block; transition:all .2s; }
-.btn-agent:hover   { background:#bdd0fb; transform:translateY(-1px); }
-.btn-creator:hover { background:#eda9ed; transform:translateY(-1px); }
-.btn-outline-light { padding:12px 24px; background:transparent; border:2px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.75); border-radius:10px; font-size:14px; font-weight:600; text-decoration:none; display:inline-block; transition:all .2s; }
-.btn-outline-light:hover { border-color:rgba(255,255,255,0.5); color:#fff; }
-
-/* FAQ */
-.faq-item { border-bottom:1px solid rgba(255,255,255,0.06); }
-.faq-q { padding:16px 0; font-size:14px; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center; color:rgba(255,255,255,0.85); }
-.faq-a { padding:0 0 16px; font-size:13.5px; color:rgba(255,255,255,0.6); line-height:1.7; display:none; }
-.faq-item.open .faq-a  { display:block; }
-.faq-item.open .faq-q  { color:#fff; }
+.hero{background:linear-gradient(135deg,#1e40af 0%,#3b82f6 100%);color:#fff;padding:3rem 1rem 2rem;text-align:center}
+.hero h1{margin:0 0 .5rem;font-size:2rem;font-weight:800}
+.hero p{margin:0 0 1.5rem;opacity:.85;font-size:1rem}
+.hero-search{display:flex;gap:.5rem;max-width:520px;margin:0 auto}
+.hero-search input{flex:1;border:none;border-radius:.5rem;padding:.65rem 1rem;font-size:.95rem}
+.hero-search button{background:#f59e0b;color:#fff;border:none;border-radius:.5rem;padding:.65rem 1.25rem;font-size:.9rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.main-wrap{max-width:1100px;margin:0 auto;padding:1.5rem 1rem;display:grid;grid-template-columns:220px 1fr;gap:1.5rem}
+@media(max-width:760px){.main-wrap{grid-template-columns:1fr}}
+.sidebar{position:sticky;top:1rem;align-self:start}
+.filter-card{background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;padding:1rem;margin-bottom:1rem}
+.filter-card h3{margin:0 0 .75rem;font-size:.85rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em}
+.filter-option{display:flex;align-items:center;gap:.4rem;padding:.25rem 0;font-size:.82rem;color:#374151;cursor:pointer}
+.filter-option input[type=radio]{accent-color:#2563eb}
+.filter-option label{cursor:pointer}
+.filter-link{display:block;padding:.2rem 0;font-size:.82rem;color:#6b7280;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.filter-link:hover,.filter-link.active{color:#2563eb}
+.filter-link.active{font-weight:600}
+.results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
+.results-count{font-size:.875rem;color:#6b7280}
+.partner-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
+.partner-card{background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;overflow:hidden;transition:box-shadow .15s;text-decoration:none;display:flex;flex-direction:column}
+.partner-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.1);border-color:#d1d5db}
+.card-top{padding:1.25rem 1.25rem .75rem;flex:1}
+.card-avatar{width:56px;height:56px;border-radius:50%;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:700;margin-bottom:.75rem;flex-shrink:0;overflow:hidden}
+.card-avatar img{width:100%;height:100%;object-fit:cover}
+.card-name{font-size:.95rem;font-weight:700;color:#111827;margin-bottom:.15rem}
+.card-tagline{font-size:.8rem;color:#6b7280;margin-bottom:.5rem;line-height:1.4}
+.card-badges{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.5rem}
+.badge{font-size:.68rem;font-weight:600;padding:.15rem .5rem;border-radius:99px}
+.badge-tier-standard{background:#dbeafe;color:#1d4ed8}
+.badge-tier-silver{background:#e5e7eb;color:#374151}
+.badge-tier-gold{background:#fef3c7;color:#92400e}
+.badge-tier-platinum{background:#ede9fe;color:#6d28d9}
+.badge-verified{background:#d1fae5;color:#065f46}
+.badge-capacity-accepting{background:#d1fae5;color:#065f46}
+.badge-capacity-limited{background:#fef3c7;color:#92400e}
+.badge-capacity-full{background:#fee2e2;color:#991b1b}
+.badge-capacity-paused{background:#f3f4f6;color:#6b7280}
+.card-specs{display:flex;gap:.25rem;flex-wrap:wrap;margin-bottom:.5rem}
+.spec-pill{background:#eff6ff;color:#1d4ed8;font-size:.68rem;padding:.1rem .4rem;border-radius:99px}
+.card-meta{display:flex;gap:.75rem;font-size:.75rem;color:#9ca3af}
+.card-bottom{padding:.6rem 1.25rem;background:#f9fafb;border-top:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between}
+.btn-view{font-size:.78rem;font-weight:600;color:#2563eb;text-decoration:none}
+.stars{color:#f59e0b;font-size:.75rem}
+.pagination{display:flex;gap:.35rem;justify-content:center;margin-top:1.5rem;flex-wrap:wrap}
+.pag-btn{padding:.4rem .75rem;border:1px solid #e5e7eb;border-radius:.4rem;font-size:.8rem;color:#374151;text-decoration:none;background:#fff}
+.pag-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
+.pag-btn:hover:not(.active){background:#f9fafb}
+.empty{text-align:center;padding:3rem;color:#9ca3af}
+.empty .icon{font-size:2.5rem;margin-bottom:.5rem}
+.active-filters{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.75rem}
+.af-pill{display:inline-flex;align-items:center;gap:.3rem;background:#eff6ff;color:#1d4ed8;font-size:.75rem;padding:.2rem .5rem;border-radius:99px;font-weight:500}
+.af-pill a{color:#1d4ed8;text-decoration:none;font-weight:700}
 </style>
 
 <!-- Hero -->
-<div class="partners-hero">
-  <div class="container">
-    <div style="display:inline-block;background:rgba(252,209,22,0.12);border:1px solid rgba(252,209,22,0.3);border-radius:99px;padding:5px 16px;font-size:12.5px;font-weight:700;color:#fcd116;margin-bottom:20px;">
-      🤝 237Biz <?= t('Partner Programme','Programme Partenaires') ?>
-    </div>
-    <h1><?= t('Earn by helping Cameroon businesses grow','Gagnez en aidant les entreprises camerounaises à grandir') ?></h1>
-    <p><?= t('Join the 237Biz Partner Programme as a Sales Agent or Content Creator. Refer businesses, earn commissions, and grow with Cameroon\'s Business Hub.','Rejoignez le Programme Partenaires 237Biz en tant qu\'Agent de Vente ou Créateur de Contenu.') ?></p>
-    <div class="partner-tabs">
-      <a href="#agents"   class="partner-tab agent">👔 <?= t('Sales Agents','Agents de Vente') ?></a>
-      <a href="#creators" class="partner-tab creator">🎬 <?= t('Content Creators','Créateurs de Contenu') ?></a>
-    </div>
-  </div>
+<div class="hero">
+    <h1>Find a Growth Partner</h1>
+    <p>Connect with verified local experts who grow businesses across Cameroon</p>
+    <form method="get" class="hero-search">
+        <?php foreach (['region','specialism','tier','capacity'] as $f):
+            if (!empty($_GET[$f])): ?>
+        <input type="hidden" name="<?= $f ?>" value="<?= e($_GET[$f]) ?>">
+        <?php endif; endforeach ?>
+        <input type="text" name="q" value="<?= e($search) ?>" placeholder="Search by name, specialism…">
+        <button type="submit">Search</button>
+    </form>
 </div>
 
-<!-- Stats bar -->
-<div style="background:#081C10;border-bottom:1px solid rgba(255,255,255,0.06);padding:24px 0;">
-  <div class="container">
-    <div style="display:flex;justify-content:center;gap:48px;flex-wrap:wrap;">
-      <?php foreach ([
-        ['🏪', t('Businesses listed','Entreprises listées'), '1,000+'],
-        ['💰', t('Commission per referral','Commission par parrainage'), t('Up to 5,000 XAF','Jusqu\'à 5 000 XAF')],
-        ['🍪', t('Referral cookie window','Fenêtre de parrainage'), t('30 days','30 jours')],
-        ['💸', t('Minimum payout','Paiement minimum'), '10,000 XAF'],
-      ] as [$icon, $label, $val]): ?>
-      <div style="text-align:center;">
-        <div style="font-size:1.4rem;font-weight:900;font-family:'Fraunces',serif;color:#fcd116;"><?= $val ?></div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px;"><?= $icon ?> <?= $label ?></div>
-      </div>
-      <?php endforeach; ?>
-    </div>
-  </div>
+<div class="main-wrap">
+    <!-- Sidebar Filters -->
+    <aside class="sidebar" style="display:none;display:block">
+        <div class="filter-card">
+            <h3>Region</h3>
+            <a href="?<?= http_build_query(array_merge($_GET, ['region'=>'','page'=>1])) ?>"
+               class="filter-link<?= !$filterRegion ? ' active' : '' ?>">All Regions</a>
+            <?php foreach ($regions as $r): ?>
+            <a href="?<?= http_build_query(array_merge($_GET, ['region'=>$r,'page'=>1])) ?>"
+               class="filter-link<?= $filterRegion===$r ? ' active' : '' ?>"><?= e($r) ?></a>
+            <?php endforeach ?>
+        </div>
+
+        <div class="filter-card">
+            <h3>Tier</h3>
+            <a href="?<?= http_build_query(array_merge($_GET, ['tier'=>'','page'=>1])) ?>"
+               class="filter-link<?= !$filterTier ? ' active' : '' ?>">All Tiers</a>
+            <?php foreach ($tiers as $t): ?>
+            <a href="?<?= http_build_query(array_merge($_GET, ['tier'=>$t['slug'],'page'=>1])) ?>"
+               class="filter-link<?= $filterTier===$t['slug'] ? ' active' : '' ?>"><?= e($t['name']) ?></a>
+            <?php endforeach ?>
+        </div>
+
+        <div class="filter-card">
+            <h3>Availability</h3>
+            <a href="?<?= http_build_query(array_merge($_GET, ['capacity'=>'','page'=>1])) ?>"
+               class="filter-link<?= !$filterCapacity ? ' active' : '' ?>">Any</a>
+            <a href="?<?= http_build_query(array_merge($_GET, ['capacity'=>'available','page'=>1])) ?>"
+               class="filter-link<?= $filterCapacity==='available' ? ' active' : '' ?>">Available now</a>
+        </div>
+
+        <?php if ($topSpecs): ?>
+        <div class="filter-card">
+            <h3>Specialism</h3>
+            <a href="?<?= http_build_query(array_merge($_GET, ['specialism'=>'','page'=>1])) ?>"
+               class="filter-link<?= !$filterSpecial ? ' active' : '' ?>">All</a>
+            <?php foreach ($topSpecs as $sp): ?>
+            <a href="?<?= http_build_query(array_merge($_GET, ['specialism'=>$sp,'page'=>1])) ?>"
+               class="filter-link<?= $filterSpecial===$sp ? ' active' : '' ?>"><?= e($sp) ?></a>
+            <?php endforeach ?>
+        </div>
+        <?php endif ?>
+
+        <?php if ($filterRegion || $filterTier || $filterCapacity || $filterSpecial || $search): ?>
+        <a href="/partners" style="display:block;text-align:center;font-size:.8rem;color:#dc2626;text-decoration:none;padding:.5rem">✕ Clear all filters</a>
+        <?php endif ?>
+    </aside>
+
+    <!-- Results -->
+    <main>
+        <div class="results-header">
+            <div class="results-count">
+                <?= number_format($totalCount) ?> partner<?= $totalCount != 1 ? 's' : '' ?> found
+            </div>
+        </div>
+
+        <!-- Active filters display -->
+        <?php
+        $activeFilters = [];
+        if ($search)        $activeFilters[] = ['Search: ' . e($search), 'q'];
+        if ($filterRegion)  $activeFilters[] = [e($filterRegion), 'region'];
+        if ($filterSpecial) $activeFilters[] = [e($filterSpecial), 'specialism'];
+        if ($filterTier)    $activeFilters[] = [e($filterTier), 'tier'];
+        if ($filterCapacity) $activeFilters[] = ['Available now', 'capacity'];
+        ?>
+        <?php if ($activeFilters): ?>
+        <div class="active-filters">
+            <?php foreach ($activeFilters as [$label, $param]): ?>
+            <span class="af-pill">
+                <?= $label ?>
+                <a href="?<?= http_build_query(array_merge($_GET, [$param=>'','page'=>1])) ?>">✕</a>
+            </span>
+            <?php endforeach ?>
+        </div>
+        <?php endif ?>
+
+        <?php if (!$partners): ?>
+        <div class="empty">
+            <div class="icon">🔍</div>
+            <p>No partners match your filters. Try adjusting your search.</p>
+            <a href="/partners" style="color:#2563eb;font-size:.875rem">Clear filters →</a>
+        </div>
+        <?php else: ?>
+        <div class="partner-grid">
+            <?php foreach ($partners as $p):
+                $initials   = strtoupper(substr($p['display_name'] ?? 'P', 0, 1));
+                $specs      = array_slice(json_decode($p['specialisms'] ?? '[]', true) ?: [], 0, 3);
+                $tierSlug   = $p['tier_slug'] ?? 'standard';
+                $tierLabel  = $p['tier_name'] ?? 'Standard';
+                $capStatus  = $p['capacity_status'] ?? 'accepting';
+                $stars      = $p['rating'] ? str_repeat('★', round($p['rating'])) . str_repeat('☆', 5 - round($p['rating'])) : '';
+            ?>
+            <a href="<?= SITE_URL ?>/partner/profile?code=<?= urlencode($p['referral_code']) ?>" class="partner-card">
+                <div class="card-top">
+                    <div class="card-avatar">
+                        <?php if ($p['avatar_url']): ?>
+                        <img src="<?= e($p['avatar_url']) ?>" alt="<?= e($p['display_name']) ?>">
+                        <?php else: ?>
+                        <?= e($initials) ?>
+                        <?php endif ?>
+                    </div>
+                    <div class="card-name"><?= e($p['display_name']) ?></div>
+                    <?php if ($p['tagline']): ?>
+                    <div class="card-tagline"><?= e(mb_substr($p['tagline'], 0, 80)) ?></div>
+                    <?php endif ?>
+                    <div class="card-badges">
+                        <span class="badge badge-tier-<?= e($tierSlug) ?>"><?= e($tierLabel) ?></span>
+                        <?php if ($p['verified']): ?>
+                        <span class="badge badge-verified">✓ Verified</span>
+                        <?php endif ?>
+                        <span class="badge badge-capacity-<?= e($capStatus) ?>"><?= ucfirst($capStatus) ?></span>
+                    </div>
+                    <?php if ($specs): ?>
+                    <div class="card-specs">
+                        <?php foreach ($specs as $sp): ?><span class="spec-pill"><?= e($sp) ?></span><?php endforeach ?>
+                    </div>
+                    <?php endif ?>
+                    <div class="card-meta">
+                        <?php if ($p['regions']): ?><span>📍 <?= e(mb_substr($p['regions'], 0, 40)) ?></span><?php endif ?>
+                        <?php if ($p['active_biz']): ?><span>🏢 <?= (int)$p['active_biz'] ?> businesses</span><?php endif ?>
+                        <?php if ($p['cert_count']): ?><span>🏅 <?= (int)$p['cert_count'] ?> certs</span><?php endif ?>
+                    </div>
+                </div>
+                <div class="card-bottom">
+                    <?php if ($stars): ?>
+                    <span class="stars"><?= $stars ?> <span style="color:#9ca3af">(<?= (int)$p['rating_count'] ?>)</span></span>
+                    <?php else: ?>
+                    <span style="font-size:.75rem;color:#9ca3af">No reviews yet</span>
+                    <?php endif ?>
+                    <span class="btn-view">View Profile →</span>
+                </div>
+            </a>
+            <?php endforeach ?>
+        </div>
+
+        <!-- Pagination -->
+        <?php if ($totalPages > 1): ?>
+        <div class="pagination">
+            <?php if ($page > 1): ?>
+            <a href="?<?= http_build_query(array_merge($_GET, ['page'=>$page-1])) ?>" class="pag-btn">‹</a>
+            <?php endif ?>
+            <?php for ($p = max(1,$page-2); $p <= min($totalPages,$page+2); $p++): ?>
+            <a href="?<?= http_build_query(array_merge($_GET, ['page'=>$p])) ?>"
+               class="pag-btn<?= $p===$page ? ' active' : '' ?>"><?= $p ?></a>
+            <?php endfor ?>
+            <?php if ($page < $totalPages): ?>
+            <a href="?<?= http_build_query(array_merge($_GET, ['page'=>$page+1])) ?>" class="pag-btn">›</a>
+            <?php endif ?>
+        </div>
+        <?php endif ?>
+        <?php endif ?>
+    </main>
 </div>
-
-<!-- ── SALES AGENTS SECTION ── -->
-<div class="partner-section" id="agents" style="background:rgba(138,180,248,0.03);">
-  <div class="container">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;" class="split-layout">
-
-      <div>
-        <div style="background:rgba(138,180,248,0.12);color:#8ab4f8;border-radius:99px;padding:4px 14px;font-size:12.5px;font-weight:700;display:inline-block;margin-bottom:16px;">
-          👔 <?= t('SALES AGENTS','AGENTS DE VENTE') ?>
-        </div>
-        <h2 style="font-family:'Fraunces',serif;font-weight:900;font-size:clamp(1.5rem,3vw,2.2rem);margin-bottom:14px;">
-          <?= t('Find businesses. Refer them. Earn commission.','Trouvez des entreprises. Référez. Gagnez des commissions.') ?>
-        </h2>
-        <p style="color:rgba(255,255,255,0.65);font-size:15px;line-height:1.7;margin-bottom:24px;">
-          <?= t('As a 237Biz Sales Agent, you actively approach local businesses, encourage them to join 237Biz, and earn a commission every time one of your referrals becomes a featured listing.','En tant qu\'Agent de Vente 237Biz, vous approchez activement les entreprises locales et gagnez une commission à chaque parrainage.') ?>
-        </p>
-
-        <!-- Journey -->
-        <div class="journey">
-          <?php
-          $steps = [
-              ['🔍','Find','Identify local businesses not yet on 237Biz'],
-              ['💬','Refer','Share your referral link or personally onboard them'],
-              ['✅','They Join','Business creates a featured listing'],
-              ['📊','Track','See conversions in your dashboard'],
-              ['💰','Earn','Commission paid via MoMo'],
-          ];
-          foreach ($steps as [$icon, $title, $desc]):
-          ?>
-          <div class="journey-step">
-            <div class="journey-icon" style="background:rgba(138,180,248,0.15);color:#8ab4f8;"><?= $icon ?></div>
-            <div class="journey-title"><?= $title ?></div>
-            <div class="journey-label"><?= $desc ?></div>
-          </div>
-          <?php endforeach; ?>
-        </div>
-
-        <div class="cta-pair">
-          <a href="<?= SITE_URL ?>/join?path=agent" class="btn-agent">👔 <?= t('Become a Sales Agent','Devenir Agent de Vente') ?></a>
-          <?php if (isLoggedIn() && (currentUser()['role'] ?? '') === 'sales_staff'): ?>
-          <a href="<?= SITE_URL ?>/agent/dashboard" class="btn-outline-light">📊 <?= t('Agent Dashboard','Tableau Agent') ?></a>
-          <?php else: ?>
-          <a href="<?= SITE_URL ?>/login" class="btn-outline-light">🔐 <?= t('Agent Login','Connexion Agent') ?></a>
-          <?php endif; ?>
-        </div>
-      </div>
-
-      <div>
-        <h3 style="font-size:15px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:.05em;margin-bottom:16px;"><?= t('What you get','Ce que vous obtenez') ?></h3>
-        <div class="feat-grid" style="grid-template-columns:1fr;">
-          <?php foreach ([
-            ['🔗', t('Your unique referral link','Votre lien de parrainage unique'), t('Share 237biz.net/r/yourname anywhere — WhatsApp, in person, everywhere.','Partagez votre lien partout.')],
-            ['📋', t('Assigned lead dashboard','Tableau de bord des leads assignés'), t('Admin assigns you hot leads directly. You see business name, location and contact.','L\'admin vous assigne des leads directement.')],
-            ['💰', t('Commission per conversion','Commission par conversion'), t('Earn a flat XAF amount every time a referred business gets a featured listing.','Gagnez un montant XAF fixe par conversion.')],
-            ['📅', t('Follow-up CRM built in','CRM de suivi intégré'), t('Log notes, set follow-up dates, track every lead status.','Consignez des notes, définissez des dates de relance.')],
-            ['💸', t('Paid via MoMo','Payé via MoMo'), t('Earnings approved by admin and transferred to your MTN MoMo or Orange Money.','Gains approuvés et transférés sur votre MoMo.')],
-          ] as [$fi, $ft, $fd]): ?>
-          <div class="feat-card">
-            <div class="fi"><?= $fi ?></div>
-            <h3><?= $ft ?></h3>
-            <p><?= $fd ?></p>
-          </div>
-          <?php endforeach; ?>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<!-- ── CREATORS SECTION ── -->
-<div class="partner-section" id="creators">
-  <div class="container">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;" class="split-layout">
-
-      <div>
-        <h3 style="font-size:15px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:.05em;margin-bottom:16px;"><?= t('What you get','Ce que vous obtenez') ?></h3>
-        <div class="feat-grid" style="grid-template-columns:1fr;">
-          <?php foreach ([
-            ['🔗', t('Unique referral link','Lien de parrainage unique'), t('Your personal link: 237biz.net/r/yourname. Perfect for TikTok bios, Instagram stories and WhatsApp status.','Votre lien personnel. Parfait pour TikTok, Instagram et WhatsApp.')],
-            ['📊', t('Click & conversion tracking','Suivi des clics et conversions'), t('See exactly how many people clicked your link and how many became customers.','Voyez exactement combien de personnes ont cliqué et converti.')],
-            ['📣', t('Paid campaigns with briefs','Campagnes payantes avec brief'), t('Join admin-created campaigns. Get a content brief, create your content, earn on approval.','Rejoignez des campagnes. Créez du contenu, gagnez à l\'approbation.')],
-            ['🏆', t('Top performer bonuses','Bonus top performer'), t('Best performing creator per campaign earns an extra bonus on top of standard commission.','Le meilleur créateur de la campagne gagne un bonus supplémentaire.')],
-            ['💸', t('Paid via MoMo','Payé via MoMo'), t('Earnings transferred to MTN MoMo or Orange Money once minimum threshold is reached.','Gains transférés sur votre MoMo une fois le seuil atteint.')],
-          ] as [$fi, $ft, $fd]): ?>
-          <div class="feat-card">
-            <div class="fi"><?= $fi ?></div>
-            <h3><?= $ft ?></h3>
-            <p><?= $fd ?></p>
-          </div>
-          <?php endforeach; ?>
-        </div>
-      </div>
-
-      <div>
-        <div style="background:rgba(224,123,224,0.12);color:#e07be0;border-radius:99px;padding:4px 14px;font-size:12.5px;font-weight:700;display:inline-block;margin-bottom:16px;">
-          🎬 <?= t('CONTENT CREATORS','CRÉATEURS DE CONTENU') ?>
-        </div>
-        <h2 style="font-family:'Fraunces',serif;font-weight:900;font-size:clamp(1.5rem,3vw,2.2rem);margin-bottom:14px;">
-          <?= t('Create content. Share your link. Earn rewards.','Créez du contenu. Partagez votre lien. Gagnez des récompenses.') ?>
-        </h2>
-        <p style="color:rgba(255,255,255,0.65);font-size:15px;line-height:1.7;margin-bottom:24px;">
-          <?= t('Got an audience on TikTok, Instagram, Facebook or YouTube? Promote 237Biz to your followers using your unique referral link and earn rewards every time a business joins through you.','Vous avez une audience sur TikTok, Instagram, Facebook ou YouTube ? Promouvez 237Biz avec votre lien unique.') ?>
-        </p>
-
-        <!-- Journey -->
-        <div class="journey">
-          <?php
-          $csteps = [
-              ['🎬','Create','Make a video or post about 237Biz businesses'],
-              ['🔗','Share','Include your referral link in bio or caption'],
-              ['👆','Clicks','People click your link to discover businesses'],
-              ['✅','Business Joins','They add a featured listing'],
-              ['💰','Earn','You get rewarded automatically'],
-          ];
-          foreach ($csteps as [$icon, $title, $desc]):
-          ?>
-          <div class="journey-step">
-            <div class="journey-icon" style="background:rgba(224,123,224,0.15);color:#e07be0;"><?= $icon ?></div>
-            <div class="journey-title"><?= $title ?></div>
-            <div class="journey-label"><?= $desc ?></div>
-          </div>
-          <?php endforeach; ?>
-        </div>
-
-        <div class="cta-pair">
-          <a href="<?= SITE_URL ?>/join?path=creator" class="btn-creator">🎬 <?= t('Become a Creator','Devenir Créateur') ?></a>
-          <?php if (isLoggedIn() && (currentUser()['role'] ?? '') === 'creator'): ?>
-          <a href="<?= SITE_URL ?>/creator/dashboard" class="btn-outline-light">📊 <?= t('Creator Dashboard','Tableau Créateur') ?></a>
-          <?php else: ?>
-          <a href="<?= SITE_URL ?>/login" class="btn-outline-light">🔐 <?= t('Creator Login','Connexion Créateur') ?></a>
-          <?php endif; ?>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<!-- Commission table -->
-<div class="partner-section" style="background:rgba(255,255,255,0.01);">
-  <div class="container" style="max-width:700px;">
-    <h2 style="font-family:'Fraunces',serif;font-weight:900;font-size:1.6rem;text-align:center;margin-bottom:8px;"><?= t('Commission Structure','Structure des commissions') ?></h2>
-    <p style="text-align:center;color:rgba(255,255,255,0.55);font-size:14px;margin-bottom:0;"><?= t('Applies to both Sales Agents and Content Creators.','Applicable aux Agents de Vente et Créateurs de Contenu.') ?></p>
-    <table class="comm-table">
-      <thead><tr><th><?= t('Conversion Type','Type de conversion') ?></th><th><?= t('Who qualifies','Qui est éligible') ?></th><th><?= t('Commission','Commission') ?></th></tr></thead>
-      <tbody>
-        <tr><td>🆓 <?= t('Free listing referral','Parrainage annonce gratuite') ?></td><td><?= t('Agents + Creators','Agents + Créateurs') ?></td><td style="color:#fcd116;font-weight:700;"><?= t('Admin-set (0–500 XAF)','Défini par admin') ?></td></tr>
-        <tr><td>⭐ <?= t('Featured listing referral','Parrainage annonce vedette') ?></td><td><?= t('Agents + Creators','Agents + Créateurs') ?></td><td style="color:#00A878;font-weight:700;">5,000 XAF</td></tr>
-        <tr><td>⬆️ <?= t('Free → Featured upgrade','Mise à niveau vers vedette') ?></td><td><?= t('Agents + Creators','Agents + Créateurs') ?></td><td style="color:#00A878;font-weight:700;">2,500 XAF</td></tr>
-        <tr><td>📣 <?= t('Approved campaign content','Contenu de campagne approuvé') ?></td><td><?= t('Creators only','Créateurs uniquement') ?></td><td style="color:#e07be0;font-weight:700;"><?= t('Campaign-set amount','Montant de la campagne') ?></td></tr>
-      </tbody>
-    </table>
-    <p style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:12px;text-align:center;"><?= t('Minimum payout: 10,000 XAF. Payment via MTN MoMo or Orange Money. Commissions approved by admin before payment.','Paiement minimum : 10 000 XAF. Via MTN MoMo ou Orange Money. Commissions approuvées par l\'admin avant paiement.') ?></p>
-  </div>
-</div>
-
-<!-- FAQ -->
-<div class="partner-section">
-  <div class="container" style="max-width:680px;">
-    <h2 style="font-family:'Fraunces',serif;font-weight:900;font-size:1.6rem;text-align:center;margin-bottom:32px;"><?= t('Common Questions','Questions fréquentes') ?></h2>
-    <?php
-    $faqs = [
-      [t('How long does my referral link stay active?','Combien de temps mon lien de parrainage reste-t-il actif ?'), t('Your referral link sets a 30-day cookie. If someone clicks your link and lists a business within 30 days, you get credited — even if they don\'t sign up immediately.','Votre lien définit un cookie de 30 jours. Si quelqu\'un clique et liste dans les 30 jours, vous êtes crédité.')],
-      [t('When will I get paid?','Quand serai-je payé ?'), t('Commissions are approved by admin, then transferred to your MTN MoMo or Orange Money. The minimum payout threshold is 10,000 XAF.','Les commissions sont approuvées par l\'admin, puis transférées sur votre MoMo. Le seuil minimum est de 10 000 XAF.')],
-      [t('Do I need a website or social media to be an Agent?','Ai-je besoin d\'un site web pour être Agent ?'), t('No. Agents approach businesses directly — in person, by phone, or via WhatsApp. Your referral link is just a bonus tracking tool.','Non. Les agents approchent les entreprises directement. Votre lien de parrainage est un outil de suivi bonus.')],
-      [t('As a Creator, what platforms can I use?','En tant que Créateur, quelles plateformes puis-je utiliser ?'), t('TikTok, Instagram, Facebook, YouTube, Twitter/X — any platform where you can share a link. Add your referral link to your bio and mention 237Biz in your content.','TikTok, Instagram, Facebook, YouTube, Twitter/X. Ajoutez votre lien de parrainage dans votre bio.')],
-      [t('Can I be both an Agent and a Creator?','Puis-je être à la fois Agent et Créateur ?'), t('Currently you register as one type. If you want to switch or expand, contact the admin team who can adjust your role.','Actuellement vous vous inscrivez comme un seul type. Contactez l\'équipe admin pour ajuster votre rôle.')],
-    ];
-    foreach ($faqs as [$q, $a]): ?>
-    <div class="faq-item" onclick="this.classList.toggle('open')">
-      <div class="faq-q"><?= $q ?> <span>+</span></div>
-      <div class="faq-a"><?= $a ?></div>
-    </div>
-    <?php endforeach; ?>
-  </div>
-</div>
-
-<!-- Final CTA -->
-<div style="background:linear-gradient(135deg,#08472F,#0e2f1a);padding:70px 0;text-align:center;">
-  <div class="container">
-    <h2 style="font-family:'Fraunces',serif;font-weight:900;font-size:clamp(1.5rem,3vw,2.2rem);margin-bottom:12px;"><?= t('Ready to start earning?','Prêt à commencer à gagner ?') ?></h2>
-    <p style="color:rgba(255,255,255,0.6);font-size:15px;margin-bottom:32px;"><?= t('Join 237Biz today as a Sales Agent or Content Creator.','Rejoignez 237Biz aujourd\'hui en tant qu\'Agent de Vente ou Créateur de Contenu.') ?></p>
-    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
-      <a href="<?= SITE_URL ?>/join?path=agent"   class="btn-agent"   style="font-size:15px;padding:14px 32px;">👔 <?= t('Become a Sales Agent','Devenir Agent de Vente') ?></a>
-      <a href="<?= SITE_URL ?>/join?path=creator" class="btn-creator" style="font-size:15px;padding:14px 32px;">🎬 <?= t('Become a Creator','Devenir Créateur') ?></a>
-    </div>
-    <p style="color:rgba(255,255,255,0.3);font-size:13px;margin-top:20px;">
-      <?= t('Already a partner?','Déjà partenaire ?') ?>
-      <a href="<?= SITE_URL ?>/login" style="color:rgba(255,255,255,0.5);"><?= t('Sign in','Connectez-vous') ?></a>
-    </p>
-  </div>
-</div>
-
-<style>
-@media(max-width:720px){ .split-layout { grid-template-columns:1fr !important; } .journey-step { min-width:80px; } }
-</style>
-<script>
-document.querySelectorAll('.faq-item').forEach(function(el) {
-  el.querySelector('.faq-q span').textContent = '+';
-});
-document.querySelectorAll('.faq-item').forEach(function(el) {
-  el.addEventListener('click', function() {
-    this.querySelector('.faq-q span').textContent = this.classList.contains('open') ? '−' : '+';
-  });
-});
-</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
