@@ -8,13 +8,13 @@ require_once __DIR__ . '/includes/config.php';
 
 if (isLoggedIn()) { redirect(SITE_URL . '/dashboard'); }
 
-$defaultPath = in_array($_GET['path']??'', ['find','list','agent','creator']) ? $_GET['path'] : 'find';
+$defaultPath = in_array($_GET['path']??'', ['find','list','agent','creator','growth_partner']) ? $_GET['path'] : 'find';
 $errors = [];
 $success = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
-    $path     = in_array($_POST['path']??'', ['find','list','agent','creator']) ? $_POST['path'] : 'find';
+    $path     = in_array($_POST['path']??'', ['find','list','agent','creator','growth_partner']) ? $_POST['path'] : 'find';
     $name     = trim($_POST['name']  ?? '');
     $email    = strtolower(trim($_POST['email']  ?? ''));
     $password = trim($_POST['password'] ?? '');
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($chk->fetch()) {
             $errors[] = t('Email already registered. Sign in instead.','Email déjà enregistré. Connectez-vous.');
         } else {
-            $role = ['agent'=>'sales_staff','creator'=>'creator','list'=>'user','find'=>'user'][$path];
+            $role = ['agent'=>'sales_staff','creator'=>'creator','list'=>'user','find'=>'user','growth_partner'=>'user'][$path];
             $hash = password_hash($password, PASSWORD_BCRYPT);
             db()->prepare("INSERT INTO users (name,email,password,role,verified) VALUES (?,?,?,?,1)")
                 ->execute([$name, $email, $hash, $role]);
@@ -56,6 +56,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } catch(Exception $e) {}
             }
 
+            // Growth partner application
+            if ($path === 'growth_partner') {
+                try {
+                    $org      = trim($_POST['organisation'] ?? '');
+                    $phone    = trim($_POST['phone'] ?? '');
+                    $region   = trim($_POST['region'] ?? '');
+                    $whyJoin  = trim($_POST['why_join'] ?? '');
+                    $experience = trim($_POST['experience'] ?? '');
+                    db()->prepare("INSERT INTO partner_profiles (user_id, status, organisation, phone, region, why_join, experience) VALUES (?,?,?,?,?,?,?)")
+                        ->execute([$uid, 'pending', $org ?: null, $phone ?: null, $region ?: null, $whyJoin ?: null, $experience ?: null]);
+                } catch(Exception $e) {}
+            }
+
             // Log them in
             $_SESSION['user_id'] = $uid;
 
@@ -68,10 +81,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Redirect based on path
             $destinations = [
-                'agent'   => SITE_URL . '/agent/dashboard',
-                'creator' => SITE_URL . '/creator/profile?setup=1',
-                'list'    => SITE_URL . '/add-listing',
-                'find'    => SITE_URL . '/listings',
+                'agent'          => SITE_URL . '/agent/dashboard',
+                'creator'        => SITE_URL . '/creator/profile?setup=1',
+                'list'           => SITE_URL . '/add-listing',
+                'find'           => SITE_URL . '/listings',
+                'growth_partner' => SITE_URL . '/partner/pending',
             ];
             // ── Referral attribution ────────────────────────────────────────
             // If the new user arrived via a partner referral link, credit it now
@@ -139,6 +153,20 @@ $benefits = [
             ['💸', t('Paid via MTN MoMo or Orange Money','Payé via MTN MoMo ou Orange Money')],
         ],
     ],
+    'growth_partner' => [
+        'icon'    => '🤝',
+        'title'   => t('Become a Growth Partner','Devenez Partenaire de Croissance'),
+        'color'   => '#00A878',
+        'tagline' => t('Help Cameroonian businesses grow — and earn as you do.','Aidez les entreprises camerounaises à grandir — et gagnez en le faisant.'),
+        'items'   => [
+            ['📋', t('Manage a portfolio of assigned businesses','Gérez un portefeuille d\'entreprises assignées')],
+            ['📈', t('Build and execute growth plans','Élaborez et exécutez des plans de croissance')],
+            ['💬', t('Track and convert customer leads','Suivez et convertissez les prospects clients')],
+            ['⭐', t('Improve health scores and review ratings','Améliorez les scores de santé et les avis')],
+            ['💰', t('Earn commissions for measurable growth','Gagnez des commissions pour une croissance mesurable')],
+            ['📊', t('Full analytics dashboard and audit trail','Tableau analytique complet et journal d\'audit')],
+        ],
+    ],
     'creator' => [
         'icon'    => '🎬',
         'title'   => t('Become a Creator','Devenez Créateur'),
@@ -165,6 +193,7 @@ $benefits = [
 
 /* Path selector */
 .path-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:28px; }
+.path-grid.five-paths { grid-template-columns:1fr 1fr 1fr; }
 .path-card {
   border:2px solid rgba(255,255,255,0.1); border-radius:12px;
   padding:14px 16px; cursor:pointer; text-align:center;
@@ -218,13 +247,14 @@ $benefits = [
     <p class="join-sub"><?= t('Choose your path to get started','Choisissez votre parcours pour commencer') ?></p>
 
     <!-- Path selector -->
-    <div class="path-grid" id="path-grid">
+    <div class="path-grid five-paths" id="path-grid">
       <?php
       $paths = [
-          'find'    => ['🔍', t('Find Businesses','Trouver des entreprises')],
-          'list'    => ['🏪', t('List My Business','Lister mon Entreprise')],
-          'agent'   => ['👔', t('Become an Agent','Devenir Agent')],
-          'creator' => ['🎬', t('Become a Creator','Devenir Créateur')],
+          'find'           => ['🔍', t('Find Businesses','Trouver des entreprises')],
+          'list'           => ['🏪', t('List My Business','Lister mon Entreprise')],
+          'agent'          => ['👔', t('Become an Agent','Devenir Agent')],
+          'creator'        => ['🎬', t('Become a Creator','Devenir Créateur')],
+          'growth_partner' => ['🤝', t('Growth Partner','Partenaire de Croissance')],
       ];
       foreach ($paths as $key => [$icon, $label]):
       ?>
@@ -256,6 +286,32 @@ $benefits = [
       <div class="join-field">
         <label><?= t('Password','Mot de passe') ?> * <span style="font-size:11px;color:var(--muted);font-weight:400;">(<?= t('min. 8 characters','min. 8 caractères') ?>)</span></label>
         <input type="password" name="password" required minlength="8" placeholder="••••••••">
+      </div>
+
+      <!-- Growth Partner extra fields (shown via JS) -->
+      <div id="gp-fields" style="display:none;">
+        <div class="join-field">
+          <label><?= t('Organisation / Company','Organisation / Entreprise') ?></label>
+          <input type="text" name="organisation" placeholder="<?= t('Optional','Optionnel') ?>" value="<?= e($_POST['organisation'] ?? '') ?>">
+        </div>
+        <div class="join-field">
+          <label><?= t('Phone Number','Numéro de téléphone') ?></label>
+          <input type="tel" name="phone" placeholder="+237 6XX XXX XXX" value="<?= e($_POST['phone'] ?? '') ?>">
+        </div>
+        <div class="join-field">
+          <label><?= t('Region / Area you cover','Région / Zone couverte') ?></label>
+          <input type="text" name="region" placeholder="<?= t('e.g. Douala, Buea, Yaoundé','ex. Douala, Buea, Yaoundé') ?>" value="<?= e($_POST['region'] ?? '') ?>">
+        </div>
+        <div class="join-field">
+          <label><?= t('Relevant Experience','Expérience pertinente') ?></label>
+          <textarea name="experience" rows="2" placeholder="<?= t('Sales, marketing, customer service, etc.','Ventes, marketing, service client, etc.') ?>"
+            style="width:100%;padding:12px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;font-size:14px;font-family:inherit;resize:vertical;"><?= e($_POST['experience'] ?? '') ?></textarea>
+        </div>
+        <div class="join-field">
+          <label><?= t('Why do you want to join?','Pourquoi voulez-vous rejoindre ?') ?></label>
+          <textarea name="why_join" rows="2" placeholder="<?= t('Tell us about your motivation…','Parlez-nous de votre motivation…') ?>"
+            style="width:100%;padding:12px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;font-size:14px;font-family:inherit;resize:vertical;"><?= e($_POST['why_join'] ?? '') ?></textarea>
+        </div>
       </div>
 
       <button type="submit" class="join-submit" id="join-btn"
@@ -300,16 +356,18 @@ $benefits = [
 var benefits = <?= json_encode($benefits, JSON_UNESCAPED_UNICODE) ?>;
 
 var btnColors = {
-  find:    '#00A878',
-  list:    '#c9a700',
-  agent:   '#3d6fbf',
-  creator: '#9b4fad',
+  find:           '#00A878',
+  list:           '#c9a700',
+  agent:          '#3d6fbf',
+  creator:        '#9b4fad',
+  growth_partner: '#00A878',
 };
 var btnLabels = {
-  find:    '<?= t('Find Businesses →','Trouver des entreprises →') ?>',
-  list:    '<?= t('Create Account & List Business →','Créer un compte et lister →') ?>',
-  agent:   '<?= t('Become a Sales Agent →','Devenir Agent de Vente →') ?>',
-  creator: '<?= t('Become a Creator →','Devenir Créateur →') ?>',
+  find:           '<?= t('Find Businesses →','Trouver des entreprises →') ?>',
+  list:           '<?= t('Create Account & List Business →','Créer un compte et lister →') ?>',
+  agent:          '<?= t('Become a Sales Agent →','Devenir Agent de Vente →') ?>',
+  creator:        '<?= t('Become a Creator →','Devenir Créateur →') ?>',
+  growth_partner: '<?= t('Apply as Growth Partner →','Postuler comme Partenaire de Croissance →') ?>',
 };
 
 function selectPath(path) {
@@ -345,6 +403,10 @@ function selectPath(path) {
   var btn = document.getElementById('join-btn');
   btn.style.background = b.color;
   btn.textContent = btnLabels[path] || '<?= t('Create My Account →','Créer mon compte →') ?>';
+
+  // Show/hide growth partner extra fields
+  var gpFields = document.getElementById('gp-fields');
+  if (gpFields) gpFields.style.display = (path === 'growth_partner') ? 'block' : 'none';
 }
 
 // Init

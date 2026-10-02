@@ -87,6 +87,7 @@ RewriteRule ^reset-password/?$          reset-password.php           [L,QSA]
 
 # Admin
 RewriteRule ^admin/?$                   admin/index.php              [L,QSA]
+RewriteRule ^admin/manage-growth-partners/?$ admin/manage-growth-partners.php [L,QSA]
 
 # Utility
 RewriteRule ^enquiry/?$                 enquiry.php                  [L,QSA]
@@ -106,6 +107,15 @@ RewriteRule ^creator/profile/?$      creator/profile.php      [L,QSA]
 RewriteRule ^creator/campaigns/?$    creator/campaigns.php    [L,QSA]
 RewriteRule ^creator/submissions/?$  creator/submissions.php  [L,QSA]
 RewriteRule ^creator/referrals/?$    creator/referrals.php    [L,QSA]
+
+# Growth Partner portal
+RewriteRule ^partner/dashboard/?$    partner/dashboard.php    [L,QSA]
+RewriteRule ^partner/portfolio/?$    partner/portfolio.php    [L,QSA]
+RewriteRule ^partner/business/?$     partner/business.php     [L,QSA]
+RewriteRule ^partner/tasks/?$        partner/tasks.php        [L,QSA]
+RewriteRule ^partner/leads/?$        partner/leads.php        [L,QSA]
+RewriteRule ^partner/commissions/?$  partner/commissions.php  [L,QSA]
+RewriteRule ^partner/pending/?$      partner/pending.php      [L,QSA]
 
 # Join & Partners
 RewriteRule ^join/?$       join.php      [L,QSA]

@@ -374,6 +374,9 @@ $cuRole = $cu['role'] ?? 'guest';
         <?php elseif ($cuRole === 'sales_staff'): ?>
         <a href="<?= SITE_URL ?>/agent/dashboard" class="nav-dd-item" style="color:#8ab4f8;">👔 <?= t('Agent Dashboard','Tableau Agent') ?></a>
         <div class="nav-dd-sep"></div>
+        <?php elseif ($cuRole === 'growth_partner'): ?>
+        <a href="<?= SITE_URL ?>/partner/dashboard" class="nav-dd-item" style="color:#00A878;">🤝 <?= t('Partner Centre','Centre Partenaire') ?></a>
+        <div class="nav-dd-sep"></div>
         <?php elseif ($cuRole === 'creator'): ?>
         <a href="<?= SITE_URL ?>/creator/dashboard" class="nav-dd-item" style="color:#e07be0;">🎬 <?= t('Creator Dashboard','Tableau Créateur') ?></a>
         <a href="<?= SITE_URL ?>/creator/referrals"  class="nav-dd-item">🔗 <?= t('My Referrals','Mes Parrainages') ?></a>
