@@ -4,8 +4,6 @@
  * Social / marketing content management with calendar view.
  */
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
 
 $partner = requireGrowthPartner();
@@ -100,7 +98,7 @@ if ($view === 'calendar') {
     $params[] = $monthEnd . ' 23:59:59';
 }
 
-$sql = "SELECT ci.*, l.name AS biz_name, c.name AS camp_name
+$sql = "SELECT ci.*, l.title AS biz_name, c.name AS camp_name
         FROM content_items ci
         JOIN listings l ON l.id = ci.listing_id
         LEFT JOIN campaigns c ON c.id = ci.campaign_id

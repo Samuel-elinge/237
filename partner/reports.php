@@ -4,8 +4,6 @@
  * Growth report generation and management.
  */
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
 
 $partner = requireGrowthPartner();
@@ -122,7 +120,7 @@ $listings = getPartnerListings($pid);
 $where  = ["r.partner_id = $pid"];
 $params = [];
 if ($filterLid) { $where[] = "r.listing_id = ?"; $params[] = $filterLid; }
-$st = $pdo->prepare("SELECT r.*, l.name AS biz_name
+$st = $pdo->prepare("SELECT r.*, l.title AS biz_name
                      FROM growth_reports r
                      JOIN listings l ON l.id = r.listing_id
                      WHERE " . implode(' AND ', $where) . "
@@ -134,7 +132,7 @@ $reports = $st->fetchAll();
 $reportDetail = null;
 $snap         = null;
 if ($view === 'report' && $viewRid) {
-    $r = $pdo->prepare("SELECT r.*, l.name AS biz_name, c.name_en AS cat_en, loc.name_en AS city
+    $r = $pdo->prepare("SELECT r.*, l.title AS biz_name, c.name_en AS cat_en, loc.name_en AS city
                         FROM growth_reports r
                         JOIN listings l ON l.id=r.listing_id
                         JOIN categories c ON c.id=l.category_id

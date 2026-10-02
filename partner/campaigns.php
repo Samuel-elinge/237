@@ -4,8 +4,6 @@
  * Campaign management across partner portfolio.
  */
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
 
 $partner = requireGrowthPartner();
@@ -106,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $platform    = trim($_POST['platform'] ?? '');
         $notes       = trim($_POST['notes'] ?? '');
 
-        $campRow = $pdo->prepare("SELECT c.*, l.name AS biz_name, l.tagline, l.services,
+        $campRow = $pdo->prepare("SELECT c.*, l.title AS biz_name, l.tagline, l.services,
                                   cat.name_en AS cat_name, loc.name_en AS city
                                   FROM campaigns c
                                   JOIN listings l ON l.id=c.listing_id
@@ -207,7 +205,7 @@ if ($filterLid)    { $where[] = "c.listing_id = ?";     $params[] = $filterLid; 
 if ($filterStatus) { $where[] = "c.status = ?";          $params[] = $filterStatus; }
 if ($filterType)   { $where[] = "c.campaign_type = ?";   $params[] = $filterType; }
 
-$sql = "SELECT c.*, l.name AS biz_name, loc.name_en AS city
+$sql = "SELECT c.*, l.title AS biz_name, loc.name_en AS city
         FROM campaigns c
         JOIN listings l ON l.id = c.listing_id
         JOIN locations loc ON loc.id = l.location_id
@@ -221,7 +219,7 @@ $campaigns = $st->fetchAll();
 $campaignDetail = null;
 $metrics        = [];
 if (($view === 'metrics' || $view === 'ai') && $viewCid) {
-    $r = $pdo->prepare("SELECT c.*, l.name AS biz_name, l.tagline, l.services, cat.name_en AS cat_name, loc.name_en AS city
+    $r = $pdo->prepare("SELECT c.*, l.title AS biz_name, l.tagline, l.services, cat.name_en AS cat_name, loc.name_en AS city
                         FROM campaigns c
                         JOIN listings l ON l.id=c.listing_id
                         JOIN categories cat ON cat.id=l.category_id

@@ -5,8 +5,6 @@
  * Phase 3C: Lead Follow-Up, Review Automation, Custom Workflows
  */
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
 
 $partner = requireGrowthPartner();
@@ -338,7 +336,7 @@ $editWorkflow = null;
 $editSteps    = [];
 $editTemplates= [];
 if ($view === 'edit' && $wid) {
-    $ew = $pdo->prepare("SELECT aw.*, l.name AS biz_name FROM automation_workflows aw LEFT JOIN listings l ON l.id=aw.listing_id WHERE aw.id=? AND aw.partner_id=?");
+    $ew = $pdo->prepare("SELECT aw.*, l.title AS biz_name FROM automation_workflows aw LEFT JOIN listings l ON l.id=aw.listing_id WHERE aw.id=? AND aw.partner_id=?");
     $ew->execute([$wid, $pid]);
     $editWorkflow = $ew->fetch();
     if (!$editWorkflow) { setFlash('error','Workflow not found.'); redirect(SITE_URL.'/partner/automation'); }
@@ -356,7 +354,7 @@ $workflows    = [];
 $pendingRuns  = [];
 $runCounts    = [];
 if ($view === 'list') {
-    $wfs = $pdo->prepare("SELECT aw.*, l.name AS biz_name,
+    $wfs = $pdo->prepare("SELECT aw.*, l.title AS biz_name,
                           (SELECT COUNT(*) FROM automation_steps WHERE workflow_id=aw.id) AS step_count
                           FROM automation_workflows aw
                           LEFT JOIN listings l ON l.id=aw.listing_id
@@ -365,7 +363,7 @@ if ($view === 'list') {
     $wfs->execute([$pid]);
     $workflows = $wfs->fetchAll();
 
-    $pr = $pdo->prepare("SELECT ar.*, aw.name AS workflow_name, l.name AS biz_name
+    $pr = $pdo->prepare("SELECT ar.*, aw.name AS workflow_name, l.title AS biz_name
                          FROM automation_runs ar
                          JOIN automation_workflows aw ON aw.id=ar.workflow_id
                          LEFT JOIN listings l ON l.id=ar.listing_id
