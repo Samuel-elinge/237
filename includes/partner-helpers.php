@@ -512,7 +512,7 @@ function generateRecommendations(int $partnerId, \PDO $pdo): int {
 
     // Get all active listings for this partner
     $st = $pdo->prepare("SELECT l.* FROM listings l
-        JOIN partner_portfolio pp ON pp.listing_id = l.id
+        JOIN partner_business_assignments pp ON pp.listing_id = l.id
         WHERE pp.partner_id = ? AND pp.status = 'active'");
     $st->execute([$partnerId]);
     $listings = $st->fetchAll();
@@ -790,7 +790,7 @@ function generateGrowthAlerts(int $partnerId, \PDO $pdo): int {
 
     // Per-listing alerts
     $st = $pdo->prepare("SELECT l.* FROM listings l
-        JOIN partner_portfolio pp ON pp.listing_id = l.id
+        JOIN partner_business_assignments pp ON pp.listing_id = l.id
         WHERE pp.partner_id = ? AND pp.status = 'active'");
     $st->execute([$partnerId]);
     $listings = $st->fetchAll();

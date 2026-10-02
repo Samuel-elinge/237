@@ -96,7 +96,7 @@ $activeCount = ($counts['new'] ?? 0) + ($counts['viewed'] ?? 0);
 
 // ── PORTFOLIO LISTINGS FOR FILTER ─────────────────────────────
 $st = $pdo->prepare("SELECT l.id, l.name FROM listings l
-    JOIN partner_portfolio pp ON pp.listing_id = l.id
+    JOIN partner_business_assignments pp ON pp.listing_id = l.id
     WHERE pp.partner_id=? AND pp.status='active' ORDER BY l.name");
 $st->execute([$pid]);
 $portfolioListings = $st->fetchAll();
