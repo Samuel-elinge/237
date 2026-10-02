@@ -59,7 +59,7 @@ if ((int)$st->fetchColumn() === 0) {
 }
 
 // ── FETCH RECOMMENDATIONS ─────────────────────────────────────
-$sql    = "SELECT r.*, l.name AS business_name FROM ai_recommendations r
+$sql    = "SELECT r.*, l.title AS business_name FROM ai_recommendations r
            LEFT JOIN listings l ON l.id = r.listing_id
            WHERE r.partner_id = ?";
 $params = [$pid];
@@ -95,9 +95,9 @@ foreach ($st->fetchAll() as $row) {
 $activeCount = ($counts['new'] ?? 0) + ($counts['viewed'] ?? 0);
 
 // ── PORTFOLIO LISTINGS FOR FILTER ─────────────────────────────
-$st = $pdo->prepare("SELECT l.id, l.name FROM listings l
+$st = $pdo->prepare("SELECT l.id, l.title AS name FROM listings l
     JOIN partner_business_assignments pp ON pp.listing_id = l.id
-    WHERE pp.partner_id=? AND pp.status='active' ORDER BY l.name");
+    WHERE pp.partner_id=? AND pp.status='active' ORDER BY l.title");
 $st->execute([$pid]);
 $portfolioListings = $st->fetchAll();
 

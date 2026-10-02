@@ -13,7 +13,7 @@ $_SESSION['user_id'] = $row['user_id'];
 
 echo "<pre>";
 
-$pages = ['content','campaigns','reports','automation'];
+$pages = ['content','campaigns','reports','automation','recommendations','alerts'];
 foreach ($pages as $page) {
     $path = __DIR__ . "/../partner/{$page}.php";
     echo "\n=== $page.php ===\n";
