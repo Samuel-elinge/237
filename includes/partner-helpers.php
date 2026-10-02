@@ -196,7 +196,7 @@ function getAttentionQueue(int $partnerId): array {
     // Fetch all active assignments
     $st = $pdo->prepare("
         SELECT l.id, l.title,
-               l.description, l.phone, l.whatsapp, l.website, l.hours,
+               l.description, l.phone, l.whatsapp, l.website,
                l.verified, l.featured,
                (SELECT COUNT(*) FROM partner_leads pl
                 WHERE pl.listing_id = l.id AND pl.partner_id = :p1
