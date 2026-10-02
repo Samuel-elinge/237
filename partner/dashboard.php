@@ -81,6 +81,23 @@ $st->execute([$pid]); $endingSoonCampaigns = $st->fetchAll();
 $attentionQueue = getAttentionQueue($pid);
 $highPriority   = array_filter($attentionQueue, fn($a) => $a['severity'] === 'high');
 
+/* ── Phase 3A: Recommendations ───────────────────────────────── */
+// Generate if none exist
+$recCheck = $pdo->prepare("SELECT COUNT(*) FROM ai_recommendations WHERE partner_id=? AND status IN ('new','viewed')");
+$recCheck->execute([$pid]);
+if ((int)$recCheck->fetchColumn() === 0) {
+    generateRecommendations($pid, $pdo);
+    generateGrowthAlerts($pid, $pdo);
+}
+$dashRecs = getActiveRecommendations($pid, $pdo, null, 5);
+
+/* ── Phase 3A: Growth Alerts ──────────────────────────────────── */
+$alertsSt = $pdo->prepare("SELECT COUNT(*) FROM growth_alerts WHERE partner_id=? AND status IN ('new','viewed')");
+$alertsSt->execute([$pid]); $activeAlertsCount = (int)$alertsSt->fetchColumn();
+
+$urgentAlertsSt = $pdo->prepare("SELECT COUNT(*) FROM growth_alerts WHERE partner_id=? AND status IN ('new','viewed') AND priority='urgent'");
+$urgentAlertsSt->execute([$pid]); $urgentAlertsCount = (int)$urgentAlertsSt->fetchColumn();
+
 /* ── Phase 2: Notifications ───────────────────────────────────── */
 $unreadNotifs = getUnreadNotifications($userId);
 
@@ -189,6 +206,30 @@ require_once __DIR__ . '/../includes/header.php';
 .btn-sm.primary{background:var(--pblue);color:#fff;border:1px solid var(--pblue)}
 .btn-sm.outline{background:#fff;color:#374151;border:1px solid #d1d5db}
 .btn-sm.outline:hover{background:#f3f4f6}
+/* ── Phase 3A additions ── */
+.ai-priorities{background:linear-gradient(135deg,#eef2ff 0%,#f0fdf4 100%);border:1px solid #c7d2fe;border-radius:12px;padding:20px;margin-bottom:22px}
+.ai-priorities h2{margin:0 0 14px;font-size:1rem;font-weight:700;color:#3730a3;display:flex;align-items:center;gap:8px}
+.ai-badge-sm{background:#6366f1;color:#fff;font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:999px;letter-spacing:.05em}
+.ai-stat-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.ai-stat{background:#fff;border:1px solid #c7d2fe;border-radius:8px;padding:12px;text-align:center}
+.ai-stat .n{font-size:1.6rem;font-weight:800;color:#4f46e5}
+.ai-stat .l{font-size:.72rem;color:#6b7280}
+.rec-strip{display:flex;flex-direction:column;gap:8px}
+.rec-strip-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;text-decoration:none;color:#111827;font-size:.87rem;transition:.15s}
+.rec-strip-item:hover{border-color:#6366f1;background:#f5f3ff}
+.rec-strip-item .rec-biz{font-size:.75rem;color:#6b7280;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.rec-dot.urgent{background:#ef4444}
+.rec-dot.high{background:#f97316}
+.rec-dot.medium{background:#3b82f6}
+.rec-dot.low{background:#9ca3af}
+.alerts-badge{background:#f59e0b;color:#fff;border-radius:999px;font-size:.65rem;font-weight:700;padding:.15rem .4rem;margin-left:.25rem}
+.alerts-badge.urgent{background:#ef4444}
+.score-ring{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;border:4px solid #e5e7eb;background:#fff;margin:0 auto}
+.score-ring .score-num{font-size:1.5rem;font-weight:800;line-height:1}
+.score-ring .score-sub{font-size:.6rem;color:#6b7280;text-align:center}
+.score-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.score-comp{font-size:.75rem;color:#374151;display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f3f4f6}
 </style>
 
 <div class="pw">
@@ -218,6 +259,8 @@ require_once __DIR__ . '/../includes/header.php';
     <a href="<?= SITE_URL ?>/partner/campaigns">📣 Campaigns</a>
     <a href="<?= SITE_URL ?>/partner/content">📅 Content</a>
     <a href="<?= SITE_URL ?>/partner/reports">📊 Reports</a>
+    <a href="<?= SITE_URL ?>/partner/recommendations">✦ Recommendations <?php if (!empty($dashRecs)): ?><span class="notif-dot"><?= count($dashRecs) ?></span><?php endif; ?></a>
+    <a href="<?= SITE_URL ?>/partner/alerts">🔔 Alerts <?php if ($activeAlertsCount): ?><span class="notif-dot <?= $urgentAlertsCount ? '' : '' ?>" style="<?= $urgentAlertsCount ? 'background:#f59e0b' : '' ?>"><?= $activeAlertsCount ?></span><?php endif; ?></a>
     <a href="<?= SITE_URL ?>/partner/commissions">💰 Commissions</a>
 </nav>
 
@@ -286,6 +329,55 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 <?php endif; ?>
+
+<!-- ── Phase 3A: AI Priorities Panel ── -->
+<div class="ai-priorities">
+    <h2>✦ AI Priorities <span class="ai-badge-sm">SMART</span></h2>
+    <div class="ai-stat-row">
+        <div class="ai-stat">
+            <div class="n"><?= (int)$portfolio['total'] ?></div>
+            <div class="l">Businesses Managed</div>
+        </div>
+        <div class="ai-stat">
+            <div class="n" style="color:<?= $urgentAlertsCount ? '#ef4444' : ($activeAlertsCount ? '#f59e0b' : '#10b981') ?>"><?= $activeAlertsCount ?></div>
+            <div class="l">Active Alerts</div>
+        </div>
+        <div class="ai-stat">
+            <div class="n" style="color:<?= $overdueLeadsCount ? '#f59e0b' : '#10b981' ?>"><?= $overdueLeadsCount ?></div>
+            <div class="l">Leads Need Follow-Up</div>
+        </div>
+        <div class="ai-stat">
+            <div class="n" style="color:<?= !empty($dashRecs) ? '#6366f1' : '#10b981' ?>"><?= count($dashRecs) ?></div>
+            <div class="l">AI Recommendations</div>
+        </div>
+    </div>
+
+    <?php if (!empty($dashRecs)): ?>
+    <div class="rec-strip">
+        <?php foreach ($dashRecs as $rec): ?>
+        <a href="<?= $rec['action_url'] ? h($rec['action_url']) : SITE_URL.'/partner/recommendations' ?>" class="rec-strip-item">
+            <span class="rec-dot <?= h($rec['priority']) ?>"></span>
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= h($rec['title']) ?></div>
+                <div class="rec-biz"><?= $rec['business_name'] ? '🏢 '.h($rec['business_name']) : '📊 Portfolio-wide' ?></div>
+            </div>
+            <?php if ($rec['recommended_action']): ?>
+            <span style="font-size:.78rem;color:#6366f1;white-space:nowrap;flex-shrink:0"><?= h($rec['recommended_action']) ?> →</span>
+            <?php endif; ?>
+        </a>
+        <?php endforeach; ?>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+        <a href="<?= SITE_URL ?>/partner/recommendations" class="btn-sm outline">View all recommendations →</a>
+        <a href="<?= SITE_URL ?>/partner/alerts" class="btn-sm outline">View alerts →</a>
+    </div>
+    <?php else: ?>
+    <div style="text-align:center;padding:12px 0;color:#6b7280;font-size:.875rem">
+        ✓ No active recommendations — your portfolio is in good shape.
+        <div style="margin-top:8px"><a href="<?= SITE_URL ?>/partner/recommendations" class="btn-sm outline">Check recommendations →</a></div>
+    </div>
+    <?php endif; ?>
+</div>
 
 <!-- ── Main grid ── -->
 <div class="main-grid">
@@ -415,6 +507,42 @@ require_once __DIR__ . '/../includes/header.php';
 </div><!-- /left -->
 <div><!-- right sidebar -->
 
+    <!-- Phase 3A: Growth Score (portfolio average) -->
+    <?php
+    // Get average score across all partner listings for display
+    $scoreSt = $pdo->prepare("
+        SELECT AVG(gsh.score) AS avg_score, COUNT(DISTINCT gsh.listing_id) AS scored_count
+        FROM growth_score_history gsh
+        JOIN partner_business_assignments pba ON pba.listing_id=gsh.listing_id
+        WHERE pba.partner_id=? AND pba.status='active'
+          AND gsh.computed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    ");
+    $scoreSt->execute([$pid]);
+    $scoreRow = $scoreSt->fetch();
+    $avgScore = $scoreRow['avg_score'] !== null ? round($scoreRow['avg_score']) : null;
+    // Score color
+    $scoreColor = $avgScore === null ? '#9ca3af' : ($avgScore >= 70 ? '#10b981' : ($avgScore >= 40 ? '#f59e0b' : '#ef4444'));
+    ?>
+    <div class="panel">
+        <h2>📈 Portfolio Growth Score <span style="font-size:.7rem;font-weight:400;color:#6b7280;margin-left:2px">237biz indicator</span></h2>
+        <?php if ($avgScore !== null): ?>
+        <div class="score-ring" style="border-color:<?= $scoreColor ?>">
+            <div class="score-num" style="color:<?= $scoreColor ?>"><?= $avgScore ?></div>
+            <div class="score-sub">/ 100</div>
+        </div>
+        <div style="text-align:center;font-size:.75rem;color:#6b7280;margin-top:6px">
+            Avg. across <?= (int)$scoreRow['scored_count'] ?> business<?= $scoreRow['scored_count']!=1?'es':'' ?>
+        </div>
+        <div style="margin-top:10px;font-size:.72rem;color:#9ca3af;text-align:center;line-height:1.4">
+            237biz activity indicator — reflects platform engagement,<br>not overall business performance.
+        </div>
+        <?php else: ?>
+        <div style="text-align:center;padding:14px 0;color:#6b7280;font-size:.87rem">
+            Visit a business workspace to compute its score.
+        </div>
+        <?php endif; ?>
+    </div>
+
     <!-- Commission summary -->
     <div class="panel">
         <h2>💰 Commission</h2>
@@ -450,6 +578,8 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="panel">
         <h2>⚡ Quick Actions</h2>
         <div class="quick-links">
+            <a href="<?= SITE_URL ?>/partner/recommendations" class="quick-link"><span class="icon">✦</span>AI Recommendations<span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/alerts" class="quick-link"><span class="icon">🔔</span>Growth Alerts<span class="arrow">→</span></a>
             <a href="<?= SITE_URL ?>/partner/portfolio" class="quick-link"><span class="icon">📋</span>View Portfolio<span class="arrow">→</span></a>
             <a href="<?= SITE_URL ?>/partner/campaigns" class="quick-link"><span class="icon">📣</span>Manage Campaigns<span class="arrow">→</span></a>
             <a href="<?= SITE_URL ?>/partner/content" class="quick-link"><span class="icon">📅</span>Content Calendar<span class="arrow">→</span></a>

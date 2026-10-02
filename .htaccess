@@ -118,7 +118,9 @@ RewriteRule ^partner/commissions/?$  partner/commissions.php  [L,QSA]
 RewriteRule ^partner/pending/?$      partner/pending.php      [L,QSA]
 RewriteRule ^partner/campaigns/?$    partner/campaigns.php    [L,QSA]
 RewriteRule ^partner/content/?$      partner/content.php      [L,QSA]
-RewriteRule ^partner/reports/?$      partner/reports.php      [L,QSA]
+RewriteRule ^partner/reports/?$          partner/reports.php          [L,QSA]
+RewriteRule ^partner/recommendations/?$  partner/recommendations.php  [L,QSA]
+RewriteRule ^partner/alerts/?$           partner/alerts.php           [L,QSA]
 
 # Join & Partners
 RewriteRule ^join/?$       join.php      [L,QSA]
