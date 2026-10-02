@@ -128,7 +128,7 @@ function gatherBusinessIntelligence(int $listingId, int $partnerId, \PDO $pdo): 
     $intel['open_tasks'] = (int)$t->fetchColumn();
 
     // Active campaigns
-    $c = $pdo->prepare("SELECT COUNT(*) FROM campaigns WHERE listing_id=? AND partner_id=? AND status='active'");
+    $c = $pdo->prepare("SELECT COUNT(*) FROM partner_campaigns WHERE listing_id=? AND partner_id=? AND status='active'");
     $c->execute([$listingId, $partnerId]);
     $intel['active_campaigns'] = (int)$c->fetchColumn();
 

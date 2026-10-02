@@ -58,7 +58,7 @@ $managedCount = (int)$bizCount->fetchColumn();
 
 // Recent feedback (published)
 $fbStmt = $pdo->prepare("
-    SELECT pf.rating, pf.comment, pf.created_at, l.name AS business_name
+    SELECT pf.rating, pf.comment, pf.created_at, l.title AS business_name
     FROM partner_feedback pf
     LEFT JOIN listings l ON l.id = pf.listing_id
     WHERE pf.partner_id = ? AND pf.published = 1

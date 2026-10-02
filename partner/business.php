@@ -214,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ctx['avg_rating'] = $listing['avg_rating'] ? round($listing['avg_rating'], 1) : null;
             $ctx['review_count'] = (int)($listing['review_count'] ?? 0);
             // Recent campaign for context
-            $ctxCamp = $pdo->prepare("SELECT name, offer, call_to_action FROM campaigns WHERE listing_id=? AND partner_id=? AND status='active' ORDER BY created_at DESC LIMIT 1");
+            $ctxCamp = $pdo->prepare("SELECT name, offer, call_to_action FROM partner_campaigns WHERE listing_id=? AND partner_id=? AND status='active' ORDER BY created_at DESC LIMIT 1");
             $ctxCamp->execute([$listingId, $partnerId]);
             $ctx['active_campaign'] = $ctxCamp->fetch(PDO::FETCH_ASSOC) ?: null;
             // Generate content using rule-based template engine
@@ -327,7 +327,7 @@ switch ($tab) {
         $tasks = $st->fetchAll();
         break;
     case 'campaigns':
-        $st = $pdo->prepare("SELECT * FROM campaigns WHERE listing_id=? AND partner_id=? ORDER BY created_at DESC");
+        $st = $pdo->prepare("SELECT * FROM partner_campaigns WHERE listing_id=? AND partner_id=? ORDER BY created_at DESC");
         $st->execute([$listingId, $partnerId]);
         $campaigns = $st->fetchAll();
         break;
@@ -362,7 +362,7 @@ switch ($tab) {
 }
 
 // Tab-specific campaigns list for content form
-$allCampaigns = $pdo->prepare("SELECT id, name FROM campaigns WHERE listing_id=? AND partner_id=? AND status IN ('active','scheduled','draft') ORDER BY name");
+$allCampaigns = $pdo->prepare("SELECT id, name FROM partner_campaigns WHERE listing_id=? AND partner_id=? AND status IN ('active','scheduled','draft') ORDER BY name");
 $allCampaigns->execute([$listingId, $partnerId]);
 $allCampaigns = $allCampaigns->fetchAll();
 
