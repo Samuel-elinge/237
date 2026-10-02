@@ -39,19 +39,7 @@ function getPartnerProfile(?int $userId = null): ?array {
  * Get all listings assigned to a partner (active assignments only).
  */
 function getPartnerListings(int $partnerId): array {
-    return db()->prepare("
-        SELECT l.*, c.name_en AS cat_en, c.icon AS cat_icon,
-               loc.name_en AS city,
-               pba.role AS assignment_role, pba.assigned_at,
-               (SELECT COUNT(*) FROM growth_tasks gt WHERE gt.listing_id = l.id AND gt.partner_id = ? AND gt.status NOT IN ('completed','cancelled')) AS open_tasks,
-               (SELECT COUNT(*) FROM partner_leads pl WHERE pl.listing_id = l.id AND pl.partner_id = ? AND pl.status IN ('new','contacted','follow_up')) AS active_leads,
-               (SELECT COUNT(*) FROM growth_plans gp WHERE gp.listing_id = l.id AND gp.partner_id = ? AND gp.status = 'active') AS active_plans
-        FROM listings l
-        JOIN partner_business_assignments pba ON pba.listing_id = l.id AND pba.partner_id = ? AND pba.status = 'active'
-        JOIN categories c ON c.id = l.category_id
-        JOIN locations loc ON loc.id = l.location_id
-        ORDER BY pba.assigned_at DESC
-    ")->execute([$partnerId, $partnerId, $partnerId, $partnerId]) ? db()->prepare("
+    $st = db()->prepare("
         SELECT l.*, c.name_en AS cat_en, c.icon AS cat_icon,
                loc.name_en AS city,
                pba.role AS assignment_role, pba.assigned_at,
@@ -63,7 +51,9 @@ function getPartnerListings(int $partnerId): array {
         JOIN categories c ON c.id = l.category_id
         JOIN locations loc ON loc.id = l.location_id
         ORDER BY pba.assigned_at DESC
-    ") : null;
+    ");
+    $st->execute([':pid1' => $partnerId, ':pid2' => $partnerId, ':pid3' => $partnerId, ':pid4' => $partnerId]);
+    return $st->fetchAll(PDO::FETCH_ASSOC);
 }
 
 /**
