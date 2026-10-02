@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Change role
     elseif ($action === 'change_role' && $userId) {
         $newRole = $_POST['new_role'] ?? 'user';
-        if (!in_array($newRole, ['user','admin','sales_staff','creator'])) $newRole = 'user';
+        if (!in_array($newRole, ['user','admin','sales_staff','creator','growth_partner'])) $newRole = 'user';
         if ($userId != $_SESSION['user_id']) {
             try { db()->prepare("UPDATE users SET role=? WHERE id=?")->execute([$newRole, $userId]); } catch (Exception $e) {}
             flash('success', 'Role updated to ' . $newRole . '.');
