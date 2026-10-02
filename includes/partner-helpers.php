@@ -859,3 +859,181 @@ function getGrowthAlerts(int $partnerId, ?\PDO $pdo = null, int $limit = 20): ar
     $st->execute([$partnerId]);
     return $st->fetchAll();
 }
+
+/**
+ * Generate AI content using verified business context only.
+ * Never fabricates prices, offers, hours, testimonials, stats, or promotions.
+ *
+ * @param string $contentType  social_post|promotional_post|review_request|customer_followup|event_promotion|whatsapp_message|instagram_caption|tiktok_concept
+ * @param string $style        professional|friendly|short|promotional|tiktok|whatsapp
+ * @param array  $ctx          Verified business context (name, category, city, tagline, services, avg_rating, review_count, active_campaign)
+ * @param string $userNotes    Additional notes/instructions from the partner
+ * @return string Generated content
+ */
+function generateAIContent(string $contentType, string $style, array $ctx, string $userNotes = ''): string {
+    $name     = $ctx['business'] ?? 'this business';
+    $category = $ctx['category'] ?? '';
+    $city     = $ctx['city'] ?? '';
+    $tagline  = $ctx['tagline'] ?? '';
+    $services = $ctx['services'] ?? '';
+    $campaign = $ctx['active_campaign'] ?? null;
+
+    // Build a context snippet we can weave in
+    $locationStr = $city ? " in {$city}" : '';
+    $categoryStr = $category ? " ({$category})" : '';
+    $taglineStr  = $tagline ? " — \"{$tagline}\"" : '';
+
+    // Rating line (only when reviews exist and rating is verified)
+    $ratingLine = '';
+    if (!empty($ctx['avg_rating']) && !empty($ctx['review_count']) && (int)$ctx['review_count'] >= 3) {
+        $ratingLine = number_format((float)$ctx['avg_rating'], 1) . '★ rated by ' . (int)$ctx['review_count'] . ' customers';
+    }
+
+    // Campaign reference (only name + CTA — never fabricated offer text)
+    $campaignRef = '';
+    if ($campaign && !empty($campaign['name'])) {
+        $cta = $campaign['call_to_action'] ?? '';
+        $campaignRef = $campaign['name'] . ($cta ? " — {$cta}" : '');
+    }
+
+    // User notes hint
+    $notesHint = $userNotes ? "\n\nPartner notes: {$userNotes}" : '';
+
+    // ── Template library ────────────────────────────────────────
+    switch ($contentType) {
+
+        case 'social_post':
+            switch ($style) {
+                case 'professional':
+                    return trim("📣 Spotlight: {$name}{$categoryStr}{$locationStr}{$taglineStr}\n\n"
+                        . ($services ? "We specialise in: {$services}\n\n" : '')
+                        . ($ratingLine ? "{$ratingLine}\n\n" : '')
+                        . "Looking for trusted {$category} support? Get in touch today."
+                        . ($campaignRef ? "\n\n🔗 {$campaignRef}" : '')
+                        . $notesHint);
+
+                case 'friendly':
+                    return trim("Hey! 👋 If you're looking for reliable {$category} services{$locationStr}, "
+                        . "{$name} might be just what you need{$taglineStr}.\n\n"
+                        . ($services ? "They cover: {$services}\n\n" : '')
+                        . ($ratingLine ? "⭐ {$ratingLine}\n\n" : '')
+                        . "Drop them a message and see how they can help!"
+                        . ($campaignRef ? "\n\n👉 {$campaignRef}" : '')
+                        . $notesHint);
+
+                case 'short':
+                    return trim("✅ {$name}{$locationStr} — trusted {$category} services."
+                        . ($ratingLine ? " {$ratingLine}." : '')
+                        . ($campaignRef ? " {$campaignRef}." : '')
+                        . $notesHint);
+
+                case 'promotional':
+                    return trim("🌟 Discover {$name}{$locationStr}!\n\n"
+                        . ($tagline ? "\"{$tagline}\"\n\n" : '')
+                        . ($services ? "Services: {$services}\n\n" : '')
+                        . ($ratingLine ? "⭐ {$ratingLine}\n\n" : '')
+                        . "Ready to work with a trusted local {$category} provider? Reach out now!"
+                        . ($campaignRef ? "\n\n👉 {$campaignRef}" : '')
+                        . $notesHint);
+
+                default:
+                    return trim("📍 {$name}{$locationStr}{$taglineStr}\n"
+                        . ($ratingLine ? "{$ratingLine}\n" : '')
+                        . ($campaignRef ? "{$campaignRef}\n" : '')
+                        . $notesHint);
+            }
+
+        case 'instagram_caption':
+            switch ($style) {
+                case 'tiktok':
+                case 'friendly':
+                    return trim("✨ {$name}{$locationStr} is HERE for you! 🙌\n\n"
+                        . ($tagline ? "\"{$tagline}\" 💬\n\n" : '')
+                        . ($services ? "What they do: {$services}\n\n" : '')
+                        . ($ratingLine ? "⭐ {$ratingLine}\n\n" : '')
+                        . "Save this post if you need reliable {$category} services{$locationStr} 📌\n\n"
+                        . ($campaignRef ? "👉 {$campaignRef}\n\n" : '')
+                        . "#local #support #{$category} #smallbusiness #community"
+                        . $notesHint);
+
+                default:
+                    return trim("📸 {$name}{$categoryStr}{$locationStr}{$taglineStr}\n\n"
+                        . ($services ? "{$services}\n\n" : '')
+                        . ($ratingLine ? "⭐ {$ratingLine}\n\n" : '')
+                        . ($campaignRef ? "👉 {$campaignRef}\n\n" : '')
+                        . "#business #local #{$category} #community"
+                        . $notesHint);
+            }
+
+        case 'tiktok_concept':
+            return trim("🎬 TikTok Content Idea for {$name}\n\n"
+                . "HOOK (0–3 sec): \"Did you know there's a {$category} business{$locationStr} that can help you today?\"\n\n"
+                . "MIDDLE (3–20 sec):\n"
+                . "- Introduce {$name}{$taglineStr}\n"
+                . ($services ? "- Highlight: {$services}\n" : '')
+                . ($ratingLine ? "- Show social proof: {$ratingLine}\n" : '')
+                . "\nCALL TO ACTION:\n"
+                . ($campaignRef ? "- {$campaignRef}\n" : "- \"Follow for more local business tips!\"\n")
+                . "\n💡 Suggested style: upbeat, fast cuts, on-screen text overlays"
+                . $notesHint);
+
+        case 'whatsapp_message':
+            switch ($style) {
+                case 'friendly':
+                case 'whatsapp':
+                    return trim("Hi there! 👋\n\n"
+                        . "Just wanted to share — {$name}{$locationStr} offers great {$category} services"
+                        . ($tagline ? " \"{$tagline}\")" : '') . ".\n\n"
+                        . ($services ? "They can help with: {$services}\n\n" : '')
+                        . ($ratingLine ? "⭐ {$ratingLine}\n\n" : '')
+                        . ($campaignRef ? "👉 {$campaignRef}\n\n" : '')
+                        . "Hope this is helpful! 😊"
+                        . $notesHint);
+
+                default:
+                    return trim("Hello,\n\nI'd like to bring {$name}{$locationStr} to your attention."
+                        . " As a trusted {$category} provider{$taglineStr}, they may be able to assist you.\n\n"
+                        . ($services ? "Services include: {$services}\n\n" : '')
+                        . ($ratingLine ? "Customer rating: {$ratingLine}\n\n" : '')
+                        . ($campaignRef ? "{$campaignRef}\n\n" : '')
+                        . "Please feel free to reach out for more information."
+                        . $notesHint);
+            }
+
+        case 'review_request':
+            return trim("Hi,\n\nThank you for choosing {$name}{$locationStr}! "
+                . "We really appreciate your support.\n\n"
+                . "If you've had a positive experience with us, we'd love to hear about it. "
+                . "Your honest feedback helps other customers find trusted {$category} services{$locationStr} and helps us keep improving.\n\n"
+                . "It only takes a minute — and it means a lot to us.\n\n"
+                . "Thank you again,\nThe {$name} Team"
+                . $notesHint);
+
+        case 'customer_followup':
+            return trim("Hi,\n\nJust checking in to see how things are going after your recent experience with {$name}{$locationStr}.\n\n"
+                . "We hope everything went well! If you have any questions, feedback, or need further assistance, "
+                . "please don't hesitate to get in touch — we're always happy to help.\n\n"
+                . ($campaignRef ? "Also, you might be interested in: {$campaignRef}\n\n" : '')
+                . "Thank you for your continued support.\n\nWarm regards,\nThe {$name} Team"
+                . $notesHint);
+
+        case 'promotional_post':
+            return trim("🎯 Looking for trusted {$category} services{$locationStr}?\n\n"
+                . "{$name} is ready to help{$taglineStr}.\n\n"
+                . ($services ? "What we offer:\n" . implode("\n", array_map(fn($s) => "• " . trim($s), explode(',', $services))) . "\n\n" : '')
+                . ($ratingLine ? "⭐ {$ratingLine}\n\n" : '')
+                . ($campaignRef ? "📌 Current focus: {$campaignRef}\n\n" : '')
+                . "Get in touch today to find out how we can help you."
+                . $notesHint);
+
+        case 'event_promotion':
+            return trim("📅 {$name}{$locationStr} — Upcoming Activity\n\n"
+                . ($userNotes ? "{$userNotes}\n\n" : "We have something exciting coming up!\n\n")
+                . ($tagline ? "\"{$tagline}\"\n\n" : '')
+                . ($ratingLine ? "⭐ {$ratingLine}\n\n" : '')
+                . "Stay tuned for more details, or get in touch to find out more.\n\n"
+                . ($campaignRef ? "👉 {$campaignRef}" : "We look forward to seeing you!"));
+    }
+
+    return "Content generated for {$name}{$locationStr}{$taglineStr}.";
+}

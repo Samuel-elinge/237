@@ -31,7 +31,7 @@ $listing = $listingSt->fetch();
 if (!$listing) redirect(SITE_URL . '/partner/portfolio');
 
 $tab = $_GET['tab'] ?? 'overview';
-$validTabs = ['overview','growth_plan','tasks','leads','campaigns','content','reviews','activity','opportunities','reports'];
+$validTabs = ['overview','growth_plan','tasks','leads','campaigns','content','reviews','activity','opportunities','reports','ai'];
 if (!in_array($tab, $validTabs)) $tab = 'overview';
 
 // ── POST handler ────────────────────────────────────────────────
@@ -195,6 +195,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         partnerAuditLog($partnerId, $userId, $listingId, 'task_completed', "Task #{$taskId}");
     }
 
+    // AI CONTENT GENERATE
+    if ($action === 'ai_generate_content') {
+        $contentType = $_POST['ai_content_type'] ?? 'social_post';
+        $platform    = trim($_POST['ai_platform'] ?? '');
+        $style       = trim($_POST['ai_style'] ?? 'professional');
+        $userNotes   = trim($_POST['ai_notes'] ?? '');
+        $validTypes  = ['social_post','promotional_post','review_request','customer_followup','event_promotion','whatsapp_message','instagram_caption','tiktok_concept'];
+        $validStyles = ['professional','friendly','short','promotional','tiktok','whatsapp'];
+        if (in_array($contentType, $validTypes) && in_array($style, $validStyles)) {
+            // Gather business context (verified data only — no fabrication)
+            $ctx = [];
+            $ctx['business']  = $listing['title'] ?? '';
+            $ctx['category']  = $listing['cat_en'] ?? '';
+            $ctx['city']      = $listing['city'] ?? '';
+            $ctx['tagline']   = $listing['tagline'] ?? '';
+            $ctx['services']  = $listing['services'] ?? '';
+            $ctx['avg_rating'] = $listing['avg_rating'] ? round($listing['avg_rating'], 1) : null;
+            $ctx['review_count'] = (int)($listing['review_count'] ?? 0);
+            // Recent campaign for context
+            $ctxCamp = $pdo->prepare("SELECT name, offer, call_to_action FROM campaigns WHERE listing_id=? AND partner_id=? AND status='active' ORDER BY created_at DESC LIMIT 1");
+            $ctxCamp->execute([$listingId, $partnerId]);
+            $ctx['active_campaign'] = $ctxCamp->fetch(PDO::FETCH_ASSOC) ?: null;
+            // Generate content using rule-based template engine
+            $generated = generateAIContent($contentType, $style, $ctx, $userNotes);
+            // Store in ai_generated_content
+            $insCtx = json_encode(['style'=>$style,'platform'=>$platform,'notes'=>$userNotes,'context'=>$ctx]);
+            $pdo->prepare("INSERT INTO ai_generated_content
+                (partner_id, listing_id, user_id, content_type, platform, style, prompt_summary, generated_text, approval_status)
+                VALUES (?,?,?,?,?,?,?,?,'pending')")
+                ->execute([$partnerId, $listingId, $userId, $contentType, $platform ?: null, $style,
+                           substr("$style $contentType for {$ctx['business']}", 0, 499),
+                           $generated]);
+            $newContentId = (int)$pdo->lastInsertId();
+            // Audit log
+            $pdo->prepare("INSERT INTO ai_audit_log
+                (partner_id, listing_id, user_id, action_type, ref_type, ref_id, prompt_summary, generated_output, approval_status)
+                VALUES (?,?,?,'content_generated','ai_generated_content',?,?,?,'pending')")
+                ->execute([$partnerId, $listingId, $userId, $newContentId,
+                           "Generate $style $contentType", $generated]);
+            setFlash('ai_content', $generated . '|||' . $newContentId);
+        }
+    }
+
+    // AI CONTENT APPROVE → save to content_items
+    if ($action === 'ai_approve_content') {
+        $genId  = (int)($_POST['gen_id'] ?? 0);
+        $edited = trim($_POST['edited_text'] ?? '');
+        if ($genId && $edited) {
+            $chk = $pdo->prepare("SELECT * FROM ai_generated_content WHERE id=? AND partner_id=? AND listing_id=?");
+            $chk->execute([$genId, $partnerId, $listingId]);
+            $genRow = $chk->fetch();
+            if ($genRow) {
+                // Mark approved
+                $pdo->prepare("UPDATE ai_generated_content SET edited_text=?, approval_status='approved', approved_by=?, approved_at=NOW() WHERE id=?")
+                    ->execute([$edited, $userId, $genId]);
+                // Save as content item (draft)
+                $pdo->prepare("INSERT INTO content_items (partner_id, listing_id, content_type, title, body, platform, status) VALUES (?,?,?,?,?,?,'draft')")
+                    ->execute([$partnerId, $listingId, $genRow['content_type'], 'AI: '.$genRow['style'].' '.$genRow['content_type'], $edited, $genRow['platform']]);
+                // Update audit log
+                $pdo->prepare("UPDATE ai_audit_log SET approval_status='approved', approved_by=?, approved_at=NOW(), user_edits=?, final_version=? WHERE ref_type='ai_generated_content' AND ref_id=?")
+                    ->execute([$userId, $edited !== $genRow['generated_text'] ? $edited : null, $edited, $genId]);
+                logBusinessActivity($listingId, $partnerId, $userId, 'ai_content_approved', 'AI content approved and saved as draft', 'content');
+                setFlash('success', 'Content approved and saved as a draft in the Content tab.');
+            }
+        }
+    }
+
+    // AI CONTENT REJECT
+    if ($action === 'ai_reject_content') {
+        $genId = (int)($_POST['gen_id'] ?? 0);
+        if ($genId) {
+            $pdo->prepare("UPDATE ai_generated_content SET approval_status='rejected', approved_by=?, approved_at=NOW() WHERE id=? AND partner_id=? AND listing_id=?")
+                ->execute([$userId, $genId, $partnerId, $listingId]);
+        }
+    }
+
     header('Location: ?id=' . $listingId . '&tab=' . $tab);
     exit;
 }
@@ -238,7 +314,7 @@ $taskSumSt->execute([$listingId, $partnerId]);
 $taskSummary = $taskSumSt->fetch();
 
 // Tab-specific data
-$leads = $tasks = $campaigns = $contents = $reviewCampaigns = $opportunities = $activityFeed = [];
+$leads = $tasks = $campaigns = $contents = $reviewCampaigns = $opportunities = $activityFeed = $aiHistory = [];
 switch ($tab) {
     case 'leads':
         $st = $pdo->prepare("SELECT pl.*, la.activity_type AS last_act FROM partner_leads pl LEFT JOIN lead_activities la ON la.id=(SELECT id FROM lead_activities WHERE lead_id=pl.id ORDER BY created_at DESC LIMIT 1) WHERE pl.listing_id=? AND pl.partner_id=? ORDER BY FIELD(pl.status,'new','follow_up','contacted','qualified','converted','lost','closed'), pl.last_activity DESC");
@@ -277,6 +353,11 @@ switch ($tab) {
         $st = $pdo->prepare("SELECT * FROM growth_reports WHERE listing_id=? AND partner_id=? ORDER BY created_at DESC");
         $st->execute([$listingId, $partnerId]);
         $reports = $st->fetchAll();
+        break;
+    case 'ai':
+        $st = $pdo->prepare("SELECT * FROM ai_generated_content WHERE listing_id=? AND partner_id=? ORDER BY created_at DESC LIMIT 30");
+        $st->execute([$listingId, $partnerId]);
+        $aiHistory = $st->fetchAll();
         break;
 }
 
@@ -430,6 +511,7 @@ function tabUrl(string $t, int $lid): string {
         'activity'    => '📅 Activity',
         'opportunities'=> '💡 Opportunities',
         'reports'     => '📈 Reports',
+        'ai'          => '✦ AI Assistant',
     ];
     foreach ($tabs as $tk => $tl): ?>
     <a href="<?= tabUrl($tk, $listingId) ?>" class="ws-tab <?= $tab===$tk?'active':'' ?>"><?= $tl ?></a>
@@ -1114,6 +1196,216 @@ function tabUrl(string $t, int $lid): string {
   </div>
 
   <?php endif; ?>
+
+  <?php // ═══ AI CONTENT ASSISTANT ═══════════════════════════════
+  if ($tab === 'ai'):
+    // Retrieve flash: generated content + id
+    $aiFlash      = getFlash('ai_content');
+    $aiGenerated  = '';
+    $aiGenId      = 0;
+    if ($aiFlash) {
+        $parts       = explode('|||', $aiFlash, 2);
+        $aiGenerated = $parts[0] ?? '';
+        $aiGenId     = (int)($parts[1] ?? 0);
+    }
+    $successMsg = getFlash('success');
+  ?>
+  <div class="ws-grid">
+    <div style="flex:1 1 60%;">
+
+      <?php if ($successMsg): ?>
+      <div style="background:#d1fae5; border:1px solid #6ee7b7; border-radius:8px; padding:.9rem 1.2rem; margin-bottom:1.2rem; color:#065f46; font-size:.9rem;">
+        ✅ <?= e($successMsg) ?>
+      </div>
+      <?php endif; ?>
+
+      <!-- APPROVAL PANEL — shown immediately after generation -->
+      <?php if ($aiGenerated && $aiGenId): ?>
+      <div class="ws-card" style="border-left:4px solid var(--primary); margin-bottom:1.5rem;">
+        <h3 style="margin-bottom:.8rem;">✦ AI Content Ready — Review &amp; Approve</h3>
+        <p style="font-size:.82rem; color:var(--muted); margin-bottom:1rem;">
+          Review and edit the content below before approving. Only approved content is saved to your Content tab.
+          <strong>Do not approve content that contains inaccurate information about this business.</strong>
+        </p>
+        <form method="POST" action="?id=<?= $listingId ?>&tab=ai">
+          <?= csrfField() ?>
+          <input type="hidden" name="action" value="ai_approve_content">
+          <input type="hidden" name="gen_id" value="<?= $aiGenId ?>">
+          <textarea name="edited_text" rows="8" style="width:100%; padding:.7rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:.9rem; resize:vertical;"><?= e($aiGenerated) ?></textarea>
+          <div style="display:flex; gap:.7rem; margin-top:.8rem; flex-wrap:wrap;">
+            <button type="submit" style="background:var(--primary); color:#fff; border:none; border-radius:6px; padding:.55rem 1.3rem; cursor:pointer; font-weight:600;">✅ Approve &amp; Save Draft</button>
+            <a href="?id=<?= $listingId ?>&tab=ai" style="display:inline-block; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:.55rem 1.1rem; font-size:.88rem; color:var(--muted); text-decoration:none;">✕ Discard</a>
+          </div>
+        </form>
+        <!-- Separate reject form -->
+        <form method="POST" action="?id=<?= $listingId ?>&tab=ai" style="margin-top:.4rem;">
+          <?= csrfField() ?>
+          <input type="hidden" name="action" value="ai_reject_content">
+          <input type="hidden" name="gen_id" value="<?= $aiGenId ?>">
+          <button type="submit" style="background:none; border:none; color:#e63946; cursor:pointer; font-size:.82rem; padding:0; text-decoration:underline;">
+            ✗ Reject this content
+          </button>
+        </form>
+      </div>
+      <?php endif; ?>
+
+      <!-- GENERATE FORM -->
+      <div class="ws-card">
+        <h3 style="margin-bottom:.3rem;">Generate AI Content</h3>
+        <p style="font-size:.82rem; color:var(--muted); margin-bottom:1.2rem;">
+          Content is generated using verified information about this business — no prices, offers, or unverified claims are included.
+          All content requires your review and approval before it is saved.
+        </p>
+        <form method="POST" action="?id=<?= $listingId ?>&tab=ai">
+          <?= csrfField() ?>
+          <input type="hidden" name="action" value="ai_generate_content">
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+            <div>
+              <label style="font-size:.82rem; font-weight:600; display:block; margin-bottom:.4rem;">Content Type</label>
+              <select name="ai_content_type" style="width:100%; padding:.55rem; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);">
+                <optgroup label="Social Media">
+                  <option value="social_post">Social Post (general)</option>
+                  <option value="instagram_caption">Instagram Caption</option>
+                  <option value="tiktok_concept">TikTok Concept / Script</option>
+                  <option value="promotional_post">Promotional Post</option>
+                </optgroup>
+                <optgroup label="Messaging">
+                  <option value="whatsapp_message">WhatsApp Message</option>
+                  <option value="review_request">Review Request</option>
+                  <option value="customer_followup">Customer Follow-Up</option>
+                </optgroup>
+                <optgroup label="Events">
+                  <option value="event_promotion">Event Promotion</option>
+                </optgroup>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:.82rem; font-weight:600; display:block; margin-bottom:.4rem;">Style / Tone</label>
+              <select name="ai_style" style="width:100%; padding:.55rem; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);">
+                <option value="professional">Professional</option>
+                <option value="friendly">Friendly</option>
+                <option value="short">Short &amp; Sharp</option>
+                <option value="promotional">Promotional</option>
+                <option value="whatsapp">WhatsApp Friendly</option>
+                <option value="tiktok">TikTok / Gen Z</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-bottom:1rem;">
+            <label style="font-size:.82rem; font-weight:600; display:block; margin-bottom:.4rem;">Platform (optional)</label>
+            <input type="text" name="ai_platform" placeholder="e.g. Facebook, Instagram, WhatsApp..." maxlength="100"
+              style="width:100%; padding:.55rem; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);">
+          </div>
+
+          <div style="margin-bottom:1.2rem;">
+            <label style="font-size:.82rem; font-weight:600; display:block; margin-bottom:.4rem;">
+              Additional Notes <span style="font-weight:400; color:var(--muted);">(optional — add context, key messages, or anything specific to include)</span>
+            </label>
+            <textarea name="ai_notes" rows="3" maxlength="500" placeholder="e.g. We're focusing on our plumbing repair services this week. Mention our free call-out policy."
+              style="width:100%; padding:.55rem; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); resize:vertical;"></textarea>
+          </div>
+
+          <button type="submit" style="background:var(--primary); color:#fff; border:none; border-radius:6px; padding:.65rem 1.6rem; cursor:pointer; font-weight:600; font-size:.95rem;">
+            ✦ Generate Content
+          </button>
+          <p style="font-size:.75rem; color:var(--muted); margin-top:.7rem;">
+            Content is generated using only verified business information from the 237biz listing.
+            Prices, promotions, opening hours, and testimonials are never fabricated.
+          </p>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: Context summary -->
+    <div style="flex:0 0 260px; min-width:220px;">
+      <div class="ws-card" style="font-size:.83rem;">
+        <h4 style="margin-bottom:.8rem; font-size:.9rem;">Business Context Used</h4>
+        <div style="display:flex; flex-direction:column; gap:.5rem;">
+          <div><span style="color:var(--muted);">Business:</span> <strong><?= e($listing['title']) ?></strong></div>
+          <?php if ($listing['cat_en']): ?>
+          <div><span style="color:var(--muted);">Category:</span> <?= e($listing['cat_en']) ?></div>
+          <?php endif; ?>
+          <?php if ($listing['city']): ?>
+          <div><span style="color:var(--muted);">Location:</span> <?= e($listing['city']) ?></div>
+          <?php endif; ?>
+          <?php if ($listing['tagline']): ?>
+          <div><span style="color:var(--muted);">Tagline:</span> <em><?= e($listing['tagline']) ?></em></div>
+          <?php endif; ?>
+          <?php if ($listing['avg_rating'] && (int)$listing['review_count'] >= 3): ?>
+          <div><span style="color:var(--muted);">Rating:</span> ⭐ <?= number_format((float)$listing['avg_rating'],1) ?> (<?= (int)$listing['review_count'] ?> reviews)</div>
+          <?php endif; ?>
+        </div>
+        <hr style="margin:.9rem 0; border:none; border-top:1px solid var(--border);">
+        <p style="color:var(--muted); font-size:.78rem; line-height:1.5;">
+          Only information from the verified business listing is used. Content is never fabricated — no invented prices, hours, testimonials, or statistics.
+        </p>
+      </div>
+
+      <!-- Quick tips -->
+      <div class="ws-card" style="font-size:.82rem; margin-top:1rem;">
+        <h4 style="margin-bottom:.7rem; font-size:.88rem;">💡 Tips</h4>
+        <ul style="padding-left:1.1rem; line-height:1.7; color:var(--muted);">
+          <li>Use <strong>Additional Notes</strong> to add specific context for this piece of content</li>
+          <li>Always review generated content before approving</li>
+          <li>Approved content is saved as a <strong>Draft</strong> in the Content tab</li>
+          <li>Activate content from the Content tab when ready to use</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY TABLE -->
+  <?php if (!empty($aiHistory)): ?>
+  <div class="ws-card" style="margin-top:1.5rem;">
+    <h3 style="margin-bottom:1rem;">Previous Generations</h3>
+    <div style="overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:.83rem;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border); text-align:left; color:var(--muted);">
+            <th style="padding:.5rem .8rem;">Date</th>
+            <th style="padding:.5rem .8rem;">Type</th>
+            <th style="padding:.5rem .8rem;">Style</th>
+            <th style="padding:.5rem .8rem;">Platform</th>
+            <th style="padding:.5rem .8rem;">Status</th>
+            <th style="padding:.5rem .8rem;">Preview</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($aiHistory as $gen):
+            $statusColour = match($gen['approval_status']) {
+                'approved' => '#059669',
+                'rejected' => '#dc2626',
+                'pending'  => '#d97706',
+                default    => 'var(--muted)',
+            };
+          ?>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:.5rem .8rem; white-space:nowrap; color:var(--muted);"><?= date('j M Y', strtotime($gen['created_at'])) ?></td>
+            <td style="padding:.5rem .8rem;"><?= e(str_replace('_',' ', $gen['content_type'])) ?></td>
+            <td style="padding:.5rem .8rem;"><?= e($gen['style'] ?? '—') ?></td>
+            <td style="padding:.5rem .8rem;"><?= e($gen['platform'] ?? '—') ?></td>
+            <td style="padding:.5rem .8rem;">
+              <span style="font-weight:600; color:<?= $statusColour ?>;">
+                <?= ucfirst($gen['approval_status']) ?>
+              </span>
+            </td>
+            <td style="padding:.5rem .8rem; max-width:280px;">
+              <span title="<?= e($gen['generated_text']) ?>" style="display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--muted);">
+                <?= e(mb_substr($gen['generated_text'], 0, 80)) ?>…
+              </span>
+            </td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <?php endif; ?>
+
+  <?php endif; // end ai tab ?>
 
 </div>
 
