@@ -121,6 +121,7 @@ RewriteRule ^partner/content/?$      partner/content.php      [L,QSA]
 RewriteRule ^partner/reports/?$          partner/reports.php          [L,QSA]
 RewriteRule ^partner/recommendations/?$  partner/recommendations.php  [L,QSA]
 RewriteRule ^partner/templates/?$        partner/templates.php        [L,QSA]
+RewriteRule ^partner/ai-plan/?$          partner/ai-plan.php          [L,QSA]
 RewriteRule ^partner/alerts/?$           partner/alerts.php           [L,QSA]
 
 # Join & Partners

@@ -579,6 +579,7 @@ require_once __DIR__ . '/../includes/header.php';
         <h2>⚡ Quick Actions</h2>
         <div class="quick-links">
             <a href="<?= SITE_URL ?>/partner/recommendations" class="quick-link"><span class="icon">✦</span>AI Recommendations<span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/ai-plan" class="quick-link"><span class="icon">🧠</span>AI Growth Plan<span class="arrow">→</span></a>
             <a href="<?= SITE_URL ?>/partner/alerts" class="quick-link"><span class="icon">🔔</span>Growth Alerts<span class="arrow">→</span></a>
             <a href="<?= SITE_URL ?>/partner/portfolio" class="quick-link"><span class="icon">📋</span>View Portfolio<span class="arrow">→</span></a>
             <a href="<?= SITE_URL ?>/partner/campaigns" class="quick-link"><span class="icon">📣</span>Manage Campaigns<span class="arrow">→</span></a>
