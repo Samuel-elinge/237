@@ -98,7 +98,6 @@ tryq($pdo, "total campaigns count", "SELECT COUNT(*) FROM partner_campaigns WHER
 // Test partner-helpers include
 echo "\n--- partner-helpers.php ---\n";
 try {
-    require_once __DIR__ . '/../includes/helpers.php';
     require_once __DIR__ . '/../includes/partner-helpers.php';
     echo "✅ partner-helpers.php loaded\n";
     // Test getAttentionQueue
