@@ -143,6 +143,7 @@ RewriteRule ^admin/market-penetration/?$   admin/market-penetration.php   [L,QSA
 RewriteRule ^admin/network-analytics/?$    admin/network-analytics.php    [L,QSA]
 RewriteRule ^admin/partner-performance/?$  admin/partner-performance.php  [L,QSA]
 RewriteRule ^admin/quality-monitoring/?$   admin/quality-monitoring.php   [L,QSA]
+RewriteRule ^admin/strategic-partners/?$   admin/strategic-partners.php   [L,QSA]
 RewriteRule ^partner-request/?$          partner-request.php          [L,QSA]
 
 # Join & Partners
