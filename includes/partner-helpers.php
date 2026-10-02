@@ -53,6 +53,18 @@ if (!function_exists('csrfCheck')) {
 }
 
 /**
+ * Verify CSRF token and abort with 403 if invalid.
+ */
+if (!function_exists('verifyCsrf')) {
+    function verifyCsrf(): void {
+        if (!csrfCheck()) {
+            http_response_code(403);
+            exit('Invalid CSRF token.');
+        }
+    }
+}
+
+/**
  * Require an active/approved growth_partner. Redirect if not.
  */
 function requireGrowthPartner(): array {
