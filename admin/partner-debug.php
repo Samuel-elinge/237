@@ -1,7 +1,6 @@
 <?php
 /**
  * Temporary diagnostic — DELETE after use
- * Shows the exact error from partner/dashboard.php
  */
 if (!isset($_GET['key']) || $_GET['key'] !== 'debug237') {
     http_response_code(403); exit('Forbidden');
@@ -10,9 +9,6 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/helpers.php';
-require_once __DIR__ . '/../includes/partner-helpers.php';
 
 $pdo = db();
 echo "<h2>DB Table Check</h2><pre>";
@@ -34,11 +30,11 @@ foreach ($tables as $t) {
     }
 }
 
-echo "\n<h2>partner_leads columns</h2>";
-$cols = $pdo->query("SHOW COLUMNS FROM partner_leads");
-foreach ($cols->fetchAll() as $c) echo $c['Field'] . " (" . $c['Type'] . ")\n";
-
-echo "\n<h2>Session</h2>";
-echo "user_id: " . ($_SESSION['user_id'] ?? 'none') . "\n";
-echo "role: " . ($_SESSION['role'] ?? 'none') . "\n";
+echo "\n<h2>partner_leads columns</h2><pre>";
+try {
+    $cols = $pdo->query("SHOW COLUMNS FROM partner_leads");
+    foreach ($cols->fetchAll() as $c) echo $c['Field'] . " (" . $c['Type'] . ")\n";
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
+}
 echo "</pre>";
