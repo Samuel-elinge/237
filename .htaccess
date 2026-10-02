@@ -132,6 +132,11 @@ RewriteRule ^partner/certifications/?$   partner/certifications.php   [L,QSA]
 RewriteRule ^partner/capacity/?$         partner/capacity.php         [L,QSA]
 RewriteRule ^partner/assignments/?$      partner/assignments.php      [L,QSA]
 RewriteRule ^partner/feedback/?$         partner/feedback.php         [L,QSA]
+RewriteRule ^partner/academy/?$          partner/academy.php          [L,QSA]
+RewriteRule ^partner/resources/?$        partner/resources.php        [L,QSA]
+RewriteRule ^partner/opportunities/?$    partner/opportunities.php    [L,QSA]
+RewriteRule ^partner/referrals/?$        partner/referrals.php        [L,QSA]
+RewriteRule ^partner/agreements/?$       partner/agreements.php       [L,QSA]
 RewriteRule ^partner-request/?$          partner-request.php          [L,QSA]
 
 # Join & Partners
