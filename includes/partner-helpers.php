@@ -27,6 +27,32 @@ if (!function_exists('getFlash')) {
 }
 
 /**
+ * Generate a CSRF token hidden input field.
+ */
+if (!function_exists('csrfField')) {
+    function csrfField(): string {
+        if (!isset($_SESSION)) session_start();
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+        $token = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8');
+        return '<input type="hidden" name="csrf_token" value="' . $token . '">';
+    }
+}
+
+/**
+ * Validate the CSRF token from a POST request.
+ */
+if (!function_exists('csrfCheck')) {
+    function csrfCheck(): bool {
+        if (!isset($_SESSION)) session_start();
+        $posted = $_POST['csrf_token'] ?? '';
+        $stored = $_SESSION['csrf_token'] ?? '';
+        return $stored && hash_equals($stored, $posted);
+    }
+}
+
+/**
  * Require an active/approved growth_partner. Redirect if not.
  */
 function requireGrowthPartner(): array {
