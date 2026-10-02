@@ -256,6 +256,11 @@ require_once __DIR__ . '/../includes/header.php';
               <button class="btn btn-primary" style="font-size:0.85rem;" onclick="return confirm('Reactivate this partner?')">↺ Reactivate</button>
             </form>
           <?php endif; ?>
+          <form method="POST" action="<?= SITE_URL ?>/admin/login-as.php" style="display:inline;" target="_blank">
+            <?= csrfField() ?>
+            <input type="hidden" name="user_id" value="<?= (int)$viewPartner['user_id'] ?>">
+            <button class="btn btn-outline" style="font-size:0.85rem;color:#8ab4f8;border-color:#8ab4f8;">👁 View Partner Portal</button>
+          </form>
         </div>
       </div>
 
@@ -395,6 +400,13 @@ require_once __DIR__ . '/../includes/header.php';
                 <td style="white-space:nowrap;"><?= date('j M Y', strtotime($p['created_at'])) ?></td>
                 <td style="white-space:nowrap;">
                   <a href="?pid=<?= $p['id'] ?>" class="action-link">View →</a>
+                  &nbsp;
+                  <form method="POST" action="<?= SITE_URL ?>/admin/login-as.php" style="display:inline;" target="_blank">
+                    <?= csrfField() ?>
+                    <input type="hidden" name="user_id" value="<?= (int)$p['user_id'] ?>">
+                    <button style="background:none;border:none;color:#8ab4f8;cursor:pointer;font-size:0.8rem;font-weight:700;"
+                      title="View partner portal as <?= e(addslashes($p['user_name'])) ?>">👁 Login as</button>
+                  </form>
                   <?php if (in_array($p['status'], ['pending','applicant'])): ?>
                     &nbsp;
                     <form method="POST" style="display:inline;">

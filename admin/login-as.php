@@ -38,8 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $st->execute([$targetId]);
     $target = $st->fetch();
 
-    if (!$target || !in_array($target['role'], ['sales_staff', 'creator', 'user'])) {
-        flash('error', 'You can only impersonate agents, creators and standard users.');
+    if (!$target || !in_array($target['role'], ['sales_staff', 'creator', 'user', 'growth_partner'])) {
+        flash('error', 'You can only impersonate agents, creators, partners and standard users.');
         redirect(SITE_URL . '/admin/');
     }
 
@@ -56,6 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $destination = SITE_URL . '/agent/dashboard';
     } elseif ($target['role'] === 'creator') {
         $destination = SITE_URL . '/creator/dashboard';
+    } elseif ($target['role'] === 'growth_partner') {
+        $destination = SITE_URL . '/partner/dashboard';
     } else {
         $destination = SITE_URL . '/dashboard';
     }
