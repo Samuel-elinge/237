@@ -95,18 +95,41 @@ tryq($pdo, "active leads list", "
 
 tryq($pdo, "total campaigns count", "SELECT COUNT(*) FROM partner_campaigns WHERE partner_id=?", [$pid]);
 
-// Test partner-helpers include
-echo "\n--- partner-helpers.php ---\n";
+echo "\n--- Checking what partner/dashboard.php requires ---\n";
+
+// Check which includes exist on server
+$files = [
+    'config.php'          => __DIR__ . '/../includes/config.php',
+    'auth.php'            => __DIR__ . '/../includes/auth.php',
+    'helpers.php'         => __DIR__ . '/../includes/helpers.php',
+    'partner-helpers.php' => __DIR__ . '/../includes/partner-helpers.php',
+    'header.php'          => __DIR__ . '/../includes/header.php',
+];
+foreach ($files as $name => $path) {
+    echo (file_exists($path) ? "✅" : "❌") . " includes/$name\n";
+}
+
+echo "\n--- partner-helpers.php load test ---\n";
 try {
     require_once __DIR__ . '/../includes/partner-helpers.php';
     echo "✅ partner-helpers.php loaded\n";
-    // Test getAttentionQueue
     $q = getAttentionQueue($pid);
     echo "✅ getAttentionQueue() returned " . count($q) . " items\n";
-} catch (Exception $e) {
-    echo "❌ partner-helpers: " . $e->getMessage() . "\n";
-} catch (Error $e) {
-    echo "❌ partner-helpers ERROR: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine() . "\n";
+    $recs = getActiveRecommendations($pid, $pdo, null, 5);
+    echo "✅ getActiveRecommendations() returned " . count($recs) . " items\n";
+} catch (Throwable $e) {
+    echo "❌ " . get_class($e) . ": " . $e->getMessage() . "\n  in " . $e->getFile() . ":" . $e->getLine() . "\n";
+}
+
+echo "\n--- Live dashboard.php first 20 lines ---\n";
+$dashFile = __DIR__ . '/../partner/dashboard.php';
+if (file_exists($dashFile)) {
+    $lines = file($dashFile);
+    foreach (array_slice($lines, 0, 20) as $i => $line) {
+        echo ($i+1) . ": " . $line;
+    }
+} else {
+    echo "❌ partner/dashboard.php not found!\n";
 }
 
 echo "</pre>";
