@@ -25,3 +25,4 @@ uploads/*.png
 uploads/*.gif
 uploads/*.webp
 uploads/*.pdf
+admin/setup-test-partner.php
