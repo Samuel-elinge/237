@@ -123,6 +123,7 @@ RewriteRule ^partner/recommendations/?$  partner/recommendations.php  [L,QSA]
 RewriteRule ^partner/templates/?$        partner/templates.php        [L,QSA]
 RewriteRule ^partner/ai-plan/?$          partner/ai-plan.php          [L,QSA]
 RewriteRule ^partner/alerts/?$           partner/alerts.php           [L,QSA]
+RewriteRule ^partner/automation/?$       partner/automation.php       [L,QSA]
 
 # Join & Partners
 RewriteRule ^join/?$       join.php      [L,QSA]
