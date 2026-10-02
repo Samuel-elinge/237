@@ -30,7 +30,7 @@ function buildReportSnapshot(int $pid, int $lid, string $start, string $end, \PD
     $r->execute([$pid,$lid,$start.' 00:00:00',$end.' 23:59:59']); $snap['leads_in_period'] = (int)$r->fetchColumn();
 
     // Campaigns
-    $r = $pdo->prepare("SELECT status, COUNT(*) AS cnt FROM campaigns WHERE partner_id=? AND listing_id=? GROUP BY status");
+    $r = $pdo->prepare("SELECT status, COUNT(*) AS cnt FROM partner_campaigns WHERE partner_id=? AND listing_id=? GROUP BY status");
     $r->execute([$pid,$lid]); foreach ($r->fetchAll() as $row) $snap['campaigns'][$row['status']] = (int)$row['cnt'];
 
     // Campaign metrics in period

@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status = 'draft';
         if ($start && $start <= date('Y-m-d')) $status = 'active';
         if ($start && $start > date('Y-m-d'))  $status = 'scheduled';
-        $pdo->prepare("INSERT INTO campaigns (partner_id,listing_id,name,campaign_type,description,objective,
+        $pdo->prepare("INSERT INTO partner_campaigns (partner_id,listing_id,name,campaign_type,description,objective,
                          offer,call_to_action,target_audience,budget,start_date,end_date,status)
                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)")
             ->execute([$pid,$lid,$name,$type,$desc,$obj,$offer,$cta,$ta,$budget,$start,$end,$status]);
@@ -51,11 +51,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $allowed = ['draft','scheduled','active','paused','completed','cancelled'];
         if (!in_array($status,$allowed)) die('Invalid');
         // verify ownership
-        $row = $pdo->prepare("SELECT * FROM campaigns WHERE id=? AND partner_id=?");
+        $row = $pdo->prepare("SELECT * FROM partner_campaigns WHERE id=? AND partner_id=?");
         $row->execute([$cid,$pid]);
         $camp = $row->fetch();
         if (!$camp) die('Forbidden');
-        $pdo->prepare("UPDATE campaigns SET status=? WHERE id=?")->execute([$status,$cid]);
+        $pdo->prepare("UPDATE partner_campaigns SET status=? WHERE id=?")->execute([$status,$cid]);
         logBusinessActivity($camp['listing_id'],$pid,$userId,'campaign_updated',"Campaign '{$camp['name']}' status → $status",'campaign',$cid);
         setFlash('success','Campaign status updated.');
         redirect(SITE_URL.'/partner/campaigns?lid='.$camp['listing_id']);
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ── Log metrics ─────────────────────────────────────────────
     if ($action === 'log_metrics') {
         $cid  = (int)($_POST['campaign_id'] ?? 0);
-        $row  = $pdo->prepare("SELECT * FROM campaigns WHERE id=? AND partner_id=?");
+        $row  = $pdo->prepare("SELECT * FROM partner_campaigns WHERE id=? AND partner_id=?");
         $row->execute([$cid,$pid]);
         $camp = $row->fetch();
         if (!$camp) die('Forbidden');
@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $campRow = $pdo->prepare("SELECT c.*, l.title AS biz_name, l.tagline, l.services,
                                   cat.name_en AS cat_name, loc.name_en AS city
-                                  FROM campaigns c
+                                  FROM partner_campaigns c
                                   JOIN listings l ON l.id=c.listing_id
                                   JOIN categories cat ON cat.id=l.category_id
                                   JOIN locations loc ON loc.id=l.location_id
@@ -159,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("UPDATE ai_generated_content SET approval_status='approved', edited_text=?, approved_by=?, approved_at=NOW() WHERE id=? AND partner_id=?")
                 ->execute([$edited, $userId, $newId, $pid]);
             // Also create a content_items draft
-            $campRow2 = $pdo->prepare("SELECT listing_id FROM campaigns WHERE id=? AND partner_id=?");
+            $campRow2 = $pdo->prepare("SELECT listing_id FROM partner_campaigns WHERE id=? AND partner_id=?");
             $campRow2->execute([$cid, $pid]);
             $cr2 = $campRow2->fetch();
             if ($cr2) {
@@ -206,7 +206,7 @@ if ($filterStatus) { $where[] = "c.status = ?";          $params[] = $filterStat
 if ($filterType)   { $where[] = "c.campaign_type = ?";   $params[] = $filterType; }
 
 $sql = "SELECT c.*, l.title AS biz_name, loc.name_en AS city
-        FROM campaigns c
+        FROM partner_campaigns c
         JOIN listings l ON l.id = c.listing_id
         JOIN locations loc ON loc.id = l.location_id
         WHERE " . implode(' AND ', $where) . "
@@ -220,7 +220,7 @@ $campaignDetail = null;
 $metrics        = [];
 if (($view === 'metrics' || $view === 'ai') && $viewCid) {
     $r = $pdo->prepare("SELECT c.*, l.title AS biz_name, l.tagline, l.services, cat.name_en AS cat_name, loc.name_en AS city
-                        FROM campaigns c
+                        FROM partner_campaigns c
                         JOIN listings l ON l.id=c.listing_id
                         JOIN categories cat ON cat.id=l.category_id
                         JOIN locations loc ON loc.id=l.location_id
@@ -243,7 +243,7 @@ if ($view === 'ai' && $campaignDetail) {
 }
 
 /* ── Summary counts ──────────────────────────────────────────────── */
-$sumSt = $pdo->prepare("SELECT status, COUNT(*) AS cnt FROM campaigns WHERE partner_id=? GROUP BY status");
+$sumSt = $pdo->prepare("SELECT status, COUNT(*) AS cnt FROM partner_campaigns WHERE partner_id=? GROUP BY status");
 $sumSt->execute([$pid]);
 $statusCounts = [];
 foreach ($sumSt->fetchAll() as $r) $statusCounts[$r['status']] = (int)$r['cnt'];
