@@ -98,10 +98,10 @@ if ($view === 'calendar') {
     $params[] = $monthEnd . ' 23:59:59';
 }
 
-$sql = "SELECT ci.*, l.title AS biz_name, c.name AS camp_name
+$sql = "SELECT ci.*, l.title AS biz_name, c.title AS camp_name
         FROM content_items ci
         JOIN listings l ON l.id = ci.listing_id
-        LEFT JOIN campaigns c ON c.id = ci.campaign_id
+        LEFT JOIN partner_campaigns c ON c.id = ci.campaign_id
         WHERE " . implode(' AND ', $where) . "
         ORDER BY COALESCE(ci.scheduled_date, ci.created_at) " . ($view==='calendar'?'ASC':'DESC');
 $st = $pdo->prepare($sql);

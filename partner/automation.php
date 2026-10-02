@@ -354,14 +354,25 @@ $workflows    = [];
 $pendingRuns  = [];
 $runCounts    = [];
 if ($view === 'list') {
-    $wfs = $pdo->prepare("SELECT aw.*, l.title AS biz_name,
-                          (SELECT COUNT(*) FROM automation_steps WHERE workflow_id=aw.id) AS step_count
-                          FROM automation_workflows aw
-                          LEFT JOIN listings l ON l.id=aw.listing_id
-                          WHERE aw.partner_id=?
-                          ORDER BY aw.created_at DESC");
-    $wfs->execute([$pid]);
-    $workflows = $wfs->fetchAll();
+    try {
+        $wfs = $pdo->prepare("SELECT aw.*, l.title AS biz_name,
+                              (SELECT COUNT(*) FROM automation_steps WHERE workflow_id=aw.id) AS step_count
+                              FROM automation_workflows aw
+                              LEFT JOIN listings l ON l.id=aw.listing_id
+                              WHERE aw.partner_id=?
+                              ORDER BY aw.created_at DESC");
+        $wfs->execute([$pid]);
+        $workflows = $wfs->fetchAll();
+    } catch (PDOException $e) {
+        // automation_steps table may not exist yet; fall back to count=0
+        $wfs = $pdo->prepare("SELECT aw.*, l.title AS biz_name, 0 AS step_count
+                              FROM automation_workflows aw
+                              LEFT JOIN listings l ON l.id=aw.listing_id
+                              WHERE aw.partner_id=?
+                              ORDER BY aw.created_at DESC");
+        $wfs->execute([$pid]);
+        $workflows = $wfs->fetchAll();
+    }
 
     $pr = $pdo->prepare("SELECT ar.*, aw.name AS workflow_name, l.title AS biz_name
                          FROM automation_runs ar

@@ -5,6 +5,28 @@
  */
 
 /**
+ * Store a flash message in the session.
+ */
+if (!function_exists('setFlash')) {
+    function setFlash(string $type, string $message): void {
+        if (!isset($_SESSION)) session_start();
+        $_SESSION['_flash'][$type] = $message;
+    }
+}
+
+/**
+ * Retrieve and clear a flash message from the session.
+ */
+if (!function_exists('getFlash')) {
+    function getFlash(string $type = 'success'): ?string {
+        if (!isset($_SESSION)) session_start();
+        $msg = $_SESSION['_flash'][$type] ?? null;
+        unset($_SESSION['_flash'][$type]);
+        return $msg;
+    }
+}
+
+/**
  * Require an active/approved growth_partner. Redirect if not.
  */
 function requireGrowthPartner(): array {
