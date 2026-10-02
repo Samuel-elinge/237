@@ -124,6 +124,9 @@ RewriteRule ^partner/templates/?$        partner/templates.php        [L,QSA]
 RewriteRule ^partner/ai-plan/?$          partner/ai-plan.php          [L,QSA]
 RewriteRule ^partner/alerts/?$           partner/alerts.php           [L,QSA]
 RewriteRule ^partner/automation/?$       partner/automation.php       [L,QSA]
+RewriteRule ^partner/profile/?$          partner/profile.php          [L,QSA]
+RewriteRule ^partner/onboarding/?$       partner/onboarding.php       [L,QSA]
+RewriteRule ^partner-request/?$          partner-request.php          [L,QSA]
 
 # Join & Partners
 RewriteRule ^join/?$       join.php      [L,QSA]
