@@ -97,13 +97,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         setFlash('success','Metrics saved.');
         redirect(SITE_URL.'/partner/campaigns?lid='.$camp['listing_id'].'&view=metrics&cid='.$cid);
     }
+
+    // ── Campaign AI content generate ────────────────────────────────
+    if ($action === 'campaign_ai_generate') {
+        $cid         = (int)($_POST['campaign_id'] ?? 0);
+        $contentType = $_POST['content_type'] ?? 'social_post';
+        $style       = $_POST['style'] ?? 'professional';
+        $platform    = trim($_POST['platform'] ?? '');
+        $notes       = trim($_POST['notes'] ?? '');
+
+        $campRow = $pdo->prepare("SELECT c.*, l.name AS biz_name, l.tagline, l.services,
+                                  cat.name_en AS cat_name, loc.name_en AS city
+                                  FROM campaigns c
+                                  JOIN listings l ON l.id=c.listing_id
+                                  JOIN categories cat ON cat.id=l.category_id
+                                  JOIN locations loc ON loc.id=l.location_id
+                                  WHERE c.id=? AND c.partner_id=?");
+        $campRow->execute([$cid, $pid]);
+        $camp = $campRow->fetch();
+        if (!$camp) { setFlash('error','Campaign not found.'); redirect(SITE_URL.'/partner/campaigns'); }
+
+        // Build context — campaign name+CTA injected as active_campaign
+        $ctx = [
+            'business'        => $camp['biz_name'],
+            'category'        => $camp['cat_name'],
+            'city'            => $camp['city'],
+            'tagline'         => $camp['tagline'] ?? '',
+            'services'        => $camp['services'] ?? '',
+            'avg_rating'      => null,
+            'review_count'    => 0,
+            'active_campaign' => $camp['name'] . ($camp['call_to_action'] ? ' — ' . $camp['call_to_action'] : ''),
+        ];
+        // Fetch rating only if sufficient reviews
+        $rr = $pdo->prepare("SELECT COUNT(*) AS rc, ROUND(AVG(rating),1) AS ar FROM reviews WHERE listing_id=? AND status='approved'");
+        $rr->execute([$camp['listing_id']]);
+        $rrRow = $rr->fetch();
+        if ((int)$rrRow['rc'] >= 3) { $ctx['avg_rating'] = $rrRow['ar']; $ctx['review_count'] = (int)$rrRow['rc']; }
+
+        $validTypes  = ['social_post','instagram_caption','tiktok_concept','whatsapp_message','review_request','customer_followup','promotional_post','event_promotion'];
+        $validStyles = ['professional','friendly','short','promotional','whatsapp','tiktok'];
+        if (!in_array($contentType, $validTypes))  $contentType = 'social_post';
+        if (!in_array($style, $validStyles))        $style = 'professional';
+
+        $generated = generateAIContent($contentType, $style, $ctx, $notes);
+
+        $ins = $pdo->prepare("INSERT INTO ai_generated_content
+                              (partner_id, listing_id, user_id, campaign_id, content_type, style, platform, generated_text, prompt_summary, approval_status, created_at)
+                              VALUES (?,?,?,?,?,?,?,?,?,'pending',NOW())");
+        $ins->execute([$pid, $camp['listing_id'], $userId, $cid, $contentType, $style, $platform, $generated, $notes]);
+        $newId = (int)$pdo->lastInsertId();
+
+        partnerAuditLog($pid,$userId,'ai_content_generated',"Campaign AI $contentType for campaign $cid",[]);
+        setFlash('ai_campaign_content', $generated . '|||' . $newId . '|||' . $cid);
+        redirect(SITE_URL.'/partner/campaigns?view=ai&cid='.$cid);
+    }
+
+    // ── Campaign AI content approve ─────────────────────────────────
+    if ($action === 'campaign_ai_approve') {
+        $newId   = (int)($_POST['content_id'] ?? 0);
+        $edited  = trim($_POST['edited_text'] ?? '');
+        $cid     = (int)($_POST['campaign_id'] ?? 0);
+        if ($newId && $edited) {
+            $pdo->prepare("UPDATE ai_generated_content SET approval_status='approved', edited_text=?, approved_by=?, approved_at=NOW() WHERE id=? AND partner_id=?")
+                ->execute([$edited, $userId, $newId, $pid]);
+            // Also create a content_items draft
+            $campRow2 = $pdo->prepare("SELECT listing_id FROM campaigns WHERE id=? AND partner_id=?");
+            $campRow2->execute([$cid, $pid]);
+            $cr2 = $campRow2->fetch();
+            if ($cr2) {
+                $pdo->prepare("INSERT INTO content_items (listing_id,partner_id,campaign_id,content_type,platform,body,status,created_at)
+                               VALUES (?,?,?,'social_post',?,?,'draft',NOW())")
+                    ->execute([$cr2['listing_id'], $pid, $cid, '', $edited]);
+            }
+            partnerAuditLog($pid,$userId,'ai_content_approved',"Campaign AI content $newId approved",[]);
+            setFlash('success','Content approved and saved as a draft in the Content Calendar.');
+        }
+        redirect(SITE_URL.'/partner/campaigns?view=ai&cid='.$cid);
+    }
+
+    // ── Campaign AI content reject ──────────────────────────────────
+    if ($action === 'campaign_ai_reject') {
+        $newId = (int)($_POST['content_id'] ?? 0);
+        $cid   = (int)($_POST['campaign_id'] ?? 0);
+        if ($newId) {
+            $pdo->prepare("UPDATE ai_generated_content SET approval_status='rejected', approved_by=?, approved_at=NOW() WHERE id=? AND partner_id=?")
+                ->execute([$userId, $newId, $pid]);
+            partnerAuditLog($pid,$userId,'ai_content_rejected',"Campaign AI content $newId rejected",[]);
+        }
+        redirect(SITE_URL.'/partner/campaigns?view=ai&cid='.$cid);
+    }
 }
 
 /* ── Filters ─────────────────────────────────────────────────────── */
 $filterLid    = (int)($_GET['lid'] ?? 0);
 $filterStatus = $_GET['status'] ?? '';
 $filterType   = $_GET['type'] ?? '';
-$view         = $_GET['view'] ?? 'list';   // list | metrics
+$view         = $_GET['view'] ?? 'list';   // list | metrics | ai
 $viewCid      = (int)($_GET['cid'] ?? 0);
 
 /* ── Partner listings dropdown ───────────────────────────────────── */
@@ -131,15 +220,28 @@ $campaigns = $st->fetchAll();
 /* ── Metrics view ────────────────────────────────────────────────── */
 $campaignDetail = null;
 $metrics        = [];
-if ($view === 'metrics' && $viewCid) {
-    $r = $pdo->prepare("SELECT c.*, l.name AS biz_name FROM campaigns c JOIN listings l ON l.id=c.listing_id WHERE c.id=? AND c.partner_id=?");
+if (($view === 'metrics' || $view === 'ai') && $viewCid) {
+    $r = $pdo->prepare("SELECT c.*, l.name AS biz_name, l.tagline, l.services, cat.name_en AS cat_name, loc.name_en AS city
+                        FROM campaigns c
+                        JOIN listings l ON l.id=c.listing_id
+                        JOIN categories cat ON cat.id=l.category_id
+                        JOIN locations loc ON loc.id=l.location_id
+                        WHERE c.id=? AND c.partner_id=?");
     $r->execute([$viewCid, $pid]);
     $campaignDetail = $r->fetch();
-    if ($campaignDetail) {
+    if ($campaignDetail && $view === 'metrics') {
         $m = $pdo->prepare("SELECT * FROM campaign_metrics WHERE campaign_id=? ORDER BY metric_date DESC LIMIT 60");
         $m->execute([$viewCid]);
         $metrics = $m->fetchAll();
     }
+}
+
+/* ── AI view data ─────────────────────────────────────────────────── */
+$aiHistory = [];
+if ($view === 'ai' && $campaignDetail) {
+    $ah = $pdo->prepare("SELECT * FROM ai_generated_content WHERE campaign_id=? AND partner_id=? ORDER BY created_at DESC LIMIT 30");
+    $ah->execute([$viewCid, $pid]);
+    $aiHistory = $ah->fetchAll();
 }
 
 /* ── Summary counts ──────────────────────────────────────────────── */
@@ -220,7 +322,167 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="flash-error">✗ <?= e($flash) ?></div>
 <?php endif; ?>
 
-<?php if ($view === 'metrics' && $campaignDetail): ?>
+<?php if ($view === 'ai' && $campaignDetail): ?>
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CAMPAIGN AI CONTENT VIEW                                         -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<a href="<?= SITE_URL ?>/partner/campaigns" class="back-link">← Back to Campaigns</a>
+
+<div class="camp-header">
+    <h1>✦ AI Content: <?= e($campaignDetail['name']) ?></h1>
+    <p><?= e($campaignDetail['biz_name']) ?> · <?= ucwords(str_replace('_',' ',$campaignDetail['campaign_type'])) ?> · <?= ucfirst($campaignDetail['status']) ?></p>
+</div>
+
+<?php $aiCampaignFlash = getFlash('ai_campaign_content');
+if ($aiCampaignFlash):
+    [$genText, $genId, $genCid] = array_pad(explode('|||', $aiCampaignFlash, 3), 3, '');
+    $genId  = (int)$genId;
+    $genCid = (int)$genCid;
+?>
+<div style="background:#f5f3ff;border:2px solid #7c3aed;border-radius:12px;padding:20px;margin-bottom:24px">
+    <h3 style="color:#5b21b6;margin:0 0 12px">✦ Generated — Review Before Using</h3>
+    <form method="post">
+        <?= csrfField() ?>
+        <input type="hidden" name="action" value="campaign_ai_approve">
+        <input type="hidden" name="content_id" value="<?= $genId ?>">
+        <input type="hidden" name="campaign_id" value="<?= $genCid ?>">
+        <textarea name="edited_text" rows="6" style="width:100%;border:1px solid #ddd6fe;border-radius:8px;padding:12px;font-size:.95rem;resize:vertical;box-sizing:border-box"><?= e($genText) ?></textarea>
+        <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
+            <button type="submit" class="btn-xs primary" style="padding:8px 18px;font-size:.9rem">✓ Approve &amp; Save Draft</button>
+            <form method="post" style="display:inline">
+                <?= csrfField() ?>
+                <input type="hidden" name="action" value="campaign_ai_reject">
+                <input type="hidden" name="content_id" value="<?= $genId ?>">
+                <input type="hidden" name="campaign_id" value="<?= $genCid ?>">
+                <button type="submit" class="btn-xs red">✗ Reject</button>
+            </form>
+            <a href="<?= SITE_URL ?>/partner/campaigns?view=ai&cid=<?= $campaignDetail['id'] ?>" style="font-size:.85rem;color:#6b7280;margin-left:4px">Discard</a>
+        </div>
+    </form>
+    <p style="font-size:.8rem;color:#7c3aed;margin:10px 0 0">⚠ Review carefully — approved content saves as a Draft in your Content Calendar.</p>
+</div>
+<?php endif; ?>
+
+<?php if ($flash2 = getFlash('success')): ?>
+<div class="flash success"><?= e($flash2) ?></div>
+<?php endif; ?>
+
+<div style="display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start">
+<!-- Generate Form -->
+<div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px">
+    <h3 style="margin:0 0 16px;color:#1f2937">Generate Campaign Content</h3>
+    <form method="post">
+        <?= csrfField() ?>
+        <input type="hidden" name="action" value="campaign_ai_generate">
+        <input type="hidden" name="campaign_id" value="<?= $campaignDetail['id'] ?>">
+
+        <div style="margin-bottom:14px">
+            <label style="display:block;font-size:.87rem;font-weight:600;color:#374151;margin-bottom:5px">Content Type</label>
+            <select name="content_type" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:.9rem">
+                <optgroup label="Social Media">
+                    <option value="social_post">Social Post (general)</option>
+                    <option value="instagram_caption">Instagram Caption</option>
+                    <option value="tiktok_concept">TikTok Concept</option>
+                    <option value="promotional_post">Promotional Post</option>
+                </optgroup>
+                <optgroup label="Messaging">
+                    <option value="whatsapp_message">WhatsApp Message</option>
+                    <option value="review_request">Review Request</option>
+                    <option value="customer_followup">Customer Follow-Up</option>
+                </optgroup>
+                <optgroup label="Events">
+                    <option value="event_promotion">Event Promotion</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <div style="margin-bottom:14px">
+            <label style="display:block;font-size:.87rem;font-weight:600;color:#374151;margin-bottom:5px">Style</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <?php foreach (['professional'=>'Professional','friendly'=>'Friendly','short'=>'Short & Punchy','promotional'=>'Promotional','whatsapp'=>'WhatsApp','tiktok'=>'TikTok'] as $sv=>$sl): ?>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.85rem">
+                    <input type="radio" name="style" value="<?= $sv ?>" <?= $sv==='professional'?'checked':'' ?>>
+                    <?= $sl ?>
+                </label>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <div style="margin-bottom:14px">
+            <label style="display:block;font-size:.87rem;font-weight:600;color:#374151;margin-bottom:5px">Platform (optional)</label>
+            <input type="text" name="platform" placeholder="e.g. Instagram, Facebook, WhatsApp" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:.9rem;box-sizing:border-box">
+        </div>
+
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:.87rem;font-weight:600;color:#374151;margin-bottom:5px">Extra Notes <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+            <textarea name="notes" rows="3" placeholder="Any specific angle, tone, or context for this piece…" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:.9rem;resize:vertical;box-sizing:border-box"></textarea>
+        </div>
+
+        <button type="submit" style="background:#7c3aed;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;width:100%">✦ Generate Content</button>
+    </form>
+</div>
+
+<!-- Campaign Context Panel -->
+<div>
+<div style="background:#faf5ff;border:1px solid #ddd6fe;border-radius:12px;padding:18px;margin-bottom:16px">
+    <h4 style="color:#5b21b6;margin:0 0 10px;font-size:.95rem">📌 Campaign Context Used</h4>
+    <p style="font-size:.82rem;color:#4b5563;margin:0 0 8px">AI uses only verified business + campaign data:</p>
+    <ul style="font-size:.82rem;color:#374151;margin:0;padding-left:16px;line-height:1.8">
+        <li><strong>Business:</strong> <?= e($campaignDetail['biz_name']) ?></li>
+        <li><strong>Category:</strong> <?= e($campaignDetail['cat_name']) ?></li>
+        <li><strong>City:</strong> <?= e($campaignDetail['city']) ?></li>
+        <?php if ($campaignDetail['tagline']): ?><li><strong>Tagline:</strong> <?= e($campaignDetail['tagline']) ?></li><?php endif; ?>
+        <li><strong>Campaign:</strong> <?= e($campaignDetail['name']) ?></li>
+        <?php if ($campaignDetail['call_to_action']): ?><li><strong>CTA:</strong> <?= e($campaignDetail['call_to_action']) ?></li><?php endif; ?>
+    </ul>
+    <p style="font-size:.78rem;color:#7c3aed;margin:10px 0 0">✓ AI never invents prices, offers, hours, reviews, or statistics.</p>
+</div>
+<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px">
+    <h4 style="margin:0 0 8px;font-size:.88rem;color:#374151">💡 Tips</h4>
+    <ul style="font-size:.82rem;color:#6b7280;margin:0;padding-left:14px;line-height:1.7">
+        <li>Add notes for a specific angle or hook</li>
+        <li>Always review before approving</li>
+        <li>Approved → Draft in Content Calendar</li>
+        <li>Generate multiple styles to compare</li>
+    </ul>
+</div>
+</div>
+</div>
+
+<?php if ($aiHistory): ?>
+<div style="margin-top:28px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px">
+    <h3 style="margin:0 0 14px;color:#1f2937">Previous Generations for This Campaign</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+        <thead>
+            <tr style="background:#f9fafb">
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb">Date</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb">Type</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb">Style</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb">Status</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb">Preview</th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($aiHistory as $ai): ?>
+        <tr>
+            <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;color:#6b7280"><?= date('d M Y', strtotime($ai['created_at'])) ?></td>
+            <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6"><?= ucwords(str_replace('_',' ',$ai['content_type'])) ?></td>
+            <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6"><?= ucfirst($ai['style']) ?></td>
+            <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6">
+                <?php $sc=['approved'=>'#059669','rejected'=>'#dc2626','pending'=>'#ca8a04']; ?>
+                <span style="color:<?= $sc[$ai['approval_status']]??'#6b7280' ?>;font-weight:600;font-size:.8rem"><?= ucfirst($ai['approval_status']) ?></span>
+            </td>
+            <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#374151">
+                <?= e(mb_substr($ai['generated_text'], 0, 100)) ?>…
+            </td>
+        </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+<?php endif; ?>
+
+<?php elseif ($view === 'metrics' && $campaignDetail): ?>
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- METRICS VIEW                                                     -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -491,6 +753,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="camp-actions">
         <a href="<?= SITE_URL ?>/partner/business?lid=<?= $c['listing_id'] ?>&tab=campaigns" class="btn-xs">Edit</a>
         <a href="<?= SITE_URL ?>/partner/campaigns?view=metrics&cid=<?= $c['id'] ?>" class="btn-xs primary">📊 Metrics</a>
+        <a href="<?= SITE_URL ?>/partner/campaigns?view=ai&cid=<?= $c['id'] ?>" class="btn-xs" style="border-color:#7c3aed;color:#7c3aed">✦ AI Content</a>
         <!-- Status actions -->
         <?php if ($c['status'] === 'draft' || $c['status'] === 'paused'): ?>
         <form method="post">
