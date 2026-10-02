@@ -18,7 +18,8 @@ $tables = [
     'growth_tasks','partner_leads','partner_commissions','campaigns','campaign_content',
     'content_items','ai_recommendations','growth_alerts','growth_score_history',
     'partner_audit_log','partner_qbrs','partner_revenue_targets','partner_performance_notes',
-    'partner_complaints','partner_message_threads','partner_messages'
+    'partner_complaints','partner_message_threads','partner_messages',
+    'business_activity','partner_notifications','notifications'
 ];
 
 foreach ($tables as $t) {
@@ -30,11 +31,15 @@ foreach ($tables as $t) {
     }
 }
 
-echo "\n<h2>partner_leads columns</h2><pre>";
-try {
-    $cols = $pdo->query("SHOW COLUMNS FROM partner_leads");
-    foreach ($cols->fetchAll() as $c) echo $c['Field'] . " (" . $c['Type'] . ")\n";
-} catch (Exception $e) {
-    echo "Error: " . $e->getMessage() . "\n";
+echo "\n<h2>partner_profiles status for user session</h2><pre>";
+session_start();
+$uid = $_SESSION['user_id'] ?? null;
+echo "Session user_id: " . ($uid ?? 'not logged in') . "\n";
+if ($uid) {
+    $st = $pdo->prepare("SELECT id, status FROM partner_profiles WHERE user_id=?");
+    $st->execute([$uid]);
+    $p = $st->fetch();
+    if ($p) echo "Partner profile: id={$p['id']}, status={$p['status']}\n";
+    else echo "No partner_profile for this user\n";
 }
 echo "</pre>";
