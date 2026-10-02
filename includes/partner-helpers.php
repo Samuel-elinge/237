@@ -180,3 +180,203 @@ function partnerAuditLog(int $partnerId, int $userId, ?int $listingId, string $a
             ->execute([$partnerId, $userId, $listingId, $action, $description, $_SERVER['REMOTE_ADDR'] ?? null]);
     } catch (Exception $e) { /* non-fatal */ }
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  Phase 2 Helpers
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Attention queue: portfolio businesses that need action.
+ * Returns array of ['listing_id','title','reasons'[]] sorted by urgency.
+ */
+function getAttentionQueue(int $partnerId): array {
+    $pdo   = db();
+    $items = [];
+
+    // Fetch all active assignments
+    $st = $pdo->prepare("
+        SELECT l.id, l.title,
+               l.description, l.phone, l.whatsapp, l.website, l.hours,
+               l.verified, l.featured,
+               (SELECT COUNT(*) FROM partner_leads pl
+                WHERE pl.listing_id = l.id AND pl.partner_id = :p1
+                  AND pl.status IN ('new','contacted','follow_up')) AS active_leads,
+               (SELECT COUNT(*) FROM partner_leads pl2
+                WHERE pl2.listing_id = l.id AND pl2.partner_id = :p2
+                  AND pl2.follow_up_date <= CURDATE() AND pl2.status NOT IN ('converted','lost','closed')) AS overdue_leads,
+               (SELECT COUNT(*) FROM growth_tasks gt
+                WHERE gt.listing_id = l.id AND gt.partner_id = :p3
+                  AND gt.due_date < CURDATE() AND gt.status NOT IN ('completed','cancelled')) AS overdue_tasks,
+               (SELECT MAX(ba.created_at) FROM business_activity ba
+                WHERE ba.listing_id = l.id) AS last_activity,
+               (SELECT COUNT(*) FROM campaigns c
+                WHERE c.listing_id = l.id AND c.partner_id = :p4 AND c.status = 'active') AS active_campaigns,
+               (SELECT MIN(gp.end_date) FROM growth_plans gp
+                WHERE gp.listing_id = l.id AND gp.partner_id = :p5 AND gp.status = 'active') AS plan_end_date
+        FROM listings l
+        JOIN partner_business_assignments pba ON pba.listing_id = l.id AND pba.partner_id = :p6 AND pba.status = 'active'
+    ");
+    $st->execute([':p1'=>$partnerId,':p2'=>$partnerId,':p3'=>$partnerId,
+                  ':p4'=>$partnerId,':p5'=>$partnerId,':p6'=>$partnerId]);
+    $rows = $st->fetchAll();
+
+    foreach ($rows as $row) {
+        $reasons = [];
+        if ((int)$row['overdue_leads'] > 0)
+            $reasons[] = ['severity'=>'high',   'text'=> $row['overdue_leads'] . ' overdue lead follow-up' . ($row['overdue_leads']>1?'s':'')];
+        if ((int)$row['overdue_tasks'] > 0)
+            $reasons[] = ['severity'=>'high',   'text'=> $row['overdue_tasks'] . ' overdue task' . ($row['overdue_tasks']>1?'s':'')];
+        if ((int)$row['active_leads'] > 0)
+            $reasons[] = ['severity'=>'medium', 'text'=> $row['active_leads'] . ' active lead' . ($row['active_leads']>1?'s':'') . ' need attention'];
+        if ($row['plan_end_date'] && strtotime($row['plan_end_date']) < strtotime('+3 days'))
+            $reasons[] = ['severity'=>'medium', 'text'=>'Growth plan expires '.date('j M',strtotime($row['plan_end_date']))];
+        if ($row['last_activity'] && strtotime($row['last_activity']) < strtotime('-14 days'))
+            $reasons[] = ['severity'=>'low',    'text'=>'No activity for '.ceil((time()-strtotime($row['last_activity']))/86400).' days'];
+        if (empty($row['phone']))
+            $reasons[] = ['severity'=>'low',    'text'=>'Profile missing phone number'];
+        if (empty($reasons)) continue;
+
+        // Severity sort: high=0, medium=1, low=2
+        $topSeverity = ($reasons[0]['severity'] === 'high') ? 0 : (($reasons[0]['severity'] === 'medium') ? 1 : 2);
+        $items[] = ['listing_id'=>$row['id'], 'title'=>$row['title'], 'reasons'=>$reasons, '_sort'=>$topSeverity];
+    }
+    usort($items, fn($a,$b) => $a['_sort'] <=> $b['_sort']);
+    return $items;
+}
+
+/**
+ * Get activity timeline for a single business.
+ */
+function getBusinessActivity(int $listingId, int $limit = 30): array {
+    $st = db()->prepare("
+        SELECT ba.*, u.name AS actor_name
+        FROM business_activity ba
+        LEFT JOIN users u ON u.id = ba.actor_id
+        WHERE ba.listing_id = ?
+        ORDER BY ba.created_at DESC
+        LIMIT ?
+    ");
+    $st->execute([$listingId, $limit]);
+    return $st->fetchAll();
+}
+
+/**
+ * Log to business_activity feed.
+ */
+function logBusinessActivity(int $listingId, ?int $partnerId, ?int $actorId, string $type, string $desc, ?string $refType = null, ?int $refId = null): void {
+    try {
+        db()->prepare("INSERT INTO business_activity (listing_id, partner_id, actor_id, activity_type, description, ref_type, ref_id) VALUES (?,?,?,?,?,?,?)")
+            ->execute([$listingId, $partnerId, $actorId, $type, $desc, $refType, $refId]);
+    } catch (Exception $e) { /* non-fatal */ }
+}
+
+/**
+ * Extended recommended actions (Phase 2) — includes campaign/lead/review checks.
+ */
+function getRecommendedActionsP2(array $listing, int $partnerId): array {
+    $pdo     = db();
+    $lid     = (int)$listing['id'];
+    $actions = [];
+
+    // Profile completeness
+    $missing = [];
+    if (empty($listing['description']) || strlen($listing['description']) < 50) $missing[] = 'description';
+    if (empty($listing['phone']))    $missing[] = 'phone';
+    if (empty($listing['whatsapp'])) $missing[] = 'WhatsApp';
+    if (empty($listing['website']))  $missing[] = 'website URL';
+    if (empty($listing['hours']))    $missing[] = 'opening hours';
+    if ($missing) $actions[] = ['level'=>'high','icon'=>'🔴','text'=>'Complete business profile: missing '.implode(', ',$missing),'link'=>'?tab=overview'];
+
+    // Leads
+    $pendingLeads = $pdo->prepare("SELECT COUNT(*) FROM partner_leads WHERE listing_id=? AND partner_id=? AND status IN ('new','contacted','follow_up')");
+    $pendingLeads->execute([$lid, $partnerId]);
+    $lc = (int)$pendingLeads->fetchColumn();
+    if ($lc > 0) $actions[] = ['level'=>'high','icon'=>'🔴','text'=>$lc.' enquir'.($lc===1?'y':'ies').' require follow-up','link'=>'?tab=leads'];
+
+    // Overdue leads
+    $overdueLeads = $pdo->prepare("SELECT COUNT(*) FROM partner_leads WHERE listing_id=? AND partner_id=? AND follow_up_date <= CURDATE() AND status NOT IN ('converted','lost','closed')");
+    $overdueLeads->execute([$lid, $partnerId]);
+    $olc = (int)$overdueLeads->fetchColumn();
+    if ($olc > 0) $actions[] = ['level'=>'high','icon'=>'🔴','text'=>$olc.' lead follow-up'.($olc===1?'':'s').' overdue','link'=>'?tab=leads'];
+
+    // Reviews
+    $revCount = (int)($listing['review_count'] ?? 0);
+    $lastReview = null;
+    $lrSt = $pdo->prepare("SELECT MAX(created_at) FROM reviews WHERE listing_id=?");
+    $lrSt->execute([$lid]);
+    $lastReview = $lrSt->fetchColumn();
+    if (!$lastReview || strtotime($lastReview) < strtotime('-30 days'))
+        $actions[] = ['level'=>'medium','icon'=>'🟠','text'=>'No new review in the last 30 days — consider a review campaign','link'=>'?tab=reviews'];
+    if ($revCount < 5)
+        $actions[] = ['level'=>'medium','icon'=>'🟠','text'=>'Only '.$revCount.' review'.($revCount===1?'':'s').' — aim for at least 10','link'=>'?tab=reviews'];
+
+    // Active campaign
+    $campSt = $pdo->prepare("SELECT COUNT(*) FROM campaigns WHERE listing_id=? AND partner_id=? AND status='active'");
+    $campSt->execute([$lid, $partnerId]);
+    if (!(int)$campSt->fetchColumn())
+        $actions[] = ['level'=>'medium','icon'=>'🟠','text'=>'No active campaign — '.date('F').' promotion not created','link'=>'?tab=campaigns'];
+
+    // Growth plan
+    $planSt = $pdo->prepare("SELECT COUNT(*) FROM growth_plans WHERE listing_id=? AND partner_id=? AND status='active'");
+    $planSt->execute([$lid, $partnerId]);
+    if (!(int)$planSt->fetchColumn())
+        $actions[] = ['level'=>'medium','icon'=>'🟠','text'=>'No active growth plan','link'=>'?tab=growth_plan'];
+
+    // Positive
+    if (empty($missing))         $actions[] = ['level'=>'good','icon'=>'🟢','text'=>'Business profile is complete'];
+    if ($revCount >= 10)         $actions[] = ['level'=>'good','icon'=>'🟢','text'=>'Good review count ('.$revCount.')'];
+    if ($listing['verified']??0) $actions[] = ['level'=>'good','icon'=>'🟢','text'=>'Business is verified'];
+
+    return $actions;
+}
+
+/**
+ * Push a notification for a user.
+ */
+function pushNotification(int $userId, string $type, string $title, string $body = '', string $actionUrl = '', ?int $partnerId = null, ?int $listingId = null): void {
+    try {
+        db()->prepare("INSERT INTO partner_notifications (user_id, partner_id, listing_id, type, title, body, action_url) VALUES (?,?,?,?,?,?,?)")
+            ->execute([$userId, $partnerId, $listingId, $type, $title, $body, $actionUrl]);
+    } catch (Exception $e) { /* non-fatal */ }
+}
+
+/**
+ * Get unread notification count for a user.
+ */
+function getUnreadNotifications(int $userId): int {
+    $st = db()->prepare("SELECT COUNT(*) FROM partner_notifications WHERE user_id=? AND is_read=0");
+    $st->execute([$userId]);
+    return (int)$st->fetchColumn();
+}
+
+/**
+ * Get campaign summary stats for a listing.
+ */
+function getCampaignStats(int $listingId, int $partnerId): array {
+    $st = db()->prepare("
+        SELECT status, COUNT(*) AS n
+        FROM campaigns WHERE listing_id=? AND partner_id=?
+        GROUP BY status
+    ");
+    $st->execute([$listingId, $partnerId]);
+    $rows = $st->fetchAll(PDO::FETCH_KEY_PAIR);
+    return [
+        'active'    => (int)($rows['active']    ?? 0),
+        'scheduled' => (int)($rows['scheduled'] ?? 0),
+        'completed' => (int)($rows['completed'] ?? 0),
+        'draft'     => (int)($rows['draft']     ?? 0),
+        'total'     => array_sum($rows),
+    ];
+}
+
+/**
+ * Profile completion percentage (0–100).
+ */
+function profileCompletion(array $listing): int {
+    $fields = ['description','phone','email','address','website','whatsapp','hours'];
+    $filled = 0;
+    foreach ($fields as $f) {
+        if (!empty($listing[$f])) $filled++;
+    }
+    return (int)round($filled / count($fields) * 100);
+}

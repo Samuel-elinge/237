@@ -1,13 +1,13 @@
 <?php
 /**
- * partner/business.php — Single business view for Growth Partner
+ * partner/business.php — Business Growth Workspace (Phase 2)
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
 
 $partnerProfile = requireGrowthPartner();
 $partnerId      = (int)$partnerProfile['id'];
-$user           = currentUser();
+$userId         = currentUser()['id'];
 $pdo            = db();
 
 $listingId = (int)($_GET['id'] ?? 0);
@@ -15,559 +15,1103 @@ if (!$listingId || !partnerCanAccessListing($partnerId, $listingId)) {
     redirect(SITE_URL . '/partner/portfolio');
 }
 
-// Fetch full listing
-$st = $pdo->prepare("
-    SELECT l.*, c.name_en AS cat_en, c.icon AS cat_icon, loc.name_en AS city,
-           u.name AS owner_name, u.email AS owner_email,
-           (SELECT COUNT(*) FROM reviews r WHERE r.listing_id = l.id AND r.status = 'approved') AS review_count,
-           (SELECT AVG(r.rating) FROM reviews r WHERE r.listing_id = l.id AND r.status = 'approved') AS avg_rating,
-           (SELECT COUNT(*) FROM reviews r WHERE r.listing_id = l.id AND r.status = 'approved' AND r.created_at >= DATE_SUB(NOW(),INTERVAL 30 DAY)) AS reviews_this_month
+$listingSt = $pdo->prepare("
+    SELECT l.*, c.name_en AS cat_en, c.icon AS cat_icon,
+           loc.name_en AS city, u.name AS owner_name,
+           (SELECT AVG(r.rating) FROM reviews r WHERE r.listing_id = l.id) AS avg_rating,
+           (SELECT COUNT(*) FROM reviews r WHERE r.listing_id = l.id) AS review_count
     FROM listings l
-    JOIN categories c ON c.id = l.category_id
-    JOIN locations loc ON loc.id = l.location_id
-    LEFT JOIN users u ON u.id = l.user_id
+    JOIN categories c   ON c.id = l.category_id
+    JOIN locations loc  ON loc.id = l.location_id
+    LEFT JOIN users u   ON u.id = l.user_id
     WHERE l.id = ?
 ");
-$st->execute([$listingId]);
-$biz = $st->fetch();
-if (!$biz) redirect(SITE_URL . '/partner/portfolio');
+$listingSt->execute([$listingId]);
+$listing = $listingSt->fetch();
+if (!$listing) redirect(SITE_URL . '/partner/portfolio');
 
-// Health score & recommendations
-$health = calcHealthScore($biz);
-$recommendations = getRecommendedActions($biz);
+$tab = $_GET['tab'] ?? 'overview';
+$validTabs = ['overview','growth_plan','tasks','leads','campaigns','content','reviews','activity','opportunities','reports'];
+if (!in_array($tab, $validTabs)) $tab = 'overview';
 
-// Growth plans
-$plans = $pdo->prepare("SELECT * FROM growth_plans WHERE listing_id = ? AND partner_id = ? ORDER BY created_at DESC");
-$plans->execute([$listingId, $partnerId]);
-$growthPlans = $plans->fetchAll();
-
-$activePlan = null;
-foreach ($growthPlans as $gp) { if ($gp['status'] === 'active') { $activePlan = $gp; break; } }
-
-// Active plan objectives
-$objectives = [];
-if ($activePlan) {
-    $objSt = $pdo->prepare("SELECT * FROM growth_plan_objectives WHERE plan_id = ? ORDER BY sort_order");
-    $objSt->execute([$activePlan['id']]);
-    $objectives = $objSt->fetchAll();
-}
-
-// Tasks
-$taskSt = $pdo->prepare("SELECT * FROM growth_tasks WHERE listing_id = ? AND partner_id = ? ORDER BY FIELD(status,'in_progress','todo','completed','cancelled'), due_date ASC LIMIT 20");
-$taskSt->execute([$listingId, $partnerId]);
-$tasks = $taskSt->fetchAll();
-
-// Leads
-$leadSt = $pdo->prepare("SELECT * FROM partner_leads WHERE listing_id = ? AND partner_id = ? ORDER BY created_at DESC LIMIT 10");
-$leadSt->execute([$listingId, $partnerId]);
-$leads = $leadSt->fetchAll();
-
-// Recent reviews
-$revSt = $pdo->prepare("SELECT * FROM reviews WHERE listing_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT 5");
-$revSt->execute([$listingId]);
-$reviews = $revSt->fetchAll();
-
-// Handle POST actions
+// ── POST handler ────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $action = $_POST['action'] ?? '';
 
+    // TASKS
     if ($action === 'add_task') {
         $title    = trim($_POST['title'] ?? '');
-        $cat      = $_POST['category'] ?? 'other';
-        $priority = $_POST['priority'] ?? 'medium';
-        $due      = $_POST['due_date'] ?? null;
-        $desc     = trim($_POST['description'] ?? '');
+        $dueDate  = $_POST['due_date'] ?? null;
+        $priority = in_array($_POST['priority']??'', ['low','medium','high','urgent']) ? $_POST['priority'] : 'medium';
+        $notes    = trim($_POST['notes'] ?? '');
         if ($title) {
-            $pdo->prepare("INSERT INTO growth_tasks (listing_id, partner_id, plan_id, title, category, priority, due_date, description) VALUES (?,?,?,?,?,?,?,?)")
-                ->execute([$listingId, $partnerId, $activePlan['id'] ?? null, $title, $cat, $priority, $due ?: null, $desc]);
-            partnerAuditLog($partnerId, $user['id'], $listingId, 'task_created', "Created task: $title");
-            flash('success', 'Task added.');
+            $pdo->prepare("INSERT INTO growth_tasks (partner_id, listing_id, title, due_date, priority, notes) VALUES (?,?,?,?,?,?)")
+                ->execute([$partnerId, $listingId, $title, $dueDate ?: null, $priority, $notes ?: null]);
+            partnerAuditLog($partnerId, $userId, $listingId, 'task_created', "Task: {$title}");
+            logBusinessActivity($listingId, $partnerId, $userId, 'task_created', "Task created: {$title}", 'task');
         }
-        redirect(SITE_URL . "/partner/business?id=$listingId&tab=tasks");
     }
 
+    // GROWTH PLAN
     if ($action === 'create_plan') {
-        $title = trim($_POST['plan_title'] ?? '');
-        $start = $_POST['start_date'] ?? null;
-        $end   = $_POST['end_date'] ?? null;
-        $notes = trim($_POST['notes'] ?? '');
-        if ($title) {
-            $pdo->prepare("INSERT INTO growth_plans (listing_id, partner_id, title, start_date, end_date, notes, status) VALUES (?,?,?,?,?,?,'active')")
-                ->execute([$listingId, $partnerId, $title, $start ?: null, $end ?: null, $notes]);
-            $planId = (int)$pdo->lastInsertId();
-            // Save objectives
-            $metrics = $_POST['obj_metric'] ?? [];
-            $targets = $_POST['obj_target'] ?? [];
-            foreach ($metrics as $i => $metric) {
-                if ($metric && isset($targets[$i]) && $targets[$i] > 0) {
-                    $pdo->prepare("INSERT INTO growth_plan_objectives (plan_id, metric, target_value, sort_order) VALUES (?,?,?,?)")
-                        ->execute([$planId, $metric, (int)$targets[$i], $i]);
-                }
-            }
-            partnerAuditLog($partnerId, $user['id'], $listingId, 'plan_created', "Created growth plan: $title");
-            flash('success', 'Growth plan created.');
+        $name   = trim($_POST['plan_name'] ?? '');
+        $start  = $_POST['start_date'] ?? date('Y-m-d');
+        $end    = $_POST['end_date'] ?? null;
+        $notes  = trim($_POST['plan_notes'] ?? '');
+        if ($name) {
+            $pdo->prepare("INSERT INTO growth_plans (partner_id, listing_id, name, start_date, end_date, notes, status) VALUES (?,?,?,?,?,?,'active')")
+                ->execute([$partnerId, $listingId, $name, $start, $end ?: null, $notes ?: null]);
+            partnerAuditLog($partnerId, $userId, $listingId, 'plan_created', "Plan: {$name}");
+            logBusinessActivity($listingId, $partnerId, $userId, 'plan_created', "Growth plan created: {$name}", 'plan');
         }
-        redirect(SITE_URL . "/partner/business?id=$listingId&tab=plan");
     }
 
-    if ($action === 'complete_task') {
-        $tid = (int)($_POST['task_id'] ?? 0);
-        $pdo->prepare("UPDATE growth_tasks SET status='completed', completed_at=NOW() WHERE id=? AND partner_id=?")->execute([$tid, $partnerId]);
-        partnerAuditLog($partnerId, $user['id'], $listingId, 'task_completed', 'Marked task #'.$tid.' completed');
-        redirect(SITE_URL . "/partner/business?id=$listingId&tab=tasks");
+    // PLAN OBJECTIVE
+    if ($action === 'add_objective') {
+        $planId = (int)($_POST['plan_id'] ?? 0);
+        $title  = trim($_POST['obj_title'] ?? '');
+        $target = (int)($_POST['target'] ?? 0);
+        $type   = trim($_POST['obj_type'] ?? 'other');
+        if ($planId && $title) {
+            // Verify plan belongs to this partner/listing
+            $chk = $pdo->prepare("SELECT id FROM growth_plans WHERE id=? AND partner_id=? AND listing_id=?");
+            $chk->execute([$planId, $partnerId, $listingId]);
+            if ($chk->fetch()) {
+                $pdo->prepare("INSERT INTO growth_plan_objectives (plan_id, title, target, current, type) VALUES (?,?,?,0,?)")
+                    ->execute([$planId, $title, $target, $type]);
+            }
+        }
     }
 
+    // LEADS
     if ($action === 'add_lead') {
         $name   = trim($_POST['customer_name'] ?? '');
         $email  = trim($_POST['customer_email'] ?? '');
         $phone  = trim($_POST['customer_phone'] ?? '');
-        $source = $_POST['source'] ?? 'other';
+        $source = trim($_POST['source'] ?? 'direct');
         $notes  = trim($_POST['notes'] ?? '');
-        $pdo->prepare("INSERT INTO partner_leads (listing_id, partner_id, customer_name, customer_email, customer_phone, source, notes) VALUES (?,?,?,?,?,?,?)")
-            ->execute([$listingId, $partnerId, $name, $email, $phone, $source, $notes]);
-        partnerAuditLog($partnerId, $user['id'], $listingId, 'lead_added', "Added lead: $name");
-        flash('success', 'Lead recorded.');
-        redirect(SITE_URL . "/partner/business?id=$listingId&tab=leads");
+        if ($name) {
+            $pdo->prepare("INSERT INTO partner_leads (partner_id, listing_id, customer_name, customer_email, customer_phone, source, notes, status) VALUES (?,?,?,?,?,?,?,'new')")
+                ->execute([$partnerId, $listingId, $name, $email ?: null, $phone ?: null, $source, $notes ?: null]);
+            logBusinessActivity($listingId, $partnerId, $userId, 'lead_received', "New lead: {$name}", 'lead');
+        }
     }
+
+    // LEAD ACTIVITY
+    if ($action === 'add_lead_activity') {
+        $leadId  = (int)($_POST['lead_id'] ?? 0);
+        $actType = $_POST['activity_type'] ?? 'note';
+        $notes   = trim($_POST['act_notes'] ?? '');
+        $fup     = $_POST['follow_up_date'] ?? null;
+        $validTypes = ['created','contacted','email_sent','message_sent','phone_call','follow_up','appointment','booking','converted','lost','note'];
+        if ($leadId && in_array($actType, $validTypes)) {
+            $chk = $pdo->prepare("SELECT id FROM partner_leads WHERE id=? AND partner_id=? AND listing_id=?");
+            $chk->execute([$leadId, $partnerId, $listingId]);
+            if ($chk->fetch()) {
+                $pdo->prepare("INSERT INTO lead_activities (lead_id, partner_id, activity_type, notes, follow_up_date, created_by) VALUES (?,?,?,?,?,?)")
+                    ->execute([$leadId, $partnerId, $actType, $notes ?: null, $fup ?: null, $userId]);
+                // Update lead status if activity implies change
+                $statusMap = ['contacted'=>'contacted','converted'=>'converted','lost'=>'lost'];
+                if (isset($statusMap[$actType])) {
+                    $pdo->prepare("UPDATE partner_leads SET status=?, last_activity=NOW() WHERE id=?")->execute([$statusMap[$actType], $leadId]);
+                } else {
+                    $pdo->prepare("UPDATE partner_leads SET last_activity=NOW() WHERE id=?")->execute([$leadId]);
+                }
+                if ($fup) {
+                    $pdo->prepare("UPDATE partner_leads SET follow_up_date=? WHERE id=?")->execute([$fup, $leadId]);
+                }
+            }
+        }
+    }
+
+    // CAMPAIGNS
+    if ($action === 'create_campaign') {
+        $name   = trim($_POST['camp_name'] ?? '');
+        $type   = $_POST['camp_type'] ?? 'business_promotion';
+        $desc   = trim($_POST['camp_desc'] ?? '');
+        $obj    = trim($_POST['camp_objective'] ?? '');
+        $start  = $_POST['camp_start'] ?? null;
+        $end    = $_POST['camp_end'] ?? null;
+        $cta    = trim($_POST['camp_cta'] ?? '');
+        $offer  = trim($_POST['camp_offer'] ?? '');
+        $budget = (float)($_POST['camp_budget'] ?? 0);
+        $validTypes = ['business_promotion','product_promotion','service_promotion','special_offer','event','review_campaign','social_media_campaign','seasonal_campaign'];
+        if ($name && in_array($type, $validTypes)) {
+            $pdo->prepare("INSERT INTO campaigns (partner_id, listing_id, name, campaign_type, description, objective, call_to_action, offer, budget, start_date, end_date, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,'draft')")
+                ->execute([$partnerId, $listingId, $name, $type, $desc ?: null, $obj ?: null, $cta ?: null, $offer ?: null, $budget ?: null, $start ?: null, $end ?: null]);
+            partnerAuditLog($partnerId, $userId, $listingId, 'campaign_created', "Campaign: {$name}");
+            logBusinessActivity($listingId, $partnerId, $userId, 'campaign_created', "Campaign created: {$name}", 'campaign');
+        }
+    }
+
+    // CONTENT ITEM
+    if ($action === 'add_content') {
+        $title      = trim($_POST['ci_title'] ?? '');
+        $body       = trim($_POST['ci_body'] ?? '');
+        $type       = $_POST['ci_type'] ?? 'social_post';
+        $platform   = trim($_POST['ci_platform'] ?? '');
+        $scheduled  = $_POST['ci_scheduled'] ?? null;
+        $campaignId = (int)($_POST['ci_campaign'] ?? 0);
+        $validTypes = ['social_post','promotional_post','product_post','service_post','event_post','review_post','video','image','announcement'];
+        if (($title || $body) && in_array($type, $validTypes)) {
+            $pdo->prepare("INSERT INTO content_items (partner_id, listing_id, campaign_id, content_type, title, body, platform, scheduled_date, status) VALUES (?,?,?,?,?,?,?,?,?)")
+                ->execute([$partnerId, $listingId, $campaignId ?: null, $type, $title ?: null, $body ?: null, $platform ?: null, $scheduled ?: null, $scheduled ? 'scheduled' : 'draft']);
+            logBusinessActivity($listingId, $partnerId, $userId, 'content_created', "Content added: ".($title ?: 'untitled'), 'content');
+        }
+    }
+
+    // REVIEW CAMPAIGN
+    if ($action === 'create_review_campaign') {
+        $name    = trim($_POST['rc_name'] ?? '');
+        $target  = (int)($_POST['rc_target'] ?? 10);
+        $msg     = trim($_POST['rc_message'] ?? '');
+        $start   = $_POST['rc_start'] ?? null;
+        $end     = $_POST['rc_end'] ?? null;
+        if ($name) {
+            $pdo->prepare("INSERT INTO review_campaigns (partner_id, listing_id, name, target_reviews, message_template, start_date, end_date, status) VALUES (?,?,?,?,?,?,?,'active')")
+                ->execute([$partnerId, $listingId, $name, $target, $msg ?: null, $start ?: null, $end ?: null]);
+            logBusinessActivity($listingId, $partnerId, $userId, 'review_campaign_created', "Review campaign: {$name}", 'review_campaign');
+        }
+    }
+
+    // OPPORTUNITY
+    if ($action === 'add_opportunity') {
+        $service = trim($_POST['opp_service'] ?? '');
+        $title   = trim($_POST['opp_title'] ?? '');
+        $desc    = trim($_POST['opp_desc'] ?? '');
+        if ($service && $title) {
+            $pdo->prepare("INSERT INTO growth_opportunities (partner_id, listing_id, service_type, title, description, status) VALUES (?,?,?,?,?,'identified')")
+                ->execute([$partnerId, $listingId, $service, $title, $desc ?: null]);
+            partnerAuditLog($partnerId, $userId, $listingId, 'opportunity_created', "Opportunity: {$title}");
+        }
+    }
+
+    // COMPLETE TASK
+    if ($action === 'complete_task') {
+        $taskId = (int)($_POST['task_id'] ?? 0);
+        $pdo->prepare("UPDATE growth_tasks SET status='completed', completed_at=NOW() WHERE id=? AND partner_id=? AND listing_id=?")
+            ->execute([$taskId, $partnerId, $listingId]);
+        partnerAuditLog($partnerId, $userId, $listingId, 'task_completed', "Task #{$taskId}");
+    }
+
+    header('Location: ?id=' . $listingId . '&tab=' . $tab);
+    exit;
 }
 
-$tab = $_GET['tab'] ?? 'overview';
-$pageTitle = e($biz['title']) . ' — Partner Centre';
+// ── Data for current tab ──────────────────────────────────────
+$healthData  = calcHealthScore($listing);
+$healthScore = $healthData['score'];
+$completion  = profileCompletion($listing);
+$actions     = getRecommendedActionsP2($listing, $partnerId);
+$campStats   = getCampaignStats($listingId, $partnerId);
+
+// Growth Plan
+$planSt = $pdo->prepare("SELECT * FROM growth_plans WHERE listing_id=? AND partner_id=? ORDER BY status='active' DESC, created_at DESC LIMIT 1");
+$planSt->execute([$listingId, $partnerId]);
+$plan = $planSt->fetch();
+$objectives = [];
+if ($plan) {
+    $objSt = $pdo->prepare("SELECT * FROM growth_plan_objectives WHERE plan_id=? ORDER BY sort_order,id");
+    $objSt->execute([$plan['id']]);
+    $objectives = $objSt->fetchAll();
+}
+
+// Leads summary
+$leadSumSt = $pdo->prepare("
+    SELECT status, COUNT(*) AS n FROM partner_leads
+    WHERE listing_id=? AND partner_id=? GROUP BY status
+");
+$leadSumSt->execute([$listingId, $partnerId]);
+$leadSummary = $leadSumSt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+// Tasks summary
+$taskSumSt = $pdo->prepare("
+    SELECT
+        COUNT(*) AS total,
+        SUM(status='completed') AS completed,
+        SUM(status NOT IN ('completed','cancelled') AND (due_date IS NULL OR due_date >= CURDATE())) AS open,
+        SUM(status NOT IN ('completed','cancelled') AND due_date < CURDATE()) AS overdue
+    FROM growth_tasks WHERE listing_id=? AND partner_id=?
+");
+$taskSumSt->execute([$listingId, $partnerId]);
+$taskSummary = $taskSumSt->fetch();
+
+// Tab-specific data
+$leads = $tasks = $campaigns = $contents = $reviewCampaigns = $opportunities = $activityFeed = [];
+switch ($tab) {
+    case 'leads':
+        $st = $pdo->prepare("SELECT pl.*, la.activity_type AS last_act FROM partner_leads pl LEFT JOIN lead_activities la ON la.id=(SELECT id FROM lead_activities WHERE lead_id=pl.id ORDER BY created_at DESC LIMIT 1) WHERE pl.listing_id=? AND pl.partner_id=? ORDER BY FIELD(pl.status,'new','follow_up','contacted','qualified','converted','lost','closed'), pl.last_activity DESC");
+        $st->execute([$listingId, $partnerId]);
+        $leads = $st->fetchAll();
+        break;
+    case 'tasks':
+        $st = $pdo->prepare("SELECT * FROM growth_tasks WHERE listing_id=? AND partner_id=? ORDER BY FIELD(status,'in_progress','todo','completed','cancelled'), priority DESC, due_date ASC");
+        $st->execute([$listingId, $partnerId]);
+        $tasks = $st->fetchAll();
+        break;
+    case 'campaigns':
+        $st = $pdo->prepare("SELECT * FROM campaigns WHERE listing_id=? AND partner_id=? ORDER BY created_at DESC");
+        $st->execute([$listingId, $partnerId]);
+        $campaigns = $st->fetchAll();
+        break;
+    case 'content':
+        $st = $pdo->prepare("SELECT ci.*, c.name AS campaign_name FROM content_items ci LEFT JOIN campaigns c ON c.id=ci.campaign_id WHERE ci.listing_id=? AND ci.partner_id=? ORDER BY ci.scheduled_date DESC, ci.created_at DESC");
+        $st->execute([$listingId, $partnerId]);
+        $contents = $st->fetchAll();
+        break;
+    case 'reviews':
+        $st = $pdo->prepare("SELECT * FROM review_campaigns WHERE listing_id=? AND partner_id=? ORDER BY created_at DESC");
+        $st->execute([$listingId, $partnerId]);
+        $reviewCampaigns = $st->fetchAll();
+        break;
+    case 'opportunities':
+        $st = $pdo->prepare("SELECT * FROM growth_opportunities WHERE listing_id=? AND partner_id=? ORDER BY created_at DESC");
+        $st->execute([$listingId, $partnerId]);
+        $opportunities = $st->fetchAll();
+        break;
+    case 'activity':
+        $activityFeed = getBusinessActivity($listingId, 50);
+        break;
+    case 'reports':
+        $st = $pdo->prepare("SELECT * FROM growth_reports WHERE listing_id=? AND partner_id=? ORDER BY created_at DESC");
+        $st->execute([$listingId, $partnerId]);
+        $reports = $st->fetchAll();
+        break;
+}
+
+// Tab-specific campaigns list for content form
+$allCampaigns = $pdo->prepare("SELECT id, name FROM campaigns WHERE listing_id=? AND partner_id=? AND status IN ('active','scheduled','draft') ORDER BY name");
+$allCampaigns->execute([$listingId, $partnerId]);
+$allCampaigns = $allCampaigns->fetchAll();
+
+$pageTitle = e($listing['title']) . ' — Growth Workspace';
 require_once __DIR__ . '/../includes/header.php';
+
+// ─── Helpers ──────────────────────────────────────────────────
+function healthColor(int $s): string {
+    if ($s >= 80) return '#00A878';
+    if ($s >= 60) return '#fcd116';
+    if ($s >= 40) return '#ff9f1c';
+    return '#e63946';
+}
+function tabUrl(string $t, int $lid): string {
+    return SITE_URL . '/partner/business?id=' . $lid . '&tab=' . $t;
+}
 ?>
 
 <style>
-.partner-wrap { max-width:1280px; margin:0 auto; padding:2rem 1.5rem; }
-.biz-header { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.5rem; margin-bottom:1.5rem;
-  display:flex; align-items:flex-start; gap:1.25rem; flex-wrap:wrap; }
-.biz-header .icon { font-size:3rem; }
-.biz-header h1 { font-family:'Fraunces',serif; font-size:1.75rem; font-weight:900; margin:0 0 0.25rem; }
-.biz-header .meta { color:var(--muted); font-size:0.875rem; }
+:root { --ws-max:1300px; }
+.ws-wrap  { max-width:var(--ws-max); margin:0 auto; padding:2rem 1.5rem; }
 
-.tab-nav { display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:1.5rem; overflow-x:auto; }
-.tab-link { padding:0.6rem 1.25rem; font-size:0.875rem; font-weight:600; color:var(--muted); text-decoration:none;
-  border-bottom:3px solid transparent; margin-bottom:-2px; white-space:nowrap; }
-.tab-link.active { color:var(--primary); border-bottom-color:var(--primary); }
-.tab-link:hover { color:var(--text); }
+/* Business header */
+.biz-header { background:var(--card); border:1px solid var(--border); border-radius:14px;
+  padding:1.5rem; margin-bottom:1.5rem; display:flex; gap:1.25rem; align-items:flex-start; flex-wrap:wrap; }
+.biz-icon  { font-size:2.5rem; line-height:1; }
+.biz-meta  { flex:1; min-width:0; }
+.biz-meta h1 { font-family:'Fraunces',serif; font-size:1.6rem; font-weight:900; margin:0 0 .3rem; }
+.biz-meta .sub { font-size:.85rem; color:var(--muted); display:flex; gap:.75rem; flex-wrap:wrap; }
+.health-pill { display:inline-flex; align-items:center; gap:.4rem; padding:.3rem .85rem;
+  border-radius:20px; font-size:.8rem; font-weight:700; }
 
-.two-col { display:grid; grid-template-columns:1fr 300px; gap:1.5rem; }
-@media(max-width:800px){ .two-col { grid-template-columns:1fr; } }
+/* Tab nav */
+.ws-nav { display:flex; gap:.35rem; flex-wrap:wrap; margin-bottom:1.5rem;
+  border-bottom:2px solid var(--border); padding-bottom:.75rem; }
+.ws-tab { padding:.4rem .9rem; border-radius:8px 8px 0 0; font-size:.84rem; font-weight:600;
+  text-decoration:none; color:var(--muted); transition:all .15s; }
+.ws-tab:hover { color:var(--text); background:var(--card); }
+.ws-tab.active { color:var(--primary); background:var(--card);
+  border:1px solid var(--border); border-bottom:2px solid var(--card); margin-bottom:-2px; }
 
-.panel { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.25rem; margin-bottom:1.25rem; }
-.panel h2 { font-size:0.95rem; font-weight:700; margin:0 0 1rem; }
+/* Grid layout */
+.ws-grid { display:grid; grid-template-columns:1fr 320px; gap:1.25rem; align-items:start; }
+@media(max-width:860px){ .ws-grid { grid-template-columns:1fr; } }
 
-.health-circle { text-align:center; padding:1rem; }
-.health-score-num { font-family:'Fraunces',serif; font-size:3rem; font-weight:900; }
-.health-component { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem; font-size:0.85rem; }
-.hc-label { width:90px; flex-shrink:0; color:var(--muted); }
-.hc-bar { flex:1; height:8px; background:var(--border); border-radius:4px; }
-.hc-fill { height:100%; border-radius:4px; }
-.hc-val { width:35px; text-align:right; font-weight:600; font-size:0.8rem; }
+/* Cards */
+.ws-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1.25rem; margin-bottom:1rem; }
+.ws-card h3 { font-size:.9rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em;
+  color:var(--muted); margin:0 0 .85rem; }
 
-.action-item { display:flex; align-items:flex-start; gap:0.75rem; padding:0.5rem 0; border-bottom:1px solid var(--border); font-size:0.875rem; }
+/* Stat grid */
+.stat-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:.75rem; margin-bottom:1.25rem; }
+.stat-box { background:var(--card); border:1px solid var(--border); border-radius:10px;
+  padding:.75rem 1rem; text-align:center; }
+.stat-box .n { font-size:1.5rem; font-weight:800; font-family:'Fraunces',serif; }
+.stat-box .l { font-size:.72rem; color:var(--muted); margin-top:.15rem; }
+
+/* Priority actions */
+.action-item { display:flex; align-items:flex-start; gap:.6rem; padding:.6rem 0;
+  border-bottom:1px solid var(--border); font-size:.875rem; }
 .action-item:last-child { border-bottom:none; }
-.action-dot-warn { width:8px; height:8px; background:#e63946; border-radius:50%; flex-shrink:0; margin-top:5px; }
-.action-dot-info { width:8px; height:8px; background:#fcd116; border-radius:50%; flex-shrink:0; margin-top:5px; }
 
-.task-row { display:flex; align-items:flex-start; gap:0.75rem; padding:0.65rem 0; border-bottom:1px solid var(--border); }
-.task-row:last-child { border-bottom:none; }
-.task-badge { font-size:0.68rem; padding:2px 7px; border-radius:20px; font-weight:700; white-space:nowrap; }
-.badge-urgent { background:#e63946; color:#fff; }
-.badge-high   { background:#ff9f1c; color:#fff; }
-.badge-medium { background:#2ec4b6; color:#fff; }
-.badge-low    { background:var(--border); color:var(--muted); }
-.status-chip  { font-size:0.68rem; padding:2px 8px; border-radius:20px; font-weight:600; }
-.status-todo  { background:var(--border); color:var(--muted); }
-.status-in_progress { background:rgba(0,168,120,0.15); color:#00A878; }
-.status-completed   { background:rgba(0,168,120,0.3); color:#00A878; }
-.status-cancelled   { background:rgba(230,57,70,0.1); color:#e63946; }
+/* Lead/task/campaign cards */
+.item-card { background:var(--card); border:1px solid var(--border); border-radius:10px;
+  padding:1rem 1.1rem; margin-bottom:.6rem; }
+.badge { display:inline-block; padding:2px 9px; border-radius:20px; font-size:.72rem; font-weight:700; }
+.badge-high    { background:rgba(230,57,70,.13); color:#e63946; }
+.badge-medium  { background:rgba(252,209,22,.2); color:#b8960f; }
+.badge-low     { background:rgba(150,150,150,.15); color:var(--muted); }
+.badge-active  { background:rgba(0,168,120,.15); color:#00A878; }
+.badge-draft   { background:rgba(150,150,150,.12); color:var(--muted); }
+.badge-completed { background:rgba(46,196,182,.15); color:#1a8f88; }
+.badge-new     { background:rgba(252,209,22,.2); color:#b8960f; }
+.badge-converted{ background:rgba(0,168,120,.25); color:#006e50; }
 
-.objective-row { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.75rem; font-size:0.875rem; }
-.obj-label { width:140px; flex-shrink:0; }
-.obj-bar { flex:1; height:10px; background:var(--border); border-radius:5px; }
-.obj-fill { height:100%; border-radius:5px; background:var(--primary); }
-.obj-val { width:60px; text-align:right; font-weight:600; }
+/* Health bar */
+.health-bar { height:8px; border-radius:4px; background:var(--border); overflow:hidden; }
+.health-fill { height:100%; border-radius:4px; transition:width .3s; }
 
-.lead-row { padding:0.65rem 0; border-bottom:1px solid var(--border); font-size:0.875rem; }
-.lead-row:last-child { border-bottom:none; }
+/* Form row */
+.form-row { display:flex; gap:.5rem; flex-wrap:wrap; align-items:flex-end; }
+.form-row input, .form-row select, .form-row textarea {
+  padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px;
+  background:var(--bg); color:var(--text); font-size:.83rem; font-family:inherit; }
+.form-row label { font-size:.78rem; color:var(--muted); display:block; margin-bottom:.2rem; }
 
-.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; }
-@media(max-width:600px){ .form-grid { grid-template-columns:1fr; } }
+/* Progress ring (plan) */
+.plan-progress { display:flex; gap:.75rem; flex-wrap:wrap; }
+.plan-obj { flex:1; min-width:130px; background:var(--bg); border:1px solid var(--border);
+  border-radius:10px; padding:.75rem; }
+.plan-obj .obj-n { font-size:1.2rem; font-weight:800; font-family:'Fraunces',serif; }
+.plan-obj .obj-l { font-size:.72rem; color:var(--muted); }
+
+/* Activity feed */
+.activity-item { display:flex; gap:.75rem; padding:.6rem 0; border-bottom:1px solid var(--border); font-size:.85rem; }
+.activity-item:last-child { border-bottom:none; }
+.activity-dot { width:8px; height:8px; border-radius:50%; background:var(--primary); flex-shrink:0; margin-top:.35rem; }
+.activity-date { font-size:.72rem; color:var(--muted); white-space:nowrap; }
+
+/* Opportunity status */
+.opp-identified { background:rgba(252,209,22,.2); color:#b8960f; }
+.opp-discussing  { background:rgba(0,120,255,.12); color:#0078ff; }
+.opp-proposal    { background:rgba(255,159,28,.2); color:#d4780f; }
+.opp-won         { background:rgba(0,168,120,.2); color:#00A878; }
+.opp-lost        { background:rgba(230,57,70,.12); color:#e63946; }
 </style>
 
-<div class="partner-wrap">
+<div class="ws-wrap">
 
-  <!-- Breadcrumb -->
-  <nav style="font-size:0.85rem; color:var(--muted); margin-bottom:1rem;">
-    <a href="<?= SITE_URL ?>/partner/portfolio" style="color:var(--primary);">← My Portfolio</a>
-  </nav>
-
-  <!-- Business header -->
+  <!-- Business Header -->
   <div class="biz-header">
-    <div class="icon"><?= $biz['cat_icon'] ?></div>
-    <div style="flex:1;">
-      <h1><?= e($biz['title']) ?></h1>
-      <div class="meta">
-        <?= e($biz['cat_en']) ?> · 📍 <?= e($biz['city']) ?>
-        <?php if ($biz['phone']): ?> · 📞 <?= e($biz['phone']) ?><?php endif; ?>
-        <?php if ($biz['verified']): ?> · <span style="color:#00A878;">✓ Verified</span><?php endif; ?>
-      </div>
-      <div class="meta" style="margin-top:0.3rem;">
-        Owner: <?= e($biz['owner_name'] ?? '—') ?>
-        <?php if ($biz['owner_email']): ?>(<?= e($biz['owner_email']) ?>)<?php endif; ?>
+    <div class="biz-icon"><?= e($listing['cat_icon'] ?? '🏢') ?></div>
+    <div class="biz-meta">
+      <h1><?= e($listing['title']) ?></h1>
+      <div class="sub">
+        <span><?= e($listing['cat_en']) ?></span>
+        <span>📍 <?= e($listing['city']) ?></span>
+        <?php if ($listing['owner_name']): ?>
+        <span>👤 <?= e($listing['owner_name']) ?></span>
+        <?php endif; ?>
+        <span>Profile <?= $completion ?>% complete</span>
       </div>
     </div>
-    <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-      <a href="<?= SITE_URL ?>/listing/<?= e($biz['slug']) ?>" target="_blank" class="btn btn-outline" style="font-size:0.85rem;">View Listing ↗</a>
+    <div style="text-align:right; flex-shrink:0;">
+      <div class="health-pill" style="background:<?= healthColor($healthScore) ?>22; color:<?= healthColor($healthScore) ?>;">
+        ❤️ <?= $healthScore ?>% Health
+      </div>
+      <div style="font-size:.75rem; color:var(--muted); margin-top:.3rem;">
+        <?= $listing['status'] ?? 'Active' ?>
+      </div>
+      <a href="<?= SITE_URL ?>/partner/portfolio" style="font-size:.78rem; color:var(--muted); text-decoration:none; display:block; margin-top:.4rem;">← Portfolio</a>
     </div>
   </div>
 
-  <!-- Tabs -->
-  <nav class="tab-nav">
+  <!-- Tab navigation -->
+  <nav class="ws-nav">
     <?php
-    $tabs = ['overview'=>'📊 Overview','plan'=>'📈 Growth Plan','tasks'=>'✅ Tasks','leads'=>'💬 Leads','reviews'=>'⭐ Reviews'];
+    $tabs = [
+        'overview'    => '📊 Overview',
+        'growth_plan' => '🎯 Growth Plan',
+        'tasks'       => '✅ Tasks' . ($taskSummary['overdue'] > 0 ? ' <span style="color:#e63946">('.(int)$taskSummary['overdue'].')</span>' : ''),
+        'leads'       => '💬 Leads' . (($leadSummary['new'] ?? 0) > 0 ? ' <span style="color:#fcd116">('.($leadSummary['new']).')</span>' : ''),
+        'campaigns'   => '📣 Campaigns',
+        'content'     => '📝 Content',
+        'reviews'     => '⭐ Reviews',
+        'activity'    => '📅 Activity',
+        'opportunities'=> '💡 Opportunities',
+        'reports'     => '📈 Reports',
+    ];
     foreach ($tabs as $tk => $tl): ?>
-    <a href="?id=<?= $listingId ?>&tab=<?= $tk ?>" class="tab-link <?= $tab===$tk?'active':'' ?>"><?= $tl ?></a>
+    <a href="<?= tabUrl($tk, $listingId) ?>" class="ws-tab <?= $tab===$tk?'active':'' ?>"><?= $tl ?></a>
     <?php endforeach; ?>
   </nav>
 
-  <?php echo csrfField() ?? ''; ?>
-
-  <!-- ══ OVERVIEW TAB ══ -->
-  <?php if ($tab === 'overview'): ?>
-  <div class="two-col">
+  <?php // ═══ OVERVIEW ═══════════════════════════════════════════
+  if ($tab === 'overview'): ?>
+  <div class="ws-grid">
     <div>
-      <!-- Active plan objectives -->
-      <?php if ($activePlan && $objectives): ?>
-      <div class="panel">
-        <h2>📈 <?= e($activePlan['title']) ?> — Objectives</h2>
-        <?php
-        $metricLabels = ['reviews'=>'Reviews','profile_views'=>'Profile Views','enquiries'=>'Enquiries','campaigns'=>'Campaigns','social_posts'=>'Social Posts'];
-        foreach ($objectives as $obj):
-          $pct = $obj['target_value'] > 0 ? min(100, round($obj['current_value'] / $obj['target_value'] * 100)) : 0;
-        ?>
-        <div class="objective-row">
-          <div class="obj-label"><?= e($metricLabels[$obj['metric']] ?? ucfirst($obj['metric'])) ?></div>
-          <div class="obj-bar"><div class="obj-fill" style="width:<?= $pct ?>%;"></div></div>
-          <div class="obj-val"><?= $obj['current_value'] ?> / <?= $obj['target_value'] ?></div>
-          <div style="width:35px; font-size:0.75rem; color:var(--muted);"><?= $pct ?>%</div>
-        </div>
-        <?php endforeach; ?>
-        <a href="?id=<?= $listingId ?>&tab=plan" style="font-size:0.85rem; color:var(--primary);">Manage growth plan →</a>
-      </div>
-      <?php endif; ?>
-
-      <!-- Recent tasks -->
-      <div class="panel">
-        <h2>✅ Recent Tasks</h2>
-        <?php $recentTasks = array_slice($tasks, 0, 5); if ($recentTasks): ?>
-          <?php foreach ($recentTasks as $task): ?>
-          <div class="task-row">
-            <span class="task-badge badge-<?= $task['priority'] ?>"><?= ucfirst($task['priority']) ?></span>
-            <div style="flex:1;">
-              <div style="font-size:0.875rem; font-weight:500;"><?= e($task['title']) ?></div>
-              <?php if ($task['due_date']): ?><div style="font-size:0.75rem; color:var(--muted);">Due <?= date('j M', strtotime($task['due_date'])) ?></div><?php endif; ?>
+      <!-- Performance summary -->
+      <div class="ws-card">
+        <h3>Performance</h3>
+        <div class="stat-row">
+          <?php
+          $perfs = [
+              ['Profile views',     $listing['views'] ?? null],
+              ['Phone clicks',      $listing['phone_clicks'] ?? null],
+              ['Website clicks',    $listing['website_clicks'] ?? null],
+              ['WhatsApp clicks',   $listing['whatsapp_clicks'] ?? null],
+              ['Enquiries/Leads',   array_sum($leadSummary)],
+              ['Reviews',           (int)$listing['review_count']],
+              ['Active Campaigns',  $campStats['active']],
+          ];
+          foreach ($perfs as [$label, $val]): ?>
+          <div class="stat-box">
+            <div class="n" <?= $val === null ? 'style="font-size:1rem;color:var(--muted)"' : '' ?>>
+              <?= $val === null ? 'N/A' : number_format((int)$val) ?>
             </div>
-            <span class="status-chip status-<?= $task['status'] ?>"><?= str_replace('_',' ',ucfirst($task['status'])) ?></span>
+            <div class="l"><?= $label ?></div>
           </div>
           <?php endforeach; ?>
-          <a href="?id=<?= $listingId ?>&tab=tasks" style="font-size:0.85rem; color:var(--primary);">All tasks →</a>
+        </div>
+      </div>
+
+      <!-- Growth Plan progress -->
+      <?php if ($plan): ?>
+      <div class="ws-card">
+        <h3><?= e(strtoupper($plan['name'])) ?></h3>
+        <?php if ($objectives): ?>
+        <div class="plan-progress">
+          <?php
+          $totalTarget = $totalCurrent = 0;
+          foreach ($objectives as $obj):
+            $pct = $obj['target'] > 0 ? min(100, round($obj['current']/$obj['target']*100)) : 0;
+            $totalTarget  += $obj['target'];
+            $totalCurrent += $obj['current'];
+          ?>
+          <div class="plan-obj">
+            <div class="obj-n" style="color:<?= $pct>=100?'#00A878':'var(--text)' ?>">
+              <?= $obj['current'] ?><small style="font-size:.6em;color:var(--muted)"> / <?= $obj['target'] ?></small>
+            </div>
+            <div class="obj-l"><?= e($obj['title']) ?></div>
+            <div class="health-bar" style="margin-top:.4rem;">
+              <div class="health-fill" style="width:<?= $pct ?>%; background:<?= healthColor($pct) ?>;"></div>
+            </div>
+          </div>
+          <?php endforeach; ?>
+          <?php if ($totalTarget > 0):
+            $overallPct = min(100, round($totalCurrent/$totalTarget*100));
+          ?>
+          <div class="plan-obj" style="border-color:var(--primary);">
+            <div class="obj-n" style="color:var(--primary);"><?= $overallPct ?>%</div>
+            <div class="obj-l">Overall Progress</div>
+            <div class="health-bar" style="margin-top:.4rem;">
+              <div class="health-fill" style="width:<?= $overallPct ?>%; background:var(--primary);"></div>
+            </div>
+          </div>
+          <?php endif; ?>
+        </div>
         <?php else: ?>
-          <p style="color:var(--muted); font-size:0.875rem;">No tasks yet. <a href="?id=<?= $listingId ?>&tab=tasks" style="color:var(--primary);">Add one →</a></p>
+        <p style="color:var(--muted); font-size:.85rem;">No objectives set. <a href="<?= tabUrl('growth_plan',$listingId) ?>">Add objectives →</a></p>
         <?php endif; ?>
       </div>
+      <?php endif; ?>
     </div>
 
-    <!-- Right column: health score + recommendations -->
+    <!-- Right column: Priority Actions + Health -->
     <div>
-      <div class="panel">
-        <?php $score = $health['score']; $color = $score>=70?'#00A878':($score>=40?'#fcd116':'#e63946'); ?>
-        <h2>💚 Business Health</h2>
-        <div class="health-circle">
-          <div class="health-score-num" style="color:<?= $color ?>;"><?= $score ?>%</div>
-          <div style="font-size:0.8rem; color:var(--muted);">Overall Health Score</div>
+      <div class="ws-card">
+        <h3>Priority Actions</h3>
+        <?php foreach ($actions as $a): ?>
+        <div class="action-item">
+          <span><?= $a['icon'] ?></span>
+          <span>
+            <?= e($a['text']) ?>
+            <?php if (!empty($a['link'])): ?>
+            <a href="<?= tabUrl(ltrim(parse_url($a['link'],PHP_URL_QUERY),'?tab='), $listingId) ?>" style="font-size:.75rem; color:var(--primary); text-decoration:none; margin-left:.3rem;">→</a>
+            <?php endif; ?>
+          </span>
         </div>
-        <?php foreach ($health['components'] as $compName => $comp):
-          $pct = $comp['max'] > 0 ? round($comp['score'] / $comp['max'] * 100) : 0;
-          $cColor = $pct>=70?'#00A878':($pct>=40?'#fcd116':'#e63946');
-        ?>
-        <div class="health-component">
-          <span class="hc-label"><?= $compName ?></span>
-          <div class="hc-bar"><div class="hc-fill" style="width:<?= $pct ?>%;background:<?= $cColor ?>;"></div></div>
-          <span class="hc-val" style="color:<?= $cColor ?>;"><?= $comp['score'] ?>/<?= $comp['max'] ?></span>
+        <?php endforeach; ?>
+        <?php if (empty($actions)): ?>
+        <p style="color:#00A878; font-size:.85rem;">🟢 No urgent actions — business is on track.</p>
+        <?php endif; ?>
+      </div>
+
+      <!-- Health Score breakdown -->
+      <div class="ws-card">
+        <h3>Health Score — <?= $healthScore ?>%</h3>
+        <?php foreach ($healthData['components'] as $name => $comp): ?>
+        <div style="margin-bottom:.75rem;">
+          <div style="display:flex; justify-content:space-between; font-size:.8rem; margin-bottom:.3rem;">
+            <span><?= $name ?></span>
+            <span style="font-weight:700;"><?= $comp['score'] ?> / <?= $comp['max'] ?></span>
+          </div>
+          <div class="health-bar">
+            <div class="health-fill" style="width:<?= round($comp['score']/$comp['max']*100) ?>%; background:<?= healthColor(round($comp['score']/$comp['max']*100)) ?>;"></div>
+          </div>
         </div>
         <?php endforeach; ?>
       </div>
 
-      <div class="panel">
-        <h2>💡 Recommended Actions</h2>
-        <?php foreach ($recommendations as $rec): ?>
-        <div class="action-item">
-          <div class="<?= $rec['type']==='warning' ? 'action-dot-warn' : 'action-dot-info' ?>"></div>
-          <div><?= e($rec['text']) ?></div>
+      <!-- Task/Lead quick stats -->
+      <div class="ws-card">
+        <h3>Quick Stats</h3>
+        <div style="font-size:.85rem; display:flex; flex-direction:column; gap:.4rem;">
+          <div style="display:flex; justify-content:space-between;"><span>Open tasks</span><strong><?= (int)$taskSummary['open'] ?></strong></div>
+          <?php if ($taskSummary['overdue'] > 0): ?>
+          <div style="display:flex; justify-content:space-between; color:#e63946;"><span>Overdue tasks</span><strong><?= (int)$taskSummary['overdue'] ?></strong></div>
+          <?php endif; ?>
+          <div style="display:flex; justify-content:space-between;"><span>New leads</span><strong><?= (int)($leadSummary['new'] ?? 0) ?></strong></div>
+          <div style="display:flex; justify-content:space-between;"><span>Active campaigns</span><strong><?= $campStats['active'] ?></strong></div>
+          <div style="display:flex; justify-content:space-between;"><span>Avg rating</span><strong><?= $listing['avg_rating'] ? number_format((float)$listing['avg_rating'],1).'★' : 'N/A' ?></strong></div>
         </div>
-        <?php endforeach; ?>
-        <?php if (!$recommendations): ?>
-          <p style="color:#00A878; text-align:center; padding:0.5rem;">✓ Profile looks good!</p>
-        <?php endif; ?>
       </div>
     </div>
   </div>
 
-  <!-- ══ GROWTH PLAN TAB ══ -->
-  <?php elseif ($tab === 'plan'): ?>
-    <?php if ($activePlan): ?>
-    <div class="panel">
-      <h2>📈 <?= e($activePlan['title']) ?>
-        <span style="margin-left:0.5rem; font-size:0.75rem; background:rgba(0,168,120,0.15); color:#00A878; padding:2px 8px; border-radius:20px; font-weight:700;">Active</span>
-      </h2>
-      <div style="display:flex; gap:2rem; flex-wrap:wrap; font-size:0.875rem; color:var(--muted); margin-bottom:1rem;">
-        <?php if ($activePlan['start_date']): ?><span>Start: <?= date('j M Y', strtotime($activePlan['start_date'])) ?></span><?php endif; ?>
-        <?php if ($activePlan['end_date']): ?><span>End: <?= date('j M Y', strtotime($activePlan['end_date'])) ?></span><?php endif; ?>
-      </div>
-      <?php if ($activePlan['notes']): ?><p style="color:var(--muted); font-size:0.875rem;"><?= nl2br(e($activePlan['notes'])) ?></p><?php endif; ?>
+  <?php // ═══ GROWTH PLAN ════════════════════════════════════════
+  elseif ($tab === 'growth_plan'): ?>
 
-      <?php if ($objectives): ?>
-      <h3 style="font-size:0.9rem; font-weight:700; margin:1.25rem 0 0.75rem;">Objectives & Progress</h3>
-      <?php
-      $metricLabels = ['reviews'=>'Reviews','profile_views'=>'Profile Views','enquiries'=>'Enquiries','campaigns'=>'Campaigns','social_posts'=>'Social Posts'];
-      foreach ($objectives as $obj):
-        $pct = $obj['target_value'] > 0 ? min(100, round($obj['current_value'] / $obj['target_value'] * 100)) : 0;
-        $blocks = round($pct / 10);
-      ?>
-      <div style="margin-bottom:1rem;">
-        <div style="display:flex; justify-content:space-between; font-size:0.875rem; margin-bottom:0.3rem;">
-          <span style="font-weight:600;"><?= e($metricLabels[$obj['metric']] ?? ucfirst($obj['metric'])) ?></span>
-          <span style="color:var(--muted);"><?= $obj['current_value'] ?> / <?= $obj['target_value'] ?></span>
-        </div>
-        <div style="display:flex; gap:2px;">
-          <?php for($b=0;$b<10;$b++): ?>
-          <div style="flex:1; height:12px; background:<?= $b<$blocks ? 'var(--primary)' : 'var(--border)' ?>; border-radius:2px;"></div>
-          <?php endfor; ?>
-        </div>
-        <div style="font-size:0.75rem; color:var(--primary); margin-top:0.2rem;"><?= $pct ?>%</div>
-      </div>
-      <?php endforeach; ?>
-      <?php endif; ?>
-    </div>
-    <?php endif; ?>
-
-    <!-- All plans list -->
-    <?php if (count($growthPlans) > 0): ?>
-    <div class="panel">
-      <h2>All Growth Plans</h2>
-      <?php foreach ($growthPlans as $gp): ?>
-      <div style="display:flex; align-items:center; gap:1rem; padding:0.6rem 0; border-bottom:1px solid var(--border); font-size:0.875rem;">
-        <div style="flex:1;"><strong><?= e($gp['title']) ?></strong>
-          <div style="color:var(--muted); font-size:0.78rem;"><?= $gp['start_date'] ? date('j M Y', strtotime($gp['start_date'])) : '—' ?> → <?= $gp['end_date'] ? date('j M Y', strtotime($gp['end_date'])) : 'Ongoing' ?></div>
-        </div>
-        <span style="font-size:0.75rem; padding:2px 8px; border-radius:20px; background:var(--border); color:var(--muted);"><?= ucfirst($gp['status']) ?></span>
-      </div>
-      <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
-
-    <!-- Create new plan form -->
-    <div class="panel">
-      <h2>➕ Create New Growth Plan</h2>
-      <form method="POST">
-        <?= csrfField() ?? '<input type="hidden" name="csrf_token" value="">' ?>
-        <input type="hidden" name="action" value="create_plan">
-        <div class="form-grid">
+  <div class="ws-grid">
+    <div>
+      <?php if ($plan): ?>
+      <div class="ws-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
           <div>
-            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.3rem;">Plan Title *</label>
-            <input type="text" name="plan_title" required placeholder="e.g. October Growth Plan" class="form-input" style="width:100%;">
-          </div>
-          <div></div>
-          <div>
-            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.3rem;">Start Date</label>
-            <input type="date" name="start_date" value="<?= date('Y-m-d') ?>" class="form-input" style="width:100%;">
-          </div>
-          <div>
-            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.3rem;">End Date</label>
-            <input type="date" name="end_date" class="form-input" style="width:100%;">
-          </div>
-        </div>
-        <div style="margin:0.75rem 0;">
-          <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.3rem;">Notes / Overview</label>
-          <textarea name="notes" rows="3" class="form-input" style="width:100%;" placeholder="What are you trying to achieve with this business this month?"></textarea>
-        </div>
-        <h3 style="font-size:0.9rem; font-weight:700; margin:1rem 0 0.5rem;">Target Objectives</h3>
-        <?php
-        $objMetrics = ['reviews'=>'Reviews','profile_views'=>'Profile Views','enquiries'=>'Enquiries','campaigns'=>'Campaigns','social_posts'=>'Social Posts'];
-        $i = 0;
-        foreach ($objMetrics as $mk => $ml):
-        ?>
-        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.5rem;">
-          <label style="width:160px; font-size:0.85rem;"><?= $ml ?></label>
-          <input type="hidden" name="obj_metric[]" value="<?= $mk ?>">
-          <input type="number" name="obj_target[]" min="0" placeholder="Target (0 = skip)" class="form-input" style="width:120px;">
-        </div>
-        <?php $i++; endforeach; ?>
-        <div style="margin-top:1rem;">
-          <button type="submit" class="btn btn-primary">Create Plan</button>
-        </div>
-      </form>
-    </div>
-
-  <!-- ══ TASKS TAB ══ -->
-  <?php elseif ($tab === 'tasks'): ?>
-    <!-- Add task form -->
-    <div class="panel" style="margin-bottom:1.5rem;">
-      <h2>➕ Add Task</h2>
-      <form method="POST">
-        <?= csrfField() ?? '' ?>
-        <input type="hidden" name="action" value="add_task">
-        <div class="form-grid">
-          <div style="grid-column:span 2;">
-            <input type="text" name="title" required placeholder="Task title *" class="form-input" style="width:100%;">
-          </div>
-          <div>
-            <select name="category" class="form-input" style="width:100%;">
-              <?php foreach(['profile','reviews','marketing','content','social_media','leads','customer_followup','campaign','website','business_email','other'] as $cat): ?>
-              <option value="<?= $cat ?>"><?= ucwords(str_replace('_',' ',$cat)) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <div style="display:flex; gap:0.5rem;">
-            <select name="priority" class="form-input" style="flex:1;">
-              <option value="low">Low</option>
-              <option value="medium" selected>Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-            <input type="date" name="due_date" class="form-input" style="flex:1;">
-          </div>
-          <div style="grid-column:span 2;">
-            <textarea name="description" rows="2" class="form-input" style="width:100%;" placeholder="Details (optional)"></textarea>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary" style="margin-top:0.75rem;">Add Task</button>
-      </form>
-    </div>
-
-    <!-- Task list -->
-    <div class="panel">
-      <h2>✅ Tasks (<?= count($tasks) ?>)</h2>
-      <?php if ($tasks): ?>
-        <?php foreach ($tasks as $task):
-          $isOverdue = $task['due_date'] && $task['due_date'] < date('Y-m-d') && $task['status'] !== 'completed';
-        ?>
-        <div class="task-row">
-          <span class="task-badge badge-<?= $task['priority'] ?>"><?= ucfirst($task['priority']) ?></span>
-          <div style="flex:1; min-width:0;">
-            <div style="font-weight:600; font-size:0.9rem; <?= $task['status']==='completed' ? 'text-decoration:line-through; opacity:.6;' : '' ?>"><?= e($task['title']) ?></div>
-            <div style="font-size:0.75rem; color:var(--muted);">
-              <?= ucwords(str_replace('_',' ',$task['category'])) ?>
-              <?php if ($task['due_date']): ?>
-                — <?php if ($isOverdue): ?><span style="color:#e63946;">⚠ Overdue</span> <?php endif; ?>
-                Due <?= date('j M', strtotime($task['due_date'])) ?>
-              <?php endif; ?>
+            <div style="font-size:1.1rem; font-weight:800; font-family:'Fraunces',serif;"><?= e($plan['name']) ?></div>
+            <div style="font-size:.78rem; color:var(--muted);">
+              <?= $plan['start_date'] ? date('j M Y', strtotime($plan['start_date'])) : '' ?>
+              <?= $plan['end_date'] ? ' – ' . date('j M Y', strtotime($plan['end_date'])) : '' ?>
             </div>
           </div>
-          <span class="status-chip status-<?= $task['status'] ?>"><?= str_replace('_',' ',ucfirst($task['status'])) ?></span>
+          <span class="badge badge-<?= $plan['status'] ?>"><?= $plan['status'] ?></span>
+        </div>
+        <?php if ($plan['notes']): ?><p style="font-size:.85rem; color:var(--muted);"><?= e($plan['notes']) ?></p><?php endif; ?>
+
+        <!-- Objectives -->
+        <?php foreach ($objectives as $obj):
+          $pct = $obj['target'] > 0 ? min(100, round($obj['current']/$obj['target']*100)) : 0;
+        ?>
+        <div style="border:1px solid var(--border); border-radius:9px; padding:.85rem; margin-bottom:.6rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="font-size:.9rem;"><?= e($obj['title']) ?></strong>
+            <span style="font-size:.85rem; font-family:'Fraunces',serif; font-weight:800;">
+              <?= $obj['current'] ?> <span style="color:var(--muted); font-size:.75rem;">/ <?= $obj['target'] ?></span>
+            </span>
+          </div>
+          <div class="health-bar" style="margin-top:.5rem;">
+            <div class="health-fill" style="width:<?= $pct ?>%; background:<?= healthColor($pct) ?>;"></div>
+          </div>
+          <div style="font-size:.72rem; color:var(--muted); margin-top:.3rem;"><?= $pct ?>% complete</div>
+        </div>
+        <?php endforeach; ?>
+
+        <!-- Add objective -->
+        <details style="margin-top:.75rem;">
+          <summary style="font-size:.82rem; color:var(--primary); cursor:pointer;">+ Add Objective</summary>
+          <form method="POST" style="margin-top:.6rem;">
+            <?= csrfField() ?>
+            <input type="hidden" name="action" value="add_objective">
+            <input type="hidden" name="plan_id" value="<?= $plan['id'] ?>">
+            <div class="form-row">
+              <div><label>Objective</label><input type="text" name="obj_title" required placeholder="e.g. New Reviews" style="width:180px;"></div>
+              <div><label>Target</label><input type="number" name="target" min="1" value="10" style="width:80px;"></div>
+              <div><label>Type</label>
+                <select name="obj_type">
+                  <option value="reviews">Reviews</option>
+                  <option value="leads">Leads</option>
+                  <option value="campaigns">Campaigns</option>
+                  <option value="tasks">Tasks</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div style="padding-top:1.2rem;"><button class="btn btn-primary" style="font-size:.82rem;">Add</button></div>
+            </div>
+          </form>
+        </details>
+      </div>
+      <?php else: ?>
+      <div class="ws-card" style="text-align:center; padding:3rem;">
+        <div style="font-size:3rem;">🎯</div>
+        <h3 style="font-family:'Fraunces',serif; font-weight:900;">No Active Growth Plan</h3>
+        <p style="color:var(--muted);">Create a growth plan to define this month's objectives.</p>
+      </div>
+      <?php endif; ?>
+    </div>
+    <div>
+      <!-- Create plan form -->
+      <div class="ws-card">
+        <h3><?= $plan ? 'New Plan' : 'Create Growth Plan' ?></h3>
+        <form method="POST">
+          <?= csrfField() ?>
+          <input type="hidden" name="action" value="create_plan">
+          <div style="display:flex; flex-direction:column; gap:.6rem;">
+            <div><label style="font-size:.78rem; color:var(--muted);">Plan Name</label>
+              <input type="text" name="plan_name" required placeholder="e.g. October Growth Plan" style="width:100%; padding:.4rem .6rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.85rem;"></div>
+            <div class="form-row">
+              <div><label>Start</label><input type="date" name="start_date" value="<?= date('Y-m-01') ?>"></div>
+              <div><label>End</label><input type="date" name="end_date" value="<?= date('Y-m-t') ?>"></div>
+            </div>
+            <div><label style="font-size:.78rem; color:var(--muted);">Notes</label>
+              <textarea name="plan_notes" rows="3" placeholder="Plan overview…" style="width:100%; padding:.4rem .6rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem; resize:vertical;"></textarea></div>
+            <button class="btn btn-primary" style="font-size:.85rem;">Create Plan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <?php // ═══ TASKS ══════════════════════════════════════════════
+  elseif ($tab === 'tasks'): ?>
+
+  <div class="ws-grid">
+    <div>
+      <?php if ($tasks): foreach ($tasks as $task):
+        $isOverdue = $task['due_date'] && $task['due_date'] < date('Y-m-d') && !in_array($task['status'],['completed','cancelled']);
+      ?>
+      <div class="item-card" style="<?= $isOverdue ? 'border-color:#e63946;' : '' ?>">
+        <div style="display:flex; justify-content:space-between; gap:.5rem; flex-wrap:wrap;">
+          <div>
+            <strong style="font-size:.9rem; <?= $task['status']==='completed'?'text-decoration:line-through;color:var(--muted)':'' ?>"><?= e($task['title']) ?></strong>
+            <span class="badge badge-<?= $task['priority'] ?>" style="margin-left:.4rem;"><?= $task['priority'] ?></span>
+            <?php if ($isOverdue): ?><span class="badge" style="background:rgba(230,57,70,.13);color:#e63946; margin-left:.3rem;">Overdue</span><?php endif; ?>
+          </div>
           <?php if ($task['status'] !== 'completed' && $task['status'] !== 'cancelled'): ?>
-          <form method="POST" style="margin:0;">
-            <?= csrfField() ?? '' ?>
+          <form method="POST">
+            <?= csrfField() ?>
             <input type="hidden" name="action" value="complete_task">
             <input type="hidden" name="task_id" value="<?= $task['id'] ?>">
-            <button type="submit" title="Mark complete" style="background:none; border:none; cursor:pointer; font-size:1.1rem; padding:2px;">✅</button>
+            <button class="btn btn-primary" style="font-size:.75rem; padding:.25rem .6rem;">✓ Done</button>
           </form>
           <?php endif; ?>
         </div>
-        <?php endforeach; ?>
-      <?php else: ?>
-        <p style="color:var(--muted); text-align:center; padding:1rem;">No tasks yet. Add one above.</p>
+        <div style="font-size:.78rem; color:var(--muted); margin-top:.3rem; display:flex; gap:.75rem; flex-wrap:wrap;">
+          <?php if ($task['due_date']): ?><span>📅 <?= date('j M Y',strtotime($task['due_date'])) ?></span><?php endif; ?>
+          <span class="badge badge-<?= str_replace('_','',$task['status']) ?>" style="font-size:.7rem;"><?= $task['status'] ?></span>
+        </div>
+        <?php if ($task['notes']): ?><div style="font-size:.8rem; color:var(--muted); margin-top:.3rem;"><?= e($task['notes']) ?></div><?php endif; ?>
+      </div>
+      <?php endforeach; else: ?>
+      <div class="ws-card" style="text-align:center; padding:2.5rem; color:var(--muted);">✅ No tasks yet.</div>
       <?php endif; ?>
     </div>
+    <div>
+      <div class="ws-card">
+        <h3>Add Task</h3>
+        <form method="POST">
+          <?= csrfField() ?>
+          <input type="hidden" name="action" value="add_task">
+          <div style="display:flex; flex-direction:column; gap:.55rem;">
+            <input type="text" name="title" required placeholder="Task title…" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.85rem;">
+            <select name="priority" style="padding:.4rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem;">
+              <option value="low">Low Priority</option>
+              <option value="medium" selected>Medium Priority</option>
+              <option value="high">High Priority</option>
+              <option value="urgent">Urgent</option>
+            </select>
+            <input type="date" name="due_date" style="padding:.4rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem;">
+            <textarea name="notes" rows="2" placeholder="Notes…" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem; resize:vertical;"></textarea>
+            <button class="btn btn-primary" style="font-size:.85rem;">Add Task</button>
+          </div>
+        </form>
+      </div>
+      <div class="ws-card">
+        <h3>Summary</h3>
+        <div style="font-size:.85rem; display:flex; flex-direction:column; gap:.35rem;">
+          <div style="display:flex; justify-content:space-between;"><span>Open</span><strong><?= (int)$taskSummary['open'] ?></strong></div>
+          <div style="display:flex; justify-content:space-between; color:#e63946;"><span>Overdue</span><strong><?= (int)$taskSummary['overdue'] ?></strong></div>
+          <div style="display:flex; justify-content:space-between; color:#00A878;"><span>Completed</span><strong><?= (int)$taskSummary['completed'] ?></strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <!-- ══ LEADS TAB ══ -->
-  <?php elseif ($tab === 'leads'): ?>
-    <div class="panel" style="margin-bottom:1.5rem;">
-      <h2>➕ Record Lead</h2>
-      <form method="POST">
-        <?= csrfField() ?? '' ?>
-        <input type="hidden" name="action" value="add_lead">
-        <div class="form-grid">
-          <div><input type="text" name="customer_name" placeholder="Customer name" class="form-input" style="width:100%;"></div>
-          <div><input type="email" name="customer_email" placeholder="Email" class="form-input" style="width:100%;"></div>
-          <div><input type="tel" name="customer_phone" placeholder="Phone" class="form-input" style="width:100%;"></div>
+  <?php // ═══ LEADS ══════════════════════════════════════════════
+  elseif ($tab === 'leads'): ?>
+
+  <!-- Pipeline summary -->
+  <div class="stat-row" style="margin-bottom:1.25rem;">
+    <?php
+    $lStages = ['new'=>'New','contacted'=>'Contacted','follow_up'=>'Follow-up','qualified'=>'Qualified','converted'=>'Converted','lost'=>'Lost'];
+    foreach ($lStages as $sk => $sl): ?>
+    <div class="stat-box">
+      <div class="n"><?= (int)($leadSummary[$sk] ?? 0) ?></div>
+      <div class="l"><?= $sl ?></div>
+    </div>
+    <?php endforeach; ?>
+  </div>
+
+  <div class="ws-grid">
+    <div>
+      <?php if ($leads): foreach ($leads as $lead):
+        $isOverdue = $lead['follow_up_date'] && $lead['follow_up_date'] < date('Y-m-d') && !in_array($lead['status'],['converted','lost','closed']);
+      ?>
+      <div class="item-card" style="<?= $isOverdue?'border-color:#e63946;':'' ?>">
+        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:.5rem;">
           <div>
-            <select name="source" class="form-input" style="width:100%;">
-              <?php foreach(['enquiry','booking','campaign','referral','walk_in','phone','other'] as $src): ?>
-              <option value="<?= $src ?>"><?= ucfirst(str_replace('_',' ',$src)) ?></option>
+            <strong><?= e($lead['customer_name'] ?: 'Unknown') ?></strong>
+            <span class="badge badge-<?= $lead['status'] ?>" style="margin-left:.4rem;"><?= str_replace('_',' ',$lead['status']) ?></span>
+            <?php if ($isOverdue): ?><span class="badge" style="background:rgba(230,57,70,.13);color:#e63946; margin-left:.3rem;">Follow-up overdue</span><?php endif; ?>
+          </div>
+          <span style="font-size:.75rem; color:var(--muted);"><?= date('j M', strtotime($lead['created_at'])) ?></span>
+        </div>
+        <div style="font-size:.78rem; color:var(--muted); margin-top:.3rem; display:flex; gap:.75rem; flex-wrap:wrap;">
+          <?php if ($lead['customer_email']): ?><span>✉ <?= e($lead['customer_email']) ?></span><?php endif; ?>
+          <?php if ($lead['customer_phone']): ?><span>📞 <?= e($lead['customer_phone']) ?></span><?php endif; ?>
+          <?php if ($lead['follow_up_date']): ?><span>📅 Follow-up: <?= date('j M Y',strtotime($lead['follow_up_date'])) ?></span><?php endif; ?>
+        </div>
+        <?php if ($lead['next_action']): ?><div style="font-size:.8rem; margin-top:.3rem;">→ <strong>Next:</strong> <?= e($lead['next_action']) ?></div><?php endif; ?>
+        <?php if ($lead['notes']): ?><div style="font-size:.78rem; color:var(--muted); margin-top:.2rem;"><?= e(mb_strimwidth($lead['notes'],0,120,'…')) ?></div><?php endif; ?>
+
+        <!-- Log activity -->
+        <?php if (!in_array($lead['status'],['converted','lost','closed'])): ?>
+        <details style="margin-top:.65rem;">
+          <summary style="font-size:.78rem; color:var(--primary); cursor:pointer;">Log activity</summary>
+          <form method="POST" style="margin-top:.5rem;">
+            <?= csrfField() ?>
+            <input type="hidden" name="action" value="add_lead_activity">
+            <input type="hidden" name="lead_id" value="<?= $lead['id'] ?>">
+            <div class="form-row">
+              <div><label>Activity</label>
+                <select name="activity_type" style="padding:.35rem; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:.8rem;">
+                  <option value="note">Note</option>
+                  <option value="phone_call">Phone call</option>
+                  <option value="email_sent">Email sent</option>
+                  <option value="message_sent">Message sent</option>
+                  <option value="follow_up">Follow-up</option>
+                  <option value="appointment">Appointment</option>
+                  <option value="converted">Converted</option>
+                  <option value="lost">Lost</option>
+                </select>
+              </div>
+              <div><label>Follow-up date</label><input type="date" name="follow_up_date" style="padding:.35rem; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:.8rem;"></div>
+            </div>
+            <textarea name="act_notes" rows="2" placeholder="Notes…" style="margin-top:.4rem; width:100%; padding:.35rem .55rem; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:.8rem; resize:vertical;"></textarea>
+            <button class="btn btn-primary" style="font-size:.78rem; padding:.3rem .7rem; margin-top:.35rem;">Save</button>
+          </form>
+        </details>
+        <?php endif; ?>
+      </div>
+      <?php endforeach; else: ?>
+      <div class="ws-card" style="text-align:center; padding:2.5rem; color:var(--muted);">💬 No leads yet.</div>
+      <?php endif; ?>
+    </div>
+    <div>
+      <div class="ws-card">
+        <h3>Add Lead</h3>
+        <form method="POST">
+          <?= csrfField() ?>
+          <input type="hidden" name="action" value="add_lead">
+          <div style="display:flex; flex-direction:column; gap:.55rem;">
+            <input type="text" name="customer_name" required placeholder="Customer name" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.85rem;">
+            <input type="email" name="customer_email" placeholder="Email (optional)" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.85rem;">
+            <input type="tel" name="customer_phone" placeholder="Phone (optional)" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.85rem;">
+            <select name="source" style="padding:.4rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem;">
+              <option value="direct">Direct</option>
+              <option value="referral">Referral</option>
+              <option value="social">Social media</option>
+              <option value="campaign">Campaign</option>
+              <option value="walk_in">Walk-in</option>
+              <option value="other">Other</option>
+            </select>
+            <textarea name="notes" rows="2" placeholder="Notes…" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem; resize:vertical;"></textarea>
+            <button class="btn btn-primary" style="font-size:.85rem;">Add Lead</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <?php // ═══ CAMPAIGNS ══════════════════════════════════════════
+  elseif ($tab === 'campaigns'): ?>
+
+  <div class="ws-grid">
+    <div>
+      <?php if ($campaigns): foreach ($campaigns as $camp): ?>
+      <div class="item-card">
+        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:.5rem;">
+          <div>
+            <strong style="font-size:.95rem;"><?= e($camp['name']) ?></strong>
+            <span class="badge badge-<?= $camp['status'] ?>" style="margin-left:.4rem;"><?= $camp['status'] ?></span>
+            <span style="font-size:.75rem; color:var(--muted); margin-left:.4rem;"><?= ucwords(str_replace('_',' ',$camp['campaign_type'])) ?></span>
+          </div>
+          <span style="font-size:.75rem; color:var(--muted);">
+            <?= $camp['start_date'] ? date('j M',strtotime($camp['start_date'])) : '' ?>
+            <?= $camp['end_date'] ? ' – '.date('j M Y',strtotime($camp['end_date'])) : '' ?>
+          </span>
+        </div>
+        <?php if ($camp['objective']): ?><div style="font-size:.82rem; color:var(--muted); margin-top:.35rem;"><?= e($camp['objective']) ?></div><?php endif; ?>
+        <?php if ($camp['call_to_action']): ?><div style="margin-top:.3rem; font-size:.82rem;">CTA: <strong><?= e($camp['call_to_action']) ?></strong></div><?php endif; ?>
+        <?php if ($camp['offer']): ?><div style="font-size:.82rem; color:var(--muted);">Offer: <?= e($camp['offer']) ?></div><?php endif; ?>
+      </div>
+      <?php endforeach; else: ?>
+      <div class="ws-card" style="text-align:center; padding:2.5rem; color:var(--muted);">📣 No campaigns yet.</div>
+      <?php endif; ?>
+    </div>
+    <div>
+      <div class="ws-card">
+        <h3>Create Campaign</h3>
+        <form method="POST">
+          <?= csrfField() ?>
+          <input type="hidden" name="action" value="create_campaign">
+          <div style="display:flex; flex-direction:column; gap:.55rem;">
+            <input type="text" name="camp_name" required placeholder="Campaign name" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.85rem;">
+            <select name="camp_type" style="padding:.4rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem;">
+              <?php foreach (['business_promotion'=>'Business Promotion','product_promotion'=>'Product Promotion','service_promotion'=>'Service Promotion','special_offer'=>'Special Offer','event'=>'Event','review_campaign'=>'Review Campaign','social_media_campaign'=>'Social Media Campaign','seasonal_campaign'=>'Seasonal Campaign'] as $v=>$l): ?>
+              <option value="<?= $v ?>"><?= $l ?></option>
               <?php endforeach; ?>
             </select>
+            <textarea name="camp_objective" rows="2" placeholder="Objective…" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem; resize:vertical;"></textarea>
+            <textarea name="camp_desc" rows="2" placeholder="Description…" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem; resize:vertical;"></textarea>
+            <input type="text" name="camp_offer" placeholder="Offer/promotion" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.85rem;">
+            <input type="text" name="camp_cta" placeholder="Call to action" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.85rem;">
+            <div class="form-row">
+              <div><label>Start</label><input type="date" name="camp_start"></div>
+              <div><label>End</label><input type="date" name="camp_end"></div>
+            </div>
+            <button class="btn btn-primary" style="font-size:.85rem;">Create Campaign</button>
           </div>
-          <div style="grid-column:span 2;">
-            <textarea name="notes" rows="2" class="form-input" style="width:100%;" placeholder="Notes / Next action"></textarea>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <?php // ═══ CONTENT ════════════════════════════════════════════
+  elseif ($tab === 'content'): ?>
+
+  <div class="ws-grid">
+    <div>
+      <?php if ($contents): foreach ($contents as $ci): ?>
+      <div class="item-card">
+        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:.5rem;">
+          <div>
+            <?php if ($ci['title']): ?><strong style="font-size:.9rem;"><?= e($ci['title']) ?></strong><?php endif; ?>
+            <span class="badge badge-<?= $ci['status'] ?>" style="margin-left:.4rem;"><?= $ci['status'] ?></span>
+            <span style="font-size:.75rem; color:var(--muted); margin-left:.3rem;"><?= ucwords(str_replace('_',' ',$ci['content_type'])) ?></span>
           </div>
+          <span style="font-size:.75rem; color:var(--muted);"><?= $ci['scheduled_date'] ? date('j M Y',strtotime($ci['scheduled_date'])) : 'Not scheduled' ?></span>
         </div>
-        <button type="submit" class="btn btn-primary" style="margin-top:0.75rem;">Record Lead</button>
+        <?php if ($ci['body']): ?><div style="font-size:.82rem; color:var(--muted); margin-top:.4rem;"><?= e(mb_strimwidth($ci['body'],0,160,'…')) ?></div><?php endif; ?>
+        <?php if ($ci['platform']): ?><div style="font-size:.75rem; color:var(--muted); margin-top:.2rem;">Platform: <?= e(ucfirst($ci['platform'])) ?></div><?php endif; ?>
+        <?php if ($ci['campaign_name']): ?><div style="font-size:.75rem; color:var(--muted);">Campaign: <?= e($ci['campaign_name']) ?></div><?php endif; ?>
+      </div>
+      <?php endforeach; else: ?>
+      <div class="ws-card" style="text-align:center; padding:2.5rem; color:var(--muted);">📝 No content yet.</div>
+      <?php endif; ?>
+    </div>
+    <div>
+      <div class="ws-card">
+        <h3>Add Content</h3>
+        <form method="POST">
+          <?= csrfField() ?>
+          <input type="hidden" name="action" value="add_content">
+          <div style="display:flex; flex-direction:column; gap:.55rem;">
+            <select name="ci_type" style="padding:.4rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem;">
+              <?php foreach (['social_post'=>'Social Post','promotional_post'=>'Promotional Post','product_post'=>'Product Post','service_post'=>'Service Post','event_post'=>'Event Post','review_post'=>'Review Post','video'=>'Video','image'=>'Image','announcement'=>'Announcement'] as $v=>$l): ?>
+              <option value="<?= $v ?>"><?= $l ?></option>
+              <?php endforeach; ?>
+            </select>
+            <input type="text" name="ci_title" placeholder="Title (optional)" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.85rem;">
+            <textarea name="ci_body" rows="4" placeholder="Content text…" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem; resize:vertical;"></textarea>
+            <select name="ci_platform" style="padding:.4rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem;">
+              <option value="">Platform (optional)</option>
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+              <option value="tiktok">TikTok</option>
+              <option value="linkedin">LinkedIn</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="other">Other</option>
+            </select>
+            <input type="datetime-local" name="ci_scheduled" style="padding:.4rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem;">
+            <?php if ($allCampaigns): ?>
+            <select name="ci_campaign" style="padding:.4rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem;">
+              <option value="">Link to campaign (optional)</option>
+              <?php foreach ($allCampaigns as $ac): ?>
+              <option value="<?= $ac['id'] ?>"><?= e($ac['name']) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <?php endif; ?>
+            <button class="btn btn-primary" style="font-size:.85rem;">Add Content</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <?php // ═══ REVIEWS ════════════════════════════════════════════
+  elseif ($tab === 'reviews'): ?>
+
+  <!-- Review overview -->
+  <div class="stat-row">
+    <div class="stat-box">
+      <div class="n"><?= (int)$listing['review_count'] ?></div><div class="l">Total Reviews</div>
+    </div>
+    <div class="stat-box">
+      <div class="n"><?= $listing['avg_rating'] ? number_format((float)$listing['avg_rating'],1) : 'N/A' ?></div><div class="l">Avg Rating ★</div>
+    </div>
+    <?php
+    $monthRevSt = $pdo->prepare("SELECT COUNT(*) FROM reviews WHERE listing_id=? AND MONTH(created_at)=MONTH(NOW()) AND YEAR(created_at)=YEAR(NOW())");
+    $monthRevSt->execute([$listingId]);
+    $monthRevs = (int)$monthRevSt->fetchColumn();
+    ?>
+    <div class="stat-box">
+      <div class="n"><?= $monthRevs ?></div><div class="l">This Month</div>
+    </div>
+  </div>
+
+  <div class="ws-grid">
+    <div>
+      <div class="ws-card">
+        <h3>Review Campaigns</h3>
+        <?php if ($reviewCampaigns): foreach ($reviewCampaigns as $rc):
+          $pct = $rc['target_reviews'] > 0 ? min(100, round($rc['reviews_generated']/$rc['target_reviews']*100)) : 0;
+        ?>
+        <div style="border:1px solid var(--border); border-radius:9px; padding:.85rem; margin-bottom:.6rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong><?= e($rc['name']) ?></strong>
+            <span class="badge badge-<?= $rc['status'] ?>"><?= $rc['status'] ?></span>
+          </div>
+          <div style="font-size:.8rem; color:var(--muted); margin:.3rem 0;">
+            Target: <?= $rc['target_reviews'] ?> reviews · Generated: <?= $rc['reviews_generated'] ?>
+          </div>
+          <div class="health-bar"><div class="health-fill" style="width:<?= $pct ?>%; background:<?= healthColor($pct) ?>;"></div></div>
+          <div style="font-size:.72rem; color:var(--muted); margin-top:.2rem;"><?= $pct ?>% complete</div>
+        </div>
+        <?php endforeach; else: ?>
+        <p style="color:var(--muted); font-size:.85rem;">No review campaigns yet.</p>
+        <?php endif; ?>
+      </div>
+
+      <!-- Existing reviews -->
+      <?php
+      $revSt = $pdo->prepare("SELECT * FROM reviews WHERE listing_id=? ORDER BY created_at DESC LIMIT 20");
+      $revSt->execute([$listingId]);
+      $revRows = $revSt->fetchAll();
+      if ($revRows): ?>
+      <div class="ws-card">
+        <h3>Recent Reviews</h3>
+        <?php foreach ($revRows as $rev): ?>
+        <div style="padding:.6rem 0; border-bottom:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; font-size:.82rem;">
+            <strong><?= e($rev['reviewer_name'] ?? 'Customer') ?></strong>
+            <span style="color:#fcd116;"><?= str_repeat('★',(int)$rev['rating']) ?><?= str_repeat('☆',5-(int)$rev['rating']) ?></span>
+          </div>
+          <?php if ($rev['review_text']??''): ?><div style="font-size:.8rem; color:var(--muted); margin-top:.2rem;"><?= e(mb_strimwidth($rev['review_text'],0,200,'…')) ?></div><?php endif; ?>
+          <div style="font-size:.72rem; color:var(--muted); margin-top:.2rem;"><?= date('j M Y',strtotime($rev['created_at'])) ?></div>
+        </div>
+        <?php endforeach; ?>
+      </div>
+      <?php endif; ?>
+    </div>
+    <div>
+      <div class="ws-card">
+        <h3>Create Review Campaign</h3>
+        <form method="POST">
+          <?= csrfField() ?>
+          <input type="hidden" name="action" value="create_review_campaign">
+          <div style="display:flex; flex-direction:column; gap:.55rem;">
+            <input type="text" name="rc_name" required placeholder="Campaign name" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.85rem;">
+            <input type="number" name="rc_target" min="1" value="10" placeholder="Target reviews" style="padding:.4rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem;">
+            <textarea name="rc_message" rows="3" placeholder="Request message template…" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem; resize:vertical;"></textarea>
+            <div class="form-row">
+              <div><label>Start</label><input type="date" name="rc_start" value="<?= date('Y-m-d') ?>"></div>
+              <div><label>End</label><input type="date" name="rc_end" value="<?= date('Y-m-t') ?>"></div>
+            </div>
+            <button class="btn btn-primary" style="font-size:.85rem;">Create Campaign</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <?php // ═══ ACTIVITY ════════════════════════════════════════════
+  elseif ($tab === 'activity'): ?>
+
+  <div style="max-width:760px;">
+    <div class="ws-card">
+      <h3>Activity Timeline</h3>
+      <?php if ($activityFeed): foreach ($activityFeed as $act): ?>
+      <div class="activity-item">
+        <div class="activity-dot"></div>
+        <div style="flex:1;">
+          <div><?= e($act['description']) ?></div>
+          <?php if ($act['actor_name']): ?><div style="font-size:.75rem; color:var(--muted);"><?= e($act['actor_name']) ?></div><?php endif; ?>
+        </div>
+        <div class="activity-date"><?= date('j M Y', strtotime($act['created_at'])) ?></div>
+      </div>
+      <?php endforeach; else: ?>
+      <p style="color:var(--muted); text-align:center; padding:2rem;">No activity recorded yet.</p>
+      <?php endif; ?>
+    </div>
+  </div>
+
+  <?php // ═══ OPPORTUNITIES ══════════════════════════════════════
+  elseif ($tab === 'opportunities'): ?>
+
+  <div class="ws-grid">
+    <div>
+      <?php if ($opportunities): foreach ($opportunities as $opp): ?>
+      <div class="item-card">
+        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:.5rem;">
+          <div>
+            <strong><?= e($opp['title']) ?></strong>
+            <span class="badge opp-<?= $opp['status'] ?>" style="margin-left:.4rem; padding:2px 9px; border-radius:20px; font-size:.72rem; font-weight:700;"><?= ucfirst($opp['status']) ?></span>
+          </div>
+          <span style="font-size:.78rem; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:.2rem .6rem;"><?= e($opp['service_type']) ?></span>
+        </div>
+        <?php if ($opp['description']): ?><div style="font-size:.82rem; color:var(--muted); margin-top:.35rem;"><?= e($opp['description']) ?></div><?php endif; ?>
+        <div style="font-size:.72rem; color:var(--muted); margin-top:.3rem;"><?= date('j M Y', strtotime($opp['created_at'])) ?></div>
+      </div>
+      <?php endforeach; else: ?>
+      <div class="ws-card" style="text-align:center; padding:2.5rem; color:var(--muted);">💡 No opportunities logged yet.</div>
+      <?php endif; ?>
+    </div>
+    <div>
+      <div class="ws-card">
+        <h3>Log Opportunity</h3>
+        <form method="POST">
+          <?= csrfField() ?>
+          <input type="hidden" name="action" value="add_opportunity">
+          <div style="display:flex; flex-direction:column; gap:.55rem;">
+            <select name="opp_service" required style="padding:.4rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem;">
+              <option value="">Select service…</option>
+              <?php foreach (['Website','Business Email','SEO','Hosting','SupportDesk','Digital Marketing','Social Media','Featured Listing','Advertising','Other'] as $svc): ?>
+              <option value="<?= $svc ?>"><?= $svc ?></option>
+              <?php endforeach; ?>
+            </select>
+            <input type="text" name="opp_title" required placeholder="Opportunity title" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.85rem;">
+            <textarea name="opp_desc" rows="3" placeholder="Details…" style="padding:.4rem .65rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:.83rem; resize:vertical;"></textarea>
+            <button class="btn btn-primary" style="font-size:.85rem;">Log Opportunity</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <?php // ═══ REPORTS ════════════════════════════════════════════
+  elseif ($tab === 'reports'): ?>
+
+  <div style="max-width:860px;">
+    <div class="ws-card">
+      <h3>Generate Report</h3>
+      <form method="POST" action="<?= SITE_URL ?>/partner/reports?id=<?= $listingId ?>" target="_blank">
+        <?= csrfField() ?>
+        <div class="form-row">
+          <div><label>Period start</label><input type="date" name="period_start" value="<?= date('Y-m-01') ?>"></div>
+          <div><label>Period end</label><input type="date" name="period_end" value="<?= date('Y-m-t') ?>"></div>
+          <div style="padding-top:1.2rem;"><button class="btn btn-primary">Preview Report →</button></div>
+        </div>
       </form>
     </div>
 
-    <div class="panel">
-      <h2>💬 Leads (<?= count($leads) ?>)</h2>
-      <?php if ($leads): ?>
-        <?php foreach ($leads as $lead): ?>
-        <div class="lead-row">
-          <div style="display:flex; align-items:flex-start; gap:0.75rem;">
-            <div style="flex:1;">
-              <div style="font-weight:600;"><?= e($lead['customer_name'] ?: 'Unknown') ?></div>
-              <div style="font-size:0.78rem; color:var(--muted);">
-                <?= e($lead['customer_email'] ?: '') ?> <?= e($lead['customer_phone'] ? '· '.$lead['customer_phone'] : '') ?>
-                · Source: <?= ucfirst(str_replace('_',' ',$lead['source'])) ?>
-                · <?= date('j M Y', strtotime($lead['created_at'])) ?>
-              </div>
-              <?php if ($lead['notes']): ?><div style="font-size:0.8rem; color:var(--muted); margin-top:0.2rem;"><?= e($lead['notes']) ?></div><?php endif; ?>
-            </div>
-            <span style="font-size:0.75rem; padding:2px 8px; border-radius:20px; background:var(--border); color:var(--muted); white-space:nowrap;"><?= ucfirst(str_replace('_',' ',$lead['status'])) ?></span>
-          </div>
+    <?php if (!empty($reports)): ?>
+    <div class="ws-card">
+      <h3>Previous Reports</h3>
+      <?php foreach ($reports as $rpt): ?>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:.6rem 0; border-bottom:1px solid var(--border); font-size:.85rem;">
+        <div>
+          <strong><?= e($rpt['title']) ?></strong>
+          <div style="font-size:.75rem; color:var(--muted);"><?= date('j M Y',strtotime($rpt['period_start'])) ?> – <?= date('j M Y',strtotime($rpt['period_end'])) ?></div>
         </div>
-        <?php endforeach; ?>
-      <?php else: ?>
-        <p style="color:var(--muted); text-align:center; padding:1rem;">No leads recorded yet.</p>
-      <?php endif; ?>
-    </div>
-
-  <!-- ══ REVIEWS TAB ══ -->
-  <?php elseif ($tab === 'reviews'): ?>
-    <div class="panel" style="display:flex; gap:2rem; align-items:flex-start; flex-wrap:wrap; margin-bottom:1.5rem;">
-      <div style="text-align:center;">
-        <div style="font-family:'Fraunces',serif; font-size:3rem; font-weight:900; color:#fcd116;"><?= $biz['avg_rating'] ? number_format($biz['avg_rating'],1) : '—' ?></div>
-        <div style="font-size:0.8rem; color:var(--muted);">Average Rating</div>
-      </div>
-      <div>
-        <div style="font-size:1.5rem; font-weight:700;"><?= (int)$biz['review_count'] ?></div>
-        <div style="font-size:0.8rem; color:var(--muted);">Total Reviews</div>
-      </div>
-      <div>
-        <div style="font-size:1.5rem; font-weight:700;"><?= (int)$biz['reviews_this_month'] ?></div>
-        <div style="font-size:0.8rem; color:var(--muted);">This Month</div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>⭐ Recent Reviews</h2>
-      <?php if ($reviews): ?>
-        <?php foreach ($reviews as $rev): ?>
-        <div style="padding:0.75rem 0; border-bottom:1px solid var(--border);">
-          <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.3rem;">
-            <span style="font-weight:700;"><?= e($rev['author_name'] ?? 'Anonymous') ?></span>
-            <span style="color:#fcd116;"><?= str_repeat('★', (int)$rev['rating']) ?><?= str_repeat('☆', 5 - (int)$rev['rating']) ?></span>
-            <span style="font-size:0.78rem; color:var(--muted);"><?= date('j M Y', strtotime($rev['created_at'])) ?></span>
-          </div>
-          <?php if ($rev['body'] ?? $rev['content'] ?? false): ?>
-          <p style="font-size:0.875rem; margin:0; color:var(--muted);"><?= e(mb_substr($rev['body'] ?? $rev['content'] ?? '', 0, 200)) ?></p>
-          <?php endif; ?>
+        <div style="display:flex; gap:.5rem; align-items:center;">
+          <span class="badge badge-<?= $rpt['status'] ?>"><?= $rpt['status'] ?></span>
+          <a href="<?= SITE_URL ?>/partner/reports?id=<?= $listingId ?>&report_id=<?= $rpt['id'] ?>" target="_blank" style="color:var(--primary); text-decoration:none; font-size:.8rem;">View →</a>
         </div>
-        <?php endforeach; ?>
-      <?php else: ?>
-        <p style="color:var(--muted); text-align:center; padding:1rem;">No reviews yet. Create a review campaign task to encourage customers.</p>
-      <?php endif; ?>
+      </div>
+      <?php endforeach; ?>
     </div>
+    <?php endif; ?>
+  </div>
 
   <?php endif; ?>
 

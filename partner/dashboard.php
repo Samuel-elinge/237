@@ -1,259 +1,467 @@
 <?php
 /**
- * partner/dashboard.php — 237Biz Business Growth Partner Centre
+ * partner/dashboard.php — 237Biz Business Growth Partner Centre (Phase 2)
  */
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
 
-$partnerProfile = requireGrowthPartner();
-$partnerId      = (int)$partnerProfile['id'];
-$user           = currentUser();
-$pdo            = db();
+$partner   = requireGrowthPartner();
+$pid       = (int)$partner['id'];
+$user      = currentUser();
+$pdo       = db();
+$userId    = (int)($_SESSION['user_id'] ?? 0);
 
-// ── Portfolio stats ───────────────────────────────────────
-$stats = $pdo->prepare("
+/* ── Portfolio stats ──────────────────────────────────────────── */
+$st = $pdo->prepare("
     SELECT
-        COUNT(*)                                               AS total,
-        SUM(l.status = 'approved')                            AS active,
-        SUM(pba.assigned_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS onboarding
+        COUNT(*)                                                   AS total,
+        SUM(l.status = 'approved')                                 AS active,
+        SUM(pba.assigned_at >= DATE_SUB(NOW(), INTERVAL 30 DAY))   AS onboarding
     FROM partner_business_assignments pba
     JOIN listings l ON l.id = pba.listing_id
     WHERE pba.partner_id = ? AND pba.status = 'active'
 ");
-$stats->execute([$partnerId]);
-$portfolio = $stats->fetch();
+$st->execute([$pid]);
+$portfolio = $st->fetch();
 
-$openTasks = $pdo->prepare("SELECT COUNT(*) FROM growth_tasks WHERE partner_id = ? AND status IN ('todo','in_progress')");
-$openTasks->execute([$partnerId]);
-$openTaskCount = (int)$openTasks->fetchColumn();
+/* ── Tasks ────────────────────────────────────────────────────── */
+$st = $pdo->prepare("SELECT COUNT(*) FROM growth_tasks WHERE partner_id=? AND status IN ('todo','in_progress')");
+$st->execute([$pid]); $openTaskCount = (int)$st->fetchColumn();
 
-$overdueTasks = $pdo->prepare("SELECT COUNT(*) FROM growth_tasks WHERE partner_id = ? AND status IN ('todo','in_progress') AND due_date < CURDATE()");
-$overdueTasks->execute([$partnerId]);
-$overdueCount = (int)$overdueTasks->fetchColumn();
+$st = $pdo->prepare("SELECT COUNT(*) FROM growth_tasks WHERE partner_id=? AND status IN ('todo','in_progress') AND due_date < CURDATE()");
+$st->execute([$pid]); $overdueCount = (int)$st->fetchColumn();
 
-$activePlans = $pdo->prepare("SELECT COUNT(*) FROM growth_plans WHERE partner_id = ? AND status = 'active'");
-$activePlans->execute([$partnerId]);
-$activePlanCount = (int)$activePlans->fetchColumn();
-
-$activeLeads = $pdo->prepare("SELECT COUNT(*) FROM partner_leads WHERE partner_id = ? AND status IN ('new','contacted','follow_up')");
-$activeLeads->execute([$partnerId]);
-$activeLeadCount = (int)$activeLeads->fetchColumn();
-
-$monthCommission = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM partner_commissions WHERE partner_id = ? AND MONTH(created_at)=MONTH(NOW()) AND YEAR(created_at)=YEAR(NOW())");
-$monthCommission->execute([$partnerId]);
-$monthComm = (float)$monthCommission->fetchColumn();
-
-$pendingCommission = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM partner_commissions WHERE partner_id = ? AND status='pending'");
-$pendingCommission->execute([$partnerId]);
-$pendingComm = (float)$pendingCommission->fetchColumn();
-
-// ── Recent activity (audit log) ───────────────────────────
-$activity = $pdo->prepare("
-    SELECT pal.*, l.title AS listing_title
-    FROM partner_audit_log pal
-    LEFT JOIN listings l ON l.id = pal.listing_id
-    WHERE pal.partner_id = ?
-    ORDER BY pal.created_at DESC
-    LIMIT 15
-");
-$activity->execute([$partnerId]);
-$activityLog = $activity->fetchAll();
-
-// ── Tasks due today / this week ───────────────────────────
-$tasksDue = $pdo->prepare("
-    SELECT gt.*, l.title AS listing_title
+$st = $pdo->prepare("
+    SELECT gt.*, l.name AS biz_name
     FROM growth_tasks gt
     JOIN listings l ON l.id = gt.listing_id
-    WHERE gt.partner_id = ? AND gt.status IN ('todo','in_progress') AND gt.due_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+    WHERE gt.partner_id=? AND gt.status IN ('todo','in_progress') AND gt.due_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
     ORDER BY gt.due_date ASC, gt.priority DESC
     LIMIT 8
 ");
-$tasksDue->execute([$partnerId]);
-$upcomingTasks = $tasksDue->fetchAll();
+$st->execute([$pid]); $upcomingTasks = $st->fetchAll();
+
+/* ── Leads ────────────────────────────────────────────────────── */
+$st = $pdo->prepare("SELECT COUNT(*) FROM partner_leads WHERE partner_id=? AND status IN ('new','contacted','follow_up')");
+$st->execute([$pid]); $activeLeadCount = (int)$st->fetchColumn();
+
+$st = $pdo->prepare("SELECT COUNT(*) FROM partner_leads WHERE partner_id=? AND follow_up_date < CURDATE() AND status NOT IN ('converted','lost','closed')");
+$st->execute([$pid]); $overdueLeadsCount = (int)$st->fetchColumn();
+
+/* ── Commissions ──────────────────────────────────────────────── */
+$st = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM partner_commissions WHERE partner_id=? AND MONTH(created_at)=MONTH(NOW()) AND YEAR(created_at)=YEAR(NOW())");
+$st->execute([$pid]); $monthComm = (float)$st->fetchColumn();
+
+$st = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM partner_commissions WHERE partner_id=? AND status='pending'");
+$st->execute([$pid]); $pendingComm = (float)$st->fetchColumn();
+
+$st = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM partner_commissions WHERE partner_id=?");
+$st->execute([$pid]); $totalComm = (float)$st->fetchColumn();
+
+/* ── Phase 2: Plans ───────────────────────────────────────────── */
+$st = $pdo->prepare("SELECT COUNT(*) FROM growth_plans WHERE partner_id=? AND status='active'");
+$st->execute([$pid]); $activePlanCount = (int)$st->fetchColumn();
+
+/* ── Phase 2: Campaigns ───────────────────────────────────────── */
+$st = $pdo->prepare("SELECT status, COUNT(*) cnt FROM campaigns WHERE partner_id=? GROUP BY status");
+$st->execute([$pid]); $campCounts = [];
+foreach ($st->fetchAll() as $r) $campCounts[$r['status']] = (int)$r['cnt'];
+$activeCampaigns    = $campCounts['active']    ?? 0;
+$scheduledCampaigns = $campCounts['scheduled'] ?? 0;
+
+// Campaigns ending soon (next 7 days)
+$st = $pdo->prepare("SELECT c.*, l.name AS biz_name FROM campaigns c JOIN listings l ON l.id=c.listing_id
+                     WHERE c.partner_id=? AND c.status='active' AND c.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(),INTERVAL 7 DAY)
+                     ORDER BY c.end_date ASC LIMIT 5");
+$st->execute([$pid]); $endingSoonCampaigns = $st->fetchAll();
+
+/* ── Phase 2: Attention queue ─────────────────────────────────── */
+$attentionQueue = getAttentionQueue($pid);
+$highPriority   = array_filter($attentionQueue, fn($a) => $a['severity'] === 'high');
+
+/* ── Phase 2: Notifications ───────────────────────────────────── */
+$unreadNotifs = getUnreadNotifications($userId);
+
+/* ── Recent audit activity ────────────────────────────────────── */
+$st = $pdo->prepare("
+    SELECT pal.*, l.name AS biz_name
+    FROM partner_audit_log pal
+    LEFT JOIN listings l ON l.id = pal.listing_id
+    WHERE pal.partner_id = ?
+    ORDER BY pal.created_at DESC LIMIT 12
+");
+$st->execute([$pid]); $activityLog = $st->fetchAll();
+
+/* ── Content scheduled today ──────────────────────────────────── */
+$st = $pdo->prepare("SELECT ci.*, l.name AS biz_name FROM content_items ci JOIN listings l ON l.id=ci.listing_id
+                     WHERE ci.partner_id=? AND ci.status='scheduled' AND DATE(ci.scheduled_date)=CURDATE()
+                     ORDER BY ci.scheduled_date ASC LIMIT 6");
+$st->execute([$pid]); $todayContent = $st->fetchAll();
 
 $pageTitle = 'Partner Centre — 237Biz';
 require_once __DIR__ . '/../includes/header.php';
 ?>
-
+<link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/partner.css">
 <style>
-.partner-wrap { max-width:1280px; margin:0 auto; padding:2rem 1.5rem; }
-.partner-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:2rem; }
-.partner-header h1 { font-family:'Fraunces',serif; font-size:2rem; font-weight:900; margin:0; }
-.partner-header .subtitle { color:var(--muted); font-size:0.9rem; margin-top:0.2rem; }
-.stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:1rem; margin-bottom:2rem; }
-.stat-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.25rem 1.5rem; }
-.stat-card .stat-label { font-size:0.78rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:0.4rem; }
-.stat-card .stat-value { font-size:2rem; font-weight:700; font-family:'Fraunces',serif; }
-.stat-card .stat-sub { font-size:0.8rem; color:var(--muted); margin-top:0.2rem; }
-.stat-card.accent-green { border-color:#00A878; }
-.stat-card.accent-yellow { border-color:#fcd116; }
-.stat-card.accent-red { border-color:#e63946; }
-
-.two-col { display:grid; grid-template-columns:1fr 360px; gap:1.5rem; }
-@media(max-width:900px){ .two-col { grid-template-columns:1fr; } }
-
-.panel { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.5rem; }
-.panel h2 { font-size:1rem; font-weight:700; margin:0 0 1rem; display:flex; align-items:center; gap:0.5rem; }
-.panel h2 .count { background:var(--primary); color:#fff; border-radius:20px; padding:1px 8px; font-size:0.75rem; }
-
-/* Task list */
-.task-row { display:flex; align-items:flex-start; gap:0.75rem; padding:0.7rem 0; border-bottom:1px solid var(--border); }
-.task-row:last-child { border-bottom:none; }
-.task-badge { font-size:0.7rem; padding:2px 8px; border-radius:20px; font-weight:700; white-space:nowrap; }
-.badge-urgent { background:#e63946; color:#fff; }
-.badge-high   { background:#ff9f1c; color:#fff; }
-.badge-medium { background:#2ec4b6; color:#fff; }
-.badge-low    { background:var(--border); color:var(--muted); }
-.overdue-tag  { font-size:0.7rem; color:#e63946; font-weight:700; }
-
-/* Activity feed */
-.activity-row { display:flex; gap:0.75rem; padding:0.6rem 0; border-bottom:1px solid var(--border); font-size:0.875rem; }
-.activity-row:last-child { border-bottom:none; }
-.activity-time { color:var(--muted); font-size:0.78rem; white-space:nowrap; flex-shrink:0; }
-
-/* Portfolio bar */
-.portfolio-bar { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.25rem 1.5rem;
-  display:flex; align-items:center; gap:2rem; flex-wrap:wrap; margin-bottom:2rem; }
-.portfolio-bar .pb-num { font-family:'Fraunces',serif; font-size:2.5rem; font-weight:900; color:var(--primary); }
-.portfolio-bar .pb-label { color:var(--muted); font-size:0.85rem; }
-.pb-split { display:flex; gap:2rem; flex-wrap:wrap; }
-.pb-split-item { text-align:center; }
-.pb-split-item .n { font-size:1.5rem; font-weight:700; }
-.pb-split-item .l { font-size:0.78rem; color:var(--muted); }
-
-.partner-nav { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:2rem; }
-.partner-nav a { padding:0.45rem 1rem; border-radius:9px; font-size:0.875rem; font-weight:600;
-  text-decoration:none; background:var(--card); border:1px solid var(--border); color:var(--text);
-  transition:all .15s; }
-.partner-nav a:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
-.partner-nav a.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+:root{--pblue:#1a56db;--pgreen:#16a34a;--pred:#dc2626;--pyellow:#ca8a04;--ppurple:#7c3aed;--pcyan:#0891b2}
+.pw{max-width:1260px;margin:0 auto;padding:28px 16px}
+/* Header */
+.dash-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:22px}
+.dash-header h1{margin:0 0 4px;font-size:1.7rem;font-weight:800;color:#111827}
+.dash-header .sub{color:#6b7280;font-size:.9rem}
+.dash-header .header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+/* Nav */
+.dash-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.dash-nav a{padding:7px 14px;border-radius:8px;font-size:.85rem;font-weight:600;text-decoration:none;
+            background:#fff;border:1px solid #e5e7eb;color:#374151;transition:.15s;position:relative}
+.dash-nav a:hover,.dash-nav a.active{background:var(--pblue);color:#fff;border-color:var(--pblue)}
+.notif-dot{position:absolute;top:-4px;right:-4px;background:var(--pred);color:#fff;border-radius:50%;
+           width:17px;height:17px;font-size:.65rem;display:flex;align-items:center;justify-content:center;font-weight:700}
+/* Summary strip */
+.sum-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:22px}
+.sum-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px 18px}
+.sum-card .val{font-size:2rem;font-weight:800;line-height:1.1;color:#111827}
+.sum-card .lbl{font-size:.78rem;color:#6b7280;margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
+.sum-card .sub{font-size:.8rem;margin-top:4px}
+.sum-card.red-border{border-color:var(--pred)}
+.sum-card.green-border{border-color:var(--pgreen)}
+.sum-card.yellow-border{border-color:var(--pyellow)}
+.sum-card.blue-border{border-color:var(--pblue)}
+.sum-card.purple-border{border-color:var(--ppurple)}
+/* Attention queue */
+.attn-section{background:#fff;border:1px solid #fca5a5;border-radius:12px;padding:20px;margin-bottom:22px}
+.attn-section h2{margin:0 0 14px;font-size:1rem;font-weight:700;color:var(--pred);display:flex;align-items:center;gap:8px}
+.attn-grid{display:flex;flex-direction:column;gap:8px}
+.attn-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;background:#fff7ed;border:1px solid #fed7aa;font-size:.88rem}
+.attn-item.high{background:#fef2f2;border-color:#fca5a5}
+.attn-item.medium{background:#fff7ed;border-color:#fed7aa}
+.attn-item.low{background:#f9fafb;border-color:#e5e7eb}
+.attn-biz{font-weight:600;color:#111827;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.attn-msg{font-size:.8rem;color:#374151;flex:2;min-width:0}
+.sev-badge{font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0}
+.sev-high{background:#fee2e2;color:#991b1b}
+.sev-medium{background:#fff7ed;color:#92400e}
+.sev-low{background:#f9fafb;color:#4b5563}
+/* Main grid */
+.main-grid{display:grid;grid-template-columns:1fr 340px;gap:20px}
+@media(max-width:900px){.main-grid{grid-template-columns:1fr}}
+.panel{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px;margin-bottom:20px}
+.panel h2{margin:0 0 14px;font-size:1rem;font-weight:700;color:#111827;display:flex;align-items:center;gap:8px}
+.panel h2 .badge{background:var(--pblue);color:#fff;border-radius:20px;padding:1px 8px;font-size:.72rem}
+/* Task rows */
+.task-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6}
+.task-row:last-child{border-bottom:none}
+.pri-badge{font-size:.7rem;padding:2px 8px;border-radius:10px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.pri-urgent{background:#dc2626;color:#fff}
+.pri-high{background:#f97316;color:#fff}
+.pri-medium{background:#0891b2;color:#fff}
+.pri-low{background:#e5e7eb;color:#4b5563}
+.overdue-tag{font-size:.72rem;color:var(--pred);font-weight:700}
+/* Activity */
+.act-row{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:.85rem}
+.act-row:last-child{border-bottom:none}
+.act-time{color:#9ca3af;font-size:.77rem;white-space:nowrap;flex-shrink:0;padding-top:2px}
+/* Campaign ending */
+.camp-ending-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:.85rem}
+.camp-ending-item:last-child{border-bottom:none}
+.days-left{font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:10px}
+.days-1-2{background:#fee2e2;color:var(--pred)}
+.days-3-5{background:#fff7ed;color:#92400e}
+.days-6-7{background:#fef9c3;color:#854d0e}
+/* Content today */
+.today-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:.85rem}
+.today-item:last-child{border-bottom:none}
+/* Commission panel */
+.comm-summary{display:flex;flex-direction:column;gap:8px}
+.comm-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:.9rem}
+.comm-row .label{color:#374151}
+.comm-row .value{font-weight:700;color:#111827}
+/* Quick links */
+.quick-links{display:flex;flex-direction:column;gap:8px}
+.quick-link{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;text-decoration:none;color:#374151;font-size:.87rem;font-weight:500;transition:.15s}
+.quick-link:hover{background:#f0f5ff;border-color:var(--pblue);color:var(--pblue)}
+.quick-link .icon{width:28px;text-align:center;font-size:1.1rem}
+.quick-link .arrow{margin-left:auto;color:#9ca3af}
+.empty-small{color:#9ca3af;font-size:.87rem;text-align:center;padding:16px 0;font-style:italic}
+.btn-sm{padding:6px 14px;font-size:.83rem;border-radius:6px;text-decoration:none;display:inline-block}
+.btn-sm.primary{background:var(--pblue);color:#fff;border:1px solid var(--pblue)}
+.btn-sm.outline{background:#fff;color:#374151;border:1px solid #d1d5db}
+.btn-sm.outline:hover{background:#f3f4f6}
 </style>
 
-<div class="partner-wrap">
+<div class="pw">
 
-  <div class="partner-header">
+<!-- ── Header ── -->
+<div class="dash-header">
     <div>
-      <h1>👔 Partner Centre</h1>
-      <div class="subtitle">Welcome back, <?= e(explode(' ', $user['name'])[0]) ?> — <?= date('l, j F Y') ?></div>
+        <h1>👔 Partner Centre</h1>
+        <div class="sub">Good <?= date('G') < 12 ? 'morning' : (date('G') < 17 ? 'afternoon' : 'evening') ?>, <?= e(explode(' ', $user['name'])[0]) ?> — <?= date('l, j F Y') ?></div>
     </div>
-    <a href="<?= SITE_URL ?>/partner/portfolio" class="btn btn-primary">📋 My Portfolio</a>
-  </div>
+    <div class="header-actions">
+        <?php if ($unreadNotifs > 0): ?>
+        <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:6px 14px;font-size:.85rem;color:var(--pred);font-weight:600">
+            🔔 <?= $unreadNotifs ?> new notification<?= $unreadNotifs > 1 ? 's' : '' ?>
+        </div>
+        <?php endif; ?>
+        <a href="<?= SITE_URL ?>/partner/portfolio" class="btn-sm primary">📋 Portfolio</a>
+    </div>
+</div>
 
-  <!-- Sub-nav -->
-  <nav class="partner-nav">
+<!-- ── Nav ── -->
+<nav class="dash-nav">
     <a href="<?= SITE_URL ?>/partner/dashboard" class="active">🏠 Dashboard</a>
     <a href="<?= SITE_URL ?>/partner/portfolio">📋 Portfolio</a>
-    <a href="<?= SITE_URL ?>/partner/tasks">✅ Tasks</a>
-    <a href="<?= SITE_URL ?>/partner/leads">💬 Leads</a>
+    <a href="<?= SITE_URL ?>/partner/tasks">✅ Tasks <?php if ($overdueCount): ?><span class="notif-dot"><?= $overdueCount ?></span><?php endif; ?></a>
+    <a href="<?= SITE_URL ?>/partner/leads">💬 Leads <?php if ($overdueLeadsCount): ?><span class="notif-dot"><?= $overdueLeadsCount ?></span><?php endif; ?></a>
+    <a href="<?= SITE_URL ?>/partner/campaigns">📣 Campaigns</a>
+    <a href="<?= SITE_URL ?>/partner/content">📅 Content</a>
+    <a href="<?= SITE_URL ?>/partner/reports">📊 Reports</a>
     <a href="<?= SITE_URL ?>/partner/commissions">💰 Commissions</a>
-  </nav>
+</nav>
 
-  <!-- Portfolio summary bar -->
-  <div class="portfolio-bar">
-    <div>
-      <div class="pb-num"><?= (int)$portfolio['total'] ?></div>
-      <div class="pb-label">Businesses in Portfolio</div>
+<!-- ── Summary strip ── -->
+<div class="sum-strip">
+    <div class="sum-card blue-border">
+        <div class="val"><?= (int)$portfolio['total'] ?></div>
+        <div class="lbl">Businesses</div>
+        <div class="sub" style="color:#16a34a"><?= (int)$portfolio['active'] ?> active · <?= (int)$portfolio['onboarding'] ?> onboarding</div>
     </div>
-    <div class="pb-split">
-      <div class="pb-split-item">
-        <div class="n" style="color:#00A878;"><?= (int)$portfolio['active'] ?></div>
-        <div class="l">Active</div>
-      </div>
-      <div class="pb-split-item">
-        <div class="n" style="color:#fcd116;"><?= (int)$portfolio['onboarding'] ?></div>
-        <div class="l">Onboarding</div>
-      </div>
-      <div class="pb-split-item">
-        <div class="n" style="color:#e63946;"><?= $overdueCount ?></div>
-        <div class="l">Overdue Tasks</div>
-      </div>
+    <div class="sum-card <?= $overdueCount > 0 ? 'red-border' : '' ?>">
+        <div class="val"><?= $openTaskCount ?></div>
+        <div class="lbl">Open Tasks</div>
+        <?php if ($overdueCount): ?>
+        <div class="sub" style="color:var(--pred)">⚠ <?= $overdueCount ?> overdue</div>
+        <?php else: ?>
+        <div class="sub" style="color:#16a34a">✓ None overdue</div>
+        <?php endif; ?>
     </div>
-  </div>
+    <div class="sum-card <?= $overdueLeadsCount > 0 ? 'yellow-border' : '' ?>">
+        <div class="val"><?= $activeLeadCount ?></div>
+        <div class="lbl">Active Leads</div>
+        <?php if ($overdueLeadsCount): ?>
+        <div class="sub" style="color:var(--pyellow)">⚠ <?= $overdueLeadsCount ?> overdue follow-up</div>
+        <?php else: ?>
+        <div class="sub" style="color:#6b7280">Need follow-up</div>
+        <?php endif; ?>
+    </div>
+    <div class="sum-card green-border">
+        <div class="val"><?= $activeCampaigns ?></div>
+        <div class="lbl">Active Campaigns</div>
+        <div class="sub" style="color:#6b7280"><?= $scheduledCampaigns ?> scheduled</div>
+    </div>
+    <div class="sum-card yellow-border">
+        <div class="val" style="font-size:1.35rem"><?= number_format($monthComm) ?></div>
+        <div class="lbl">Commission (Month)</div>
+        <div class="sub" style="color:#6b7280">XAF · <?= number_format($pendingComm) ?> pending</div>
+    </div>
+    <div class="sum-card purple-border">
+        <div class="val"><?= $activePlanCount ?></div>
+        <div class="lbl">Active Plans</div>
+        <div class="sub" style="color:#6b7280">Growth plans running</div>
+    </div>
+</div>
 
-  <!-- Stat cards -->
-  <div class="stat-grid">
-    <div class="stat-card accent-green">
-      <div class="stat-label">Active Plans</div>
-      <div class="stat-value"><?= $activePlanCount ?></div>
-      <div class="stat-sub">Growth plans in progress</div>
+<!-- ── Attention queue (only shown if items exist) ── -->
+<?php if (!empty($attentionQueue)): ?>
+<div class="attn-section">
+    <h2>⚠️ Attention Needed <span style="background:#dc2626;color:#fff;border-radius:12px;padding:1px 8px;font-size:.72rem;font-weight:700"><?= count($attentionQueue) ?></span></h2>
+    <div class="attn-grid">
+    <?php foreach (array_slice($attentionQueue, 0, 8) as $a): ?>
+    <div class="attn-item <?= $a['severity'] ?>">
+        <a href="<?= SITE_URL ?>/partner/business?lid=<?= $a['listing_id'] ?>" style="text-decoration:none;flex:1;display:flex;align-items:center;gap:12px;overflow:hidden">
+            <span class="attn-biz">🏢 <?= e($a['name']) ?></span>
+            <span class="attn-msg"><?= e($a['reason']) ?></span>
+        </a>
+        <span class="sev-badge sev-<?= $a['severity'] ?>"><?= ucfirst($a['severity']) ?></span>
+        <a href="<?= SITE_URL ?>/partner/business?lid=<?= $a['listing_id'] ?>" style="font-size:.8rem;color:var(--pblue);white-space:nowrap;text-decoration:none">Take action →</a>
     </div>
-    <div class="stat-card <?= $overdueCount > 0 ? 'accent-red' : '' ?>">
-      <div class="stat-label">Open Tasks</div>
-      <div class="stat-value"><?= $openTaskCount ?></div>
-      <div class="stat-sub"><?= $overdueCount ?> overdue</div>
+    <?php endforeach; ?>
+    <?php if (count($attentionQueue) > 8): ?>
+    <div style="text-align:center;padding:8px 0">
+        <a href="<?= SITE_URL ?>/partner/portfolio" style="font-size:.85rem;color:var(--pblue);text-decoration:none">+ <?= count($attentionQueue)-8 ?> more → View Portfolio</a>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Active Leads</div>
-      <div class="stat-value"><?= $activeLeadCount ?></div>
-      <div class="stat-sub">Require follow-up</div>
+    <?php endif; ?>
     </div>
-    <div class="stat-card accent-yellow">
-      <div class="stat-label">This Month</div>
-      <div class="stat-value" style="font-size:1.4rem;"><?= number_format($monthComm) ?> XAF</div>
-      <div class="stat-sub">Commission earned</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Pending</div>
-      <div class="stat-value" style="font-size:1.4rem;"><?= number_format($pendingComm) ?> XAF</div>
-      <div class="stat-sub">Awaiting approval</div>
-    </div>
-  </div>
+</div>
+<?php endif; ?>
 
-  <!-- Two-column layout -->
-  <div class="two-col">
+<!-- ── Main grid ── -->
+<div class="main-grid">
+<div><!-- left column -->
 
     <!-- Upcoming tasks -->
     <div class="panel">
-      <h2>✅ Upcoming Tasks <span class="count"><?= count($upcomingTasks) ?></span></h2>
-      <?php if ($upcomingTasks): ?>
+        <h2>✅ Upcoming Tasks <span class="badge"><?= count($upcomingTasks) ?></span></h2>
+        <?php if ($upcomingTasks): ?>
         <?php foreach ($upcomingTasks as $task):
-          $isOverdue = $task['due_date'] && $task['due_date'] < date('Y-m-d');
+            $isOverdue = $task['due_date'] && $task['due_date'] < date('Y-m-d');
         ?>
         <div class="task-row">
-          <span class="task-badge badge-<?= $task['priority'] ?>"><?= ucfirst($task['priority']) ?></span>
-          <div style="flex:1; min-width:0;">
-            <div style="font-weight:600; font-size:0.9rem;"><?= e($task['title']) ?></div>
-            <div style="font-size:0.78rem; color:var(--muted);">
-              📍 <?= e($task['listing_title']) ?>
-              <?php if ($task['due_date']): ?>
-                — <?php if ($isOverdue): ?><span class="overdue-tag">⚠ Overdue:</span><?php endif; ?>
-                <?= date('j M', strtotime($task['due_date'])) ?>
-              <?php endif; ?>
+            <span class="pri-badge pri-<?= $task['priority'] ?>"><?= ucfirst($task['priority']) ?></span>
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= e($task['title']) ?></div>
+                <div style="font-size:.78rem;color:#6b7280">
+                    🏢 <?= e($task['biz_name']) ?>
+                    <?php if ($task['due_date']): ?> ·
+                    <?php if ($isOverdue): ?><span class="overdue-tag">⚠ Overdue:</span><?php endif; ?>
+                    <?= date('j M', strtotime($task['due_date'])) ?>
+                    <?php endif; ?>
+                </div>
             </div>
-          </div>
-          <a href="<?= SITE_URL ?>/partner/tasks?listing=<?= $task['listing_id'] ?>" style="font-size:0.8rem; color:var(--primary);">View →</a>
+            <a href="<?= SITE_URL ?>/partner/business?lid=<?= $task['listing_id'] ?>&tab=tasks" style="font-size:.8rem;color:var(--pblue);text-decoration:none;white-space:nowrap">View →</a>
         </div>
         <?php endforeach; ?>
-        <div style="margin-top:1rem;">
-          <a href="<?= SITE_URL ?>/partner/tasks" class="btn btn-outline" style="font-size:0.85rem;">View all tasks →</a>
+        <div style="margin-top:12px">
+            <a href="<?= SITE_URL ?>/partner/tasks" class="btn-sm outline">View all tasks →</a>
         </div>
-      <?php else: ?>
-        <p style="color:var(--muted); text-align:center; padding:1rem 0;">No upcoming tasks. Great work! 🎉</p>
-      <?php endif; ?>
+        <?php else: ?>
+        <div class="empty-small">🎉 No upcoming tasks this week. Great work!</div>
+        <?php endif; ?>
     </div>
 
-    <!-- Activity feed -->
+    <!-- Active leads -->
     <div class="panel">
-      <h2>📋 Recent Activity</h2>
-      <?php if ($activityLog): ?>
-        <?php foreach ($activityLog as $entry): ?>
-        <div class="activity-row">
-          <div style="flex:1;">
-            <div style="font-weight:500;"><?= e($entry['description'] ?: $entry['action']) ?></div>
-            <?php if ($entry['listing_title']): ?>
-              <div style="font-size:0.78rem; color:var(--muted);">📍 <?= e($entry['listing_title']) ?></div>
-            <?php endif; ?>
-          </div>
-          <div class="activity-time"><?= date('d M H:i', strtotime($entry['created_at'])) ?></div>
+        <h2>💬 Active Leads <span class="badge"><?= $activeLeadCount ?></span></h2>
+        <?php
+        $leadSt = $pdo->prepare("SELECT pl.*, l.name AS biz_name FROM partner_leads pl JOIN listings l ON l.id=pl.listing_id WHERE pl.partner_id=? AND pl.status IN ('new','contacted','follow_up') ORDER BY pl.follow_up_date ASC NULLS LAST, pl.created_at DESC LIMIT 6");
+        $leadSt->execute([$pid]); $activeLeadList = $leadSt->fetchAll();
+        ?>
+        <?php if ($activeLeadList): ?>
+        <?php foreach ($activeLeadList as $lead):
+            $overdueL = $lead['follow_up_date'] && $lead['follow_up_date'] < date('Y-m-d');
+        ?>
+        <div class="task-row">
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:.88rem"><?= e($lead['contact_name']) ?></div>
+                <div style="font-size:.78rem;color:#6b7280">
+                    🏢 <?= e($lead['biz_name']) ?> · <?= ucfirst($lead['status']) ?>
+                    <?php if ($lead['follow_up_date']): ?> ·
+                    <?php if ($overdueL): ?><span class="overdue-tag">⚠ Overdue follow-up</span>
+                    <?php else: ?>📅 <?= date('j M', strtotime($lead['follow_up_date'])) ?><?php endif; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <a href="<?= SITE_URL ?>/partner/business?lid=<?= $lead['listing_id'] ?>&tab=leads" style="font-size:.8rem;color:var(--pblue);text-decoration:none;white-space:nowrap">Log →</a>
         </div>
         <?php endforeach; ?>
-      <?php else: ?>
-        <p style="color:var(--muted); text-align:center; padding:1rem 0;">No activity yet. Start by opening a business from your portfolio.</p>
-      <?php endif; ?>
+        <div style="margin-top:12px">
+            <a href="<?= SITE_URL ?>/partner/leads" class="btn-sm outline">View all leads →</a>
+        </div>
+        <?php else: ?>
+        <div class="empty-small">No active leads.</div>
+        <?php endif; ?>
     </div>
 
-  </div><!-- /two-col -->
+    <!-- Campaigns ending soon -->
+    <?php if (!empty($endingSoonCampaigns)): ?>
+    <div class="panel">
+        <h2>⏰ Campaigns Ending Soon</h2>
+        <?php foreach ($endingSoonCampaigns as $camp):
+            $daysLeft = (int)ceil((strtotime($camp['end_date']) - time()) / 86400);
+            $dClass   = $daysLeft <= 2 ? 'days-1-2' : ($daysLeft <= 5 ? 'days-3-5' : 'days-6-7');
+        ?>
+        <div class="camp-ending-item">
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= e($camp['name']) ?></div>
+                <div style="font-size:.78rem;color:#6b7280">🏢 <?= e($camp['biz_name']) ?></div>
+            </div>
+            <span class="days-left <?= $dClass ?>"><?= $daysLeft ?> day<?= $daysLeft !== 1?'s':'' ?></span>
+            <a href="<?= SITE_URL ?>/partner/campaigns?view=metrics&cid=<?= $camp['id'] ?>" style="font-size:.8rem;color:var(--pblue);text-decoration:none">Metrics →</a>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 
-</div>
+    <!-- Today's scheduled content -->
+    <?php if (!empty($todayContent)): ?>
+    <div class="panel">
+        <h2>📅 Publishing Today <span class="badge"><?= count($todayContent) ?></span></h2>
+        <?php foreach ($todayContent as $ci): ?>
+        <div class="today-item">
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                    <?= $ci['platform'] ? '['.$ci['platform'].'] ' : '' ?><?= e($ci['title']?:'(untitled)') ?>
+                </div>
+                <div style="font-size:.78rem;color:#6b7280">🏢 <?= e($ci['biz_name']) ?> · <?= date('H:i', strtotime($ci['scheduled_date'])) ?></div>
+            </div>
+            <a href="<?= SITE_URL ?>/partner/business?lid=<?= $ci['listing_id'] ?>&tab=content" style="font-size:.8rem;color:var(--pblue);text-decoration:none">View →</a>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <!-- Recent activity -->
+    <div class="panel">
+        <h2>📋 Recent Activity</h2>
+        <?php if ($activityLog): ?>
+        <?php foreach ($activityLog as $entry): ?>
+        <div class="act-row">
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= e($entry['description'] ?: $entry['action']) ?></div>
+                <?php if ($entry['biz_name']): ?>
+                <div style="font-size:.77rem;color:#6b7280">🏢 <?= e($entry['biz_name']) ?></div>
+                <?php endif; ?>
+            </div>
+            <div class="act-time"><?= date('d M H:i', strtotime($entry['created_at'])) ?></div>
+        </div>
+        <?php endforeach; ?>
+        <?php else: ?>
+        <div class="empty-small">No activity recorded yet.</div>
+        <?php endif; ?>
+    </div>
+
+</div><!-- /left -->
+<div><!-- right sidebar -->
+
+    <!-- Commission summary -->
+    <div class="panel">
+        <h2>💰 Commission</h2>
+        <div class="comm-summary">
+            <div class="comm-row"><span class="label">This Month</span><span class="value" style="color:var(--pgreen)"><?= number_format($monthComm,0) ?> XAF</span></div>
+            <div class="comm-row"><span class="label">Pending</span><span class="value" style="color:var(--pyellow)"><?= number_format($pendingComm,0) ?> XAF</span></div>
+            <div class="comm-row"><span class="label">Total Earned</span><span class="value"><?= number_format($totalComm,0) ?> XAF</span></div>
+        </div>
+        <div style="margin-top:12px">
+            <a href="<?= SITE_URL ?>/partner/commissions" class="btn-sm outline" style="width:100%;text-align:center;display:block">View details →</a>
+        </div>
+    </div>
+
+    <!-- Portfolio quick stats -->
+    <div class="panel">
+        <h2>📊 Portfolio Pulse</h2>
+        <?php
+        $totalLeadsAll = $pdo->prepare("SELECT COUNT(*) FROM partner_leads WHERE partner_id=?");
+        $totalLeadsAll->execute([$pid]); $totalLeadsCount = (int)$totalLeadsAll->fetchColumn();
+        $convLeads = $pdo->prepare("SELECT COUNT(*) FROM partner_leads WHERE partner_id=? AND status='converted'");
+        $convLeads->execute([$pid]); $convLeadsCount = (int)$convLeads->fetchColumn();
+        $convRate = $totalLeadsCount > 0 ? round($convLeadsCount/$totalLeadsCount*100) : 0;
+        $totalCamps = $pdo->prepare("SELECT COUNT(*) FROM campaigns WHERE partner_id=?");
+        $totalCamps->execute([$pid]); $totalCampsCount = (int)$totalCamps->fetchColumn();
+        ?>
+        <div class="comm-row"><span class="label">Total Leads</span><span class="value"><?= $totalLeadsCount ?></span></div>
+        <div class="comm-row"><span class="label">Conversion Rate</span><span class="value" style="color:var(--pgreen)"><?= $convRate ?>%</span></div>
+        <div class="comm-row"><span class="label">Total Campaigns</span><span class="value"><?= $totalCampsCount ?></span></div>
+        <div class="comm-row"><span class="label">Active Campaigns</span><span class="value" style="color:var(--pblue)"><?= $activeCampaigns ?></span></div>
+    </div>
+
+    <!-- Quick links -->
+    <div class="panel">
+        <h2>⚡ Quick Actions</h2>
+        <div class="quick-links">
+            <a href="<?= SITE_URL ?>/partner/portfolio" class="quick-link"><span class="icon">📋</span>View Portfolio<span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/campaigns" class="quick-link"><span class="icon">📣</span>Manage Campaigns<span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/content" class="quick-link"><span class="icon">📅</span>Content Calendar<span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/reports" class="quick-link"><span class="icon">📊</span>Generate Report<span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/tasks" class="quick-link"><span class="icon">✅</span>All Tasks<span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/leads" class="quick-link"><span class="icon">💬</span>All Leads<span class="arrow">→</span></a>
+        </div>
+    </div>
+
+</div><!-- /right -->
+</div><!-- /main-grid -->
+
+</div><!-- /pw -->
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
