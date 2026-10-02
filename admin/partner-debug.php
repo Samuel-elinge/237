@@ -10,7 +10,7 @@ $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 echo "<pre>";
 
 // Find first approved partner
-$partnerRow = $pdo->query("SELECT gp.*, gp.user_id FROM growth_partners gp WHERE gp.status='approved' LIMIT 1")->fetch();
+$partnerRow = $pdo->query("SELECT * FROM partner_profiles WHERE status='approved' LIMIT 1")->fetch();
 if (!$partnerRow) { echo "NO APPROVED PARTNER FOUND\n"; exit; }
 $pid = (int)$partnerRow['id'];
 echo "Testing with partner_id=$pid\n\n";
