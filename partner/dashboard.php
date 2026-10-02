@@ -34,7 +34,7 @@ $st = $pdo->prepare("SELECT COUNT(*) FROM growth_tasks WHERE partner_id=? AND st
 $st->execute([$pid]); $overdueCount = (int)$st->fetchColumn();
 
 $st = $pdo->prepare("
-    SELECT gt.*, l.name AS biz_name
+    SELECT gt.*, l.title AS biz_name
     FROM growth_tasks gt
     JOIN listings l ON l.id = gt.listing_id
     WHERE gt.partner_id=? AND gt.status IN ('todo','in_progress') AND gt.due_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
@@ -65,14 +65,14 @@ $st = $pdo->prepare("SELECT COUNT(*) FROM growth_plans WHERE partner_id=? AND st
 $st->execute([$pid]); $activePlanCount = (int)$st->fetchColumn();
 
 /* ── Phase 2: Campaigns ───────────────────────────────────────── */
-$st = $pdo->prepare("SELECT status, COUNT(*) cnt FROM campaigns WHERE partner_id=? GROUP BY status");
+$st = $pdo->prepare("SELECT status, COUNT(*) cnt FROM partner_campaigns WHERE partner_id=? GROUP BY status");
 $st->execute([$pid]); $campCounts = [];
 foreach ($st->fetchAll() as $r) $campCounts[$r['status']] = (int)$r['cnt'];
 $activeCampaigns    = $campCounts['active']    ?? 0;
 $scheduledCampaigns = $campCounts['scheduled'] ?? 0;
 
 // Campaigns ending soon (next 7 days)
-$st = $pdo->prepare("SELECT c.*, l.name AS biz_name FROM campaigns c JOIN listings l ON l.id=c.listing_id
+$st = $pdo->prepare("SELECT c.*, l.title AS biz_name FROM partner_campaigns c JOIN listings l ON l.id=c.listing_id
                      WHERE c.partner_id=? AND c.status='active' AND c.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(),INTERVAL 7 DAY)
                      ORDER BY c.end_date ASC LIMIT 5");
 $st->execute([$pid]); $endingSoonCampaigns = $st->fetchAll();
@@ -103,7 +103,7 @@ $unreadNotifs = getUnreadNotifications($userId);
 
 /* ── Recent audit activity ────────────────────────────────────── */
 $st = $pdo->prepare("
-    SELECT pal.*, l.name AS biz_name
+    SELECT pal.*, l.title AS biz_name
     FROM partner_audit_log pal
     LEFT JOIN listings l ON l.id = pal.listing_id
     WHERE pal.partner_id = ?
@@ -112,7 +112,7 @@ $st = $pdo->prepare("
 $st->execute([$pid]); $activityLog = $st->fetchAll();
 
 /* ── Content scheduled today ──────────────────────────────────── */
-$st = $pdo->prepare("SELECT ci.*, l.name AS biz_name FROM content_items ci JOIN listings l ON l.id=ci.listing_id
+$st = $pdo->prepare("SELECT ci.*, l.title AS biz_name FROM content_items ci JOIN listings l ON l.id=ci.listing_id
                      WHERE ci.partner_id=? AND ci.status='scheduled' AND DATE(ci.scheduled_date)=CURDATE()
                      ORDER BY ci.scheduled_date ASC LIMIT 6");
 $st->execute([$pid]); $todayContent = $st->fetchAll();
@@ -417,7 +417,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="panel">
         <h2>💬 Active Leads <span class="badge"><?= $activeLeadCount ?></span></h2>
         <?php
-        $leadSt = $pdo->prepare("SELECT pl.*, l.name AS biz_name FROM partner_leads pl JOIN listings l ON l.id=pl.listing_id WHERE pl.partner_id=? AND pl.status IN ('new','contacted','follow_up') ORDER BY pl.follow_up_date ASC NULLS LAST, pl.created_at DESC LIMIT 6");
+        $leadSt = $pdo->prepare("SELECT pl.*, l.title AS biz_name FROM partner_leads pl JOIN listings l ON l.id=pl.listing_id WHERE pl.partner_id=? AND pl.status IN ('new','contacted','follow_up') ORDER BY pl.follow_up_date ASC, pl.created_at DESC LIMIT 6");
         $leadSt->execute([$pid]); $activeLeadList = $leadSt->fetchAll();
         ?>
         <?php if ($activeLeadList): ?>
@@ -565,7 +565,7 @@ require_once __DIR__ . '/../includes/header.php';
         $convLeads = $pdo->prepare("SELECT COUNT(*) FROM partner_leads WHERE partner_id=? AND status='converted'");
         $convLeads->execute([$pid]); $convLeadsCount = (int)$convLeads->fetchColumn();
         $convRate = $totalLeadsCount > 0 ? round($convLeadsCount/$totalLeadsCount*100) : 0;
-        $totalCamps = $pdo->prepare("SELECT COUNT(*) FROM campaigns WHERE partner_id=?");
+        $totalCamps = $pdo->prepare("SELECT COUNT(*) FROM partner_campaigns WHERE partner_id=?");
         $totalCamps->execute([$pid]); $totalCampsCount = (int)$totalCamps->fetchColumn();
         ?>
         <div class="comm-row"><span class="label">Total Leads</span><span class="value"><?= $totalLeadsCount ?></span></div>

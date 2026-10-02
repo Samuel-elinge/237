@@ -209,7 +209,7 @@ function getAttentionQueue(int $partnerId): array {
                   AND gt.due_date < CURDATE() AND gt.status NOT IN ('completed','cancelled')) AS overdue_tasks,
                (SELECT MAX(ba.created_at) FROM business_activity ba
                 WHERE ba.listing_id = l.id) AS last_activity,
-               (SELECT COUNT(*) FROM campaigns c
+               (SELECT COUNT(*) FROM partner_campaigns c
                 WHERE c.listing_id = l.id AND c.partner_id = :p4 AND c.status = 'active') AS active_campaigns,
                (SELECT MIN(gp.end_date) FROM growth_plans gp
                 WHERE gp.listing_id = l.id AND gp.partner_id = :p5 AND gp.status = 'active') AS plan_end_date
@@ -311,7 +311,7 @@ function getRecommendedActionsP2(array $listing, int $partnerId): array {
         $actions[] = ['level'=>'medium','icon'=>'🟠','text'=>'Only '.$revCount.' review'.($revCount===1?'':'s').' — aim for at least 10','link'=>'?tab=reviews'];
 
     // Active campaign
-    $campSt = $pdo->prepare("SELECT COUNT(*) FROM campaigns WHERE listing_id=? AND partner_id=? AND status='active'");
+    $campSt = $pdo->prepare("SELECT COUNT(*) FROM partner_campaigns WHERE listing_id=? AND partner_id=? AND status='active'");
     $campSt->execute([$lid, $partnerId]);
     if (!(int)$campSt->fetchColumn())
         $actions[] = ['level'=>'medium','icon'=>'🟠','text'=>'No active campaign — '.date('F').' promotion not created','link'=>'?tab=campaigns'];
@@ -355,7 +355,7 @@ function getUnreadNotifications(int $userId): int {
 function getCampaignStats(int $listingId, int $partnerId): array {
     $st = db()->prepare("
         SELECT status, COUNT(*) AS n
-        FROM campaigns WHERE listing_id=? AND partner_id=?
+        FROM partner_campaigns WHERE listing_id=? AND partner_id=?
         GROUP BY status
     ");
     $st->execute([$listingId, $partnerId]);
@@ -422,7 +422,7 @@ function computeGrowthScore(int $listingId, int $partnerId, \PDO $pdo): array {
     $leadScore  = min(20, $totalLeads * 2 + (int)round($convRate * 10));
 
     // 4. Campaign score (0–15): active/recent campaigns
-    $st = $pdo->prepare("SELECT COUNT(*) cnt FROM campaigns
+    $st = $pdo->prepare("SELECT COUNT(*) cnt FROM partner_campaigns
                           WHERE listing_id = ? AND partner_id = ?
                           AND status IN ('active','completed')
                           AND (end_date IS NULL OR end_date >= ?)");
@@ -613,7 +613,7 @@ function generateRecommendations(int $partnerId, \PDO $pdo): int {
         // Rule: no_campaign_activity — no active/recent campaigns in 60 days
         if (!$exists('no_campaign_activity')) {
             $sixtyDays = date('Y-m-d', strtotime('-60 days'));
-            $st = $pdo->prepare("SELECT COUNT(*) FROM campaigns
+            $st = $pdo->prepare("SELECT COUNT(*) FROM partner_campaigns
                 WHERE listing_id = ? AND partner_id = ?
                 AND status IN ('active','completed') AND created_at >= ?");
             $st->execute([$lid, $partnerId, $sixtyDays]);
@@ -708,7 +708,7 @@ function generateRecommendations(int $partnerId, \PDO $pdo): int {
  */
 function getActiveRecommendations(int $partnerId, ?\PDO $pdo = null, ?int $listingId = null, int $limit = 10): array {
     if (!$pdo) $pdo = db();
-    $sql = "SELECT r.*, l.name AS business_name FROM ai_recommendations r
+    $sql = "SELECT r.*, l.title AS business_name FROM ai_recommendations r
             LEFT JOIN listings l ON l.id = r.listing_id
             WHERE r.partner_id = ? AND r.status IN ('new','viewed')";
     $params = [$partnerId];
@@ -849,7 +849,7 @@ function generateGrowthAlerts(int $partnerId, \PDO $pdo): int {
  */
 function getGrowthAlerts(int $partnerId, ?\PDO $pdo = null, int $limit = 20): array {
     if (!$pdo) $pdo = db();
-    $st = $pdo->prepare("SELECT a.*, l.name AS business_name FROM growth_alerts a
+    $st = $pdo->prepare("SELECT a.*, l.title AS business_name FROM growth_alerts a
         LEFT JOIN listings l ON l.id = a.listing_id
         WHERE a.partner_id = ? AND a.status IN ('new','viewed')
         AND (a.expires_at IS NULL OR a.expires_at > NOW())
