@@ -583,6 +583,7 @@ require_once __DIR__ . '/../includes/header.php';
             <a href="<?= SITE_URL ?>/partner/portfolio" class="quick-link"><span class="icon">📋</span>View Portfolio<span class="arrow">→</span></a>
             <a href="<?= SITE_URL ?>/partner/campaigns" class="quick-link"><span class="icon">📣</span>Manage Campaigns<span class="arrow">→</span></a>
             <a href="<?= SITE_URL ?>/partner/content" class="quick-link"><span class="icon">📅</span>Content Calendar<span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/templates" class="quick-link"><span class="icon">📨</span>Message Templates<span class="arrow">→</span></a>
             <a href="<?= SITE_URL ?>/partner/reports" class="quick-link"><span class="icon">📊</span>Generate Report<span class="arrow">→</span></a>
             <a href="<?= SITE_URL ?>/partner/tasks" class="quick-link"><span class="icon">✅</span>All Tasks<span class="arrow">→</span></a>
             <a href="<?= SITE_URL ?>/partner/leads" class="quick-link"><span class="icon">💬</span>All Leads<span class="arrow">→</span></a>
