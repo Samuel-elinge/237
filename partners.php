@@ -7,6 +7,7 @@
  * Links to individual partner profile pages.
  */
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/partner-lang.php';
 
 $pdo = db();
 
@@ -99,7 +100,7 @@ foreach ($specRows as $row) {
 arsort($allSpecs);
 $topSpecs = array_slice(array_keys($allSpecs), 0, 20);
 
-$pageTitle = 'Find a Growth Partner';
+$pageTitle = pt('find_a_growth_partner');
 require_once __DIR__ . '/includes/header.php';
 ?>
 <style>
@@ -160,15 +161,15 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- Hero -->
 <div class="hero">
-    <h1>Find a Growth Partner</h1>
-    <p>Connect with verified local experts who grow businesses across Cameroon</p>
+    <h1><?= pt('find_a_growth_partner') ?></h1>
+    <p><?= pt('partners_hero_sub') ?></p>
     <form method="get" class="hero-search">
         <?php foreach (['region','specialism','tier','capacity'] as $f):
             if (!empty($_GET[$f])): ?>
         <input type="hidden" name="<?= $f ?>" value="<?= e($_GET[$f]) ?>">
         <?php endif; endforeach ?>
-        <input type="text" name="q" value="<?= e($search) ?>" placeholder="Search by name, specialism…">
-        <button type="submit">Search</button>
+        <input type="text" name="q" value="<?= e($search) ?>" placeholder="<?= pt('search_by_name_specialism') ?>">
+        <button type="submit"><?= pt('search') ?></button>
     </form>
 </div>
 
@@ -176,9 +177,9 @@ require_once __DIR__ . '/includes/header.php';
     <!-- Sidebar Filters -->
     <aside class="sidebar" style="display:none;display:block">
         <div class="filter-card">
-            <h3>Region</h3>
+            <h3><?= pt('region') ?></h3>
             <a href="?<?= http_build_query(array_merge($_GET, ['region'=>'','page'=>1])) ?>"
-               class="filter-link<?= !$filterRegion ? ' active' : '' ?>">All Regions</a>
+               class="filter-link<?= !$filterRegion ? ' active' : '' ?>"><?= pt('all_regions') ?></a>
             <?php foreach ($regions as $r): ?>
             <a href="?<?= http_build_query(array_merge($_GET, ['region'=>$r,'page'=>1])) ?>"
                class="filter-link<?= $filterRegion===$r ? ' active' : '' ?>"><?= e($r) ?></a>
@@ -186,9 +187,9 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <div class="filter-card">
-            <h3>Tier</h3>
+            <h3><?= pt('tier') ?></h3>
             <a href="?<?= http_build_query(array_merge($_GET, ['tier'=>'','page'=>1])) ?>"
-               class="filter-link<?= !$filterTier ? ' active' : '' ?>">All Tiers</a>
+               class="filter-link<?= !$filterTier ? ' active' : '' ?>"><?= pt('all_tiers') ?></a>
             <?php foreach ($tiers as $t): ?>
             <a href="?<?= http_build_query(array_merge($_GET, ['tier'=>$t['slug'],'page'=>1])) ?>"
                class="filter-link<?= $filterTier===$t['slug'] ? ' active' : '' ?>"><?= e($t['name']) ?></a>
@@ -196,18 +197,18 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <div class="filter-card">
-            <h3>Availability</h3>
+            <h3><?= pt('availability') ?></h3>
             <a href="?<?= http_build_query(array_merge($_GET, ['capacity'=>'','page'=>1])) ?>"
-               class="filter-link<?= !$filterCapacity ? ' active' : '' ?>">Any</a>
+               class="filter-link<?= !$filterCapacity ? ' active' : '' ?>"><?= pt('any') ?></a>
             <a href="?<?= http_build_query(array_merge($_GET, ['capacity'=>'available','page'=>1])) ?>"
-               class="filter-link<?= $filterCapacity==='available' ? ' active' : '' ?>">Available now</a>
+               class="filter-link<?= $filterCapacity==='available' ? ' active' : '' ?>"><?= pt('available_now') ?></a>
         </div>
 
         <?php if ($topSpecs): ?>
         <div class="filter-card">
-            <h3>Specialism</h3>
+            <h3><?= pt('specialism') ?></h3>
             <a href="?<?= http_build_query(array_merge($_GET, ['specialism'=>'','page'=>1])) ?>"
-               class="filter-link<?= !$filterSpecial ? ' active' : '' ?>">All</a>
+               class="filter-link<?= !$filterSpecial ? ' active' : '' ?>"><?= pt('all') ?></a>
             <?php foreach ($topSpecs as $sp): ?>
             <a href="?<?= http_build_query(array_merge($_GET, ['specialism'=>$sp,'page'=>1])) ?>"
                class="filter-link<?= $filterSpecial===$sp ? ' active' : '' ?>"><?= e($sp) ?></a>
@@ -216,7 +217,7 @@ require_once __DIR__ . '/includes/header.php';
         <?php endif ?>
 
         <?php if ($filterRegion || $filterTier || $filterCapacity || $filterSpecial || $search): ?>
-        <a href="/partners" style="display:block;text-align:center;font-size:.8rem;color:#dc2626;text-decoration:none;padding:.5rem">✕ Clear all filters</a>
+        <a href="/partners" style="display:block;text-align:center;font-size:.8rem;color:#dc2626;text-decoration:none;padding:.5rem">✕ <?= pt('clear_all_filters') ?></a>
         <?php endif ?>
     </aside>
 
@@ -224,25 +225,25 @@ require_once __DIR__ . '/includes/header.php';
     <main>
         <div class="results-header">
             <div class="results-count">
-                <?= number_format($totalCount) ?> partner<?= $totalCount != 1 ? 's' : '' ?> found
+                <?= number_format($totalCount) ?> <?= $totalCount != 1 ? pt('partners_found_plural') : pt('partner_found_singular') ?>
             </div>
         </div>
 
         <!-- Active filters display -->
         <?php
         $activeFilters = [];
-        if ($search)        $activeFilters[] = ['Search: ' . e($search), 'q'];
+        if ($search)        $activeFilters[] = [pt('search') . ': ' . e($search), 'q'];
         if ($filterRegion)  $activeFilters[] = [e($filterRegion), 'region'];
         if ($filterSpecial) $activeFilters[] = [e($filterSpecial), 'specialism'];
         if ($filterTier)    $activeFilters[] = [e($filterTier), 'tier'];
-        if ($filterCapacity) $activeFilters[] = ['Available now', 'capacity'];
+        if ($filterCapacity) $activeFilters[] = [pt('available_now'), 'capacity'];
         ?>
         <?php if ($activeFilters): ?>
         <div class="active-filters">
             <?php foreach ($activeFilters as [$label, $param]): ?>
             <span class="af-pill">
                 <?= $label ?>
-                <a href="?<?= http_build_query(array_merge($_GET, [$param=>'','page'=>1])) ?>">✕</a>
+                <a href="?<?= http_build_query(array_merge($_GET, [$param=>'','page'=>1])) ?>" title="<?= pt('remove_filter') ?>">✕</a>
             </span>
             <?php endforeach ?>
         </div>
@@ -251,8 +252,8 @@ require_once __DIR__ . '/includes/header.php';
         <?php if (!$partners): ?>
         <div class="empty">
             <div class="icon">🔍</div>
-            <p>No partners match your filters. Try adjusting your search.</p>
-            <a href="/partners" style="color:#2563eb;font-size:.875rem">Clear filters →</a>
+            <p><?= pt('no_partners_match') ?></p>
+            <a href="/partners" style="color:#2563eb;font-size:.875rem"><?= pt('clear_filters') ?> →</a>
         </div>
         <?php else: ?>
         <div class="partner-grid">
@@ -280,9 +281,9 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="card-badges">
                         <span class="badge badge-tier-<?= e($tierSlug) ?>"><?= e($tierLabel) ?></span>
                         <?php if ($p['verified']): ?>
-                        <span class="badge badge-verified">✓ Verified</span>
+                        <span class="badge badge-verified">✓ <?= pt('verified') ?></span>
                         <?php endif ?>
-                        <span class="badge badge-capacity-<?= e($capStatus) ?>"><?= ucfirst($capStatus) ?></span>
+                        <span class="badge badge-capacity-<?= e($capStatus) ?>"><?= pt('capacity_' . $capStatus) ?: ucfirst($capStatus) ?></span>
                     </div>
                     <?php if ($specs): ?>
                     <div class="card-specs">
@@ -291,17 +292,17 @@ require_once __DIR__ . '/includes/header.php';
                     <?php endif ?>
                     <div class="card-meta">
                         <?php if ($p['regions']): ?><span>📍 <?= e(mb_substr($p['regions'], 0, 40)) ?></span><?php endif ?>
-                        <?php if ($p['active_biz']): ?><span>🏢 <?= (int)$p['active_biz'] ?> businesses</span><?php endif ?>
-                        <?php if ($p['cert_count']): ?><span>🏅 <?= (int)$p['cert_count'] ?> certs</span><?php endif ?>
+                        <?php if ($p['active_biz']): ?><span>🏢 <?= (int)$p['active_biz'] ?> <?= pt('businesses') ?></span><?php endif ?>
+                        <?php if ($p['cert_count']): ?><span>🏅 <?= (int)$p['cert_count'] ?> <?= pt('certs') ?></span><?php endif ?>
                     </div>
                 </div>
                 <div class="card-bottom">
                     <?php if ($stars): ?>
                     <span class="stars"><?= $stars ?> <span style="color:#9ca3af">(<?= (int)$p['rating_count'] ?>)</span></span>
                     <?php else: ?>
-                    <span style="font-size:.75rem;color:#9ca3af">No reviews yet</span>
+                    <span style="font-size:.75rem;color:#9ca3af"><?= pt('no_reviews_yet') ?></span>
                     <?php endif ?>
-                    <span class="btn-view">View Profile →</span>
+                    <span class="btn-view"><?= pt('view_profile') ?> →</span>
                 </div>
             </a>
             <?php endforeach ?>
