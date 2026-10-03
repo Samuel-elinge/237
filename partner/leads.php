@@ -4,6 +4,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $partnerProfile = requireGrowthPartner();
 $partnerId      = (int)$partnerProfile['id'];
@@ -76,7 +77,7 @@ $leads = $st->fetchAll();
 
 $myListings = fetchPartnerListings($partnerId);
 
-$pageTitle = 'Leads — Partner Centre';
+$pageTitle = pt('Leads') . ' — ' . pt('Partner Centre');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -105,22 +106,22 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="partner-wrap">
   <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
-    <h1 style="font-family:'Fraunces',serif; font-size:2rem; font-weight:900; margin:0;">💬 Leads</h1>
-    <span style="color:var(--muted);"><?= count($leads) ?> lead<?= count($leads) !== 1 ? 's' : '' ?></span>
+    <h1 style="font-family:'Fraunces',serif; font-size:2rem; font-weight:900; margin:0;">💬 <?= pt('Leads') ?></h1>
+    <span style="color:var(--muted);"><?= count($leads) ?> <?= pt('lead(s)') ?></span>
   </div>
 
   <nav class="partner-nav">
-    <a href="<?= SITE_URL ?>/partner/dashboard">🏠 Dashboard</a>
-    <a href="<?= SITE_URL ?>/partner/portfolio">📋 Portfolio</a>
-    <a href="<?= SITE_URL ?>/partner/tasks">✅ Tasks</a>
-    <a href="<?= SITE_URL ?>/partner/leads" class="active">💬 Leads</a>
-    <a href="<?= SITE_URL ?>/partner/commissions">💰 Commissions</a>
+    <a href="<?= SITE_URL ?>/partner/dashboard">🏠 <?= pt('Dashboard') ?></a>
+    <a href="<?= SITE_URL ?>/partner/portfolio">📋 <?= pt('Portfolio') ?></a>
+    <a href="<?= SITE_URL ?>/partner/tasks">✅ <?= pt('Tasks') ?></a>
+    <a href="<?= SITE_URL ?>/partner/leads" class="active">💬 <?= pt('Leads') ?></a>
+    <a href="<?= SITE_URL ?>/partner/commissions">💰 <?= pt('Commissions') ?></a>
   </nav>
 
   <!-- Status tabs -->
   <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1rem;">
     <?php
-    $tabs = ['active'=>'Active','pipeline'=>'Full Pipeline','new'=>'New','contacted'=>'Contacted','follow_up'=>'Follow Up','qualified'=>'Qualified','converted'=>'Converted','lost'=>'Lost'];
+    $tabs = ['active'=>pt('Active'),'pipeline'=>pt('Full Pipeline'),'new'=>pt('New'),'contacted'=>pt('Contacted'),'follow_up'=>pt('Follow Up'),'qualified'=>pt('Qualified'),'converted'=>pt('Converted'),'lost'=>pt('Lost')];
     foreach ($tabs as $tk => $tl): ?>
     <a href="?status=<?= $tk ?><?= $listingFilter ? '&listing='.$listingFilter : '' ?>" class="status-tab <?= $statusFilter===$tk?'active':'' ?>"><?= $tl ?></a>
     <?php endforeach; ?>
@@ -129,22 +130,22 @@ require_once __DIR__ . '/../includes/header.php';
   <!-- Filters -->
   <form method="GET" style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; margin-bottom:1.5rem;">
     <input type="hidden" name="status" value="<?= e($statusFilter) ?>">
-    <input type="text" name="q" value="<?= e($search) ?>" placeholder="Search leads…"
+    <input type="text" name="q" value="<?= e($search) ?>" placeholder="<?= pt('Search leads…') ?>"
       style="flex:1; min-width:180px; padding:0.45rem 0.75rem; border:1px solid var(--border); border-radius:8px; background:var(--card); color:var(--text); font-size:0.875rem;">
     <select name="listing" style="padding:0.45rem 0.75rem; border:1px solid var(--border); border-radius:8px; background:var(--card); color:var(--text); font-size:0.875rem;">
-      <option value="">All Businesses</option>
+      <option value=""><?= pt('All Businesses') ?></option>
       <?php foreach ($myListings as $ml): ?>
       <option value="<?= $ml['id'] ?>" <?= $listingFilter===$ml['id']?'selected':'' ?>><?= e($ml['title']) ?></option>
       <?php endforeach; ?>
     </select>
-    <button type="submit" class="btn btn-primary" style="white-space:nowrap;">Filter</button>
+    <button type="submit" class="btn btn-primary" style="white-space:nowrap;"><?= pt('Filter') ?></button>
   </form>
 
   <?php if (!$leads): ?>
     <div style="text-align:center; padding:4rem; background:var(--card); border:1px solid var(--border); border-radius:14px;">
       <div style="font-size:3rem; margin-bottom:1rem;">📭</div>
-      <h3 style="font-family:'Fraunces',serif;">No leads found</h3>
-      <p style="color:var(--muted);">Leads are added from the business management page.</p>
+      <h3 style="font-family:'Fraunces',serif;"><?= pt('No leads found') ?></h3>
+      <p style="color:var(--muted);"><?= pt('Leads are added from the business management page.') ?></p>
     </div>
   <?php else: ?>
     <?php foreach ($leads as $lead): ?>
@@ -163,12 +164,12 @@ require_once __DIR__ . '/../includes/header.php';
             <span><?= date('j M Y', strtotime($lead['created_at'])) ?></span>
           </div>
         </div>
-        <a href="<?= SITE_URL ?>/partner/business?id=<?= $lead['listing_id'] ?>&tab=leads" style="font-size:0.8rem; color:var(--primary); text-decoration:none; flex-shrink:0;">View →</a>
+        <a href="<?= SITE_URL ?>/partner/business?id=<?= $lead['listing_id'] ?>&tab=leads" style="font-size:0.8rem; color:var(--primary); text-decoration:none; flex-shrink:0;"><?= pt('View') ?> →</a>
       </div>
 
       <?php if ($lead['notes'] || $lead['next_action']): ?>
       <div style="margin-top:0.5rem; font-size:0.83rem; color:var(--muted);">
-        <?php if ($lead['next_action']): ?><div>→ <strong>Next:</strong> <?= e($lead['next_action']) ?></div><?php endif; ?>
+        <?php if ($lead['next_action']): ?><div>→ <strong><?= pt('Next:') ?></strong> <?= e($lead['next_action']) ?></div><?php endif; ?>
         <?php if ($lead['notes']): ?><div style="margin-top:0.2rem;"><?= e(mb_strimwidth($lead['notes'], 0, 140, '…')) ?></div><?php endif; ?>
       </div>
       <?php endif; ?>
@@ -176,7 +177,7 @@ require_once __DIR__ . '/../includes/header.php';
       <!-- Quick status update -->
       <?php if (!in_array($lead['status'], ['converted','lost','closed'])): ?>
       <details style="margin-top:0.75rem;">
-        <summary style="font-size:0.8rem; color:var(--primary); cursor:pointer; user-select:none;">Update status</summary>
+        <summary style="font-size:0.8rem; color:var(--primary); cursor:pointer; user-select:none;"><?= pt('Update status') ?></summary>
         <form method="POST" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end; margin-top:0.5rem;">
           <?= csrfField() ?>
           <input type="hidden" name="action" value="update_lead">
@@ -186,9 +187,9 @@ require_once __DIR__ . '/../includes/header.php';
             <option value="<?= $s ?>" <?= $lead['status']===$s?'selected':'' ?>><?= ucwords(str_replace('_',' ',$s)) ?></option>
             <?php endforeach; ?>
           </select>
-          <input type="text" name="next_action" value="<?= e($lead['next_action'] ?? '') ?>" placeholder="Next action…"
+          <input type="text" name="next_action" value="<?= e($lead['next_action'] ?? '') ?>" placeholder="<?= pt('Next action…') ?>"
             style="flex:1; min-width:140px; padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:0.83rem;">
-          <button type="submit" class="btn btn-primary" style="font-size:0.83rem; padding:0.35rem 0.75rem;">Save</button>
+          <button type="submit" class="btn btn-primary" style="font-size:0.83rem; padding:0.35rem 0.75rem;"><?= pt('Save') ?></button>
         </form>
       </details>
       <?php endif; ?>

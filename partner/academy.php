@@ -8,6 +8,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $pdo = db();
 $partnerProfile = requireGrowthPartner();
@@ -151,7 +152,7 @@ $stats->execute([$partnerId, $partnerId]);
 $stats = $stats->fetch();
 
 $flash     = getFlash();
-$pageTitle = 'Partner Academy';
+$pageTitle = pt('Partner Academy');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <style>
@@ -224,10 +225,10 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="page-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem">
         <div>
-            <h1 style="margin:0;font-size:1.3rem;color:#111827">Partner Academy</h1>
-            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280">Training modules to sharpen your Growth Partner skills</p>
+            <h1 style="margin:0;font-size:1.3rem;color:#111827"><?= pt('Partner Academy') ?></h1>
+            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280"><?= pt('Training modules to sharpen your Growth Partner skills') ?></p>
         </div>
-        <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← Dashboard</a>
+        <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← <?= pt('Dashboard') ?></a>
     </div>
 
     <?php if ($flash): ?>
@@ -239,15 +240,15 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="progress-banner">
         <div class="prog-stat">
             <div class="val"><?= (int)$stats['done_modules'] ?>/<?= (int)$stats['total_modules'] ?></div>
-            <div class="lbl">Modules Complete</div>
+            <div class="lbl"><?= pt('Modules Complete') ?></div>
         </div>
         <div class="prog-stat">
             <div class="val"><?= (int)$stats['done_lessons'] ?>/<?= (int)$stats['total_lessons'] ?></div>
-            <div class="lbl">Lessons Done</div>
+            <div class="lbl"><?= pt('Lessons Done') ?></div>
         </div>
         <div class="prog-bar-wrap">
             <?php $pct = $stats['total_lessons'] > 0 ? round($stats['done_lessons']/$stats['total_lessons']*100) : 0 ?>
-            <div class="prog-bar-label">Overall progress: <?= $pct ?>%</div>
+            <div class="prog-bar-label"><?= pt('Overall progress:') ?> <?= $pct ?>%</div>
             <div class="prog-track"><div class="prog-fill" style="width:<?= $pct ?>%"></div></div>
         </div>
     </div>
@@ -255,7 +256,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <?php if ($currentModule): ?>
     <!-- ── Lesson view ── -->
-    <a href="<?= SITE_URL ?>/partner/academy<?= $filterCat ? '?cat='.urlencode($filterCat) : '' ?>" class="back-link">← Back to modules</a>
+    <a href="<?= SITE_URL ?>/partner/academy<?= $filterCat ? '?cat='.urlencode($filterCat) : '' ?>" class="back-link">← <?= pt('Back to modules') ?></a>
 
     <div class="module-hero">
         <div class="module-hero-icon" style="background:<?= e($currentModule['color'] ?? '#dbeafe') ?>">
@@ -277,7 +278,7 @@ require_once __DIR__ . '/../includes/header.php';
             $modPct = $totalL > 0 ? round($doneL/$totalL*100) : 0;
             ?>
             <div style="margin-top:.75rem">
-                <div style="font-size:.78rem;color:#6b7280;margin-bottom:.25rem"><?= $doneL ?>/<?= $totalL ?> lessons · <?= $modPct ?>% complete</div>
+                <div style="font-size:.78rem;color:#6b7280;margin-bottom:.25rem"><?= $doneL ?>/<?= $totalL ?> <?= pt('lessons') ?> · <?= $modPct ?>% <?= pt('complete') ?></div>
                 <div class="mini-track" style="height:7px;width:200px"><div class="mini-fill<?= $modPct==100?' done':'' ?>" style="width:<?= $modPct ?>%"></div></div>
             </div>
         </div>
@@ -286,7 +287,7 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if (!$lessons): ?>
     <div class="empty">
         <div style="font-size:2rem;margin-bottom:.5rem">📖</div>
-        <p>No lessons in this module yet. Check back soon!</p>
+        <p><?= pt('No lessons in this module yet. Check back soon!') ?></p>
     </div>
     <?php else: ?>
     <div class="lesson-list">
@@ -303,10 +304,10 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="lesson-meta">
                     <?php if ($lesson['duration_mins']): ?><span>⏱ <?= (int)$lesson['duration_mins'] ?> min</span><?php endif ?>
                     <?php if ($lesson['type']): ?><span>📄 <?= ucfirst($lesson['type']) ?></span><?php endif ?>
-                    <?php if ($isDone && $lesson['completed_at'] ?? null): ?><span>✓ Done</span><?php endif ?>
+                    <?php if ($isDone && $lesson['completed_at'] ?? null): ?><span>✓ <?= pt('Done') ?></span><?php endif ?>
                 </div>
                 <?php if ($lesson['content_url']): ?>
-                <a href="<?= e($lesson['content_url']) ?>" target="_blank" class="btn btn-detail btn-sm" style="margin-top:.5rem">Open Lesson →</a>
+                <a href="<?= e($lesson['content_url']) ?>" target="_blank" class="btn btn-detail btn-sm" style="margin-top:.5rem"><?= pt('Open Lesson') ?> →</a>
                 <?php endif ?>
             </div>
             <div class="lesson-actions">
@@ -318,7 +319,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <input type="hidden" name="module" value="<?= (int)$_GET['module'] ?>">
                     <?php endif ?>
                     <button type="submit" class="btn <?= $isDone ? 'btn-detail' : 'btn-success' ?> btn-sm">
-                        <?= $isDone ? '✕ Unmark' : '✓ Complete' ?>
+                        <?= $isDone ? ('✕ ' . pt('Unmark')) : ('✓ ' . pt('Complete')) ?>
                     </button>
                 </form>
             </div>
@@ -332,21 +333,21 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="layout">
         <div class="sidebar">
             <div class="cat-nav">
-                <div class="cat-label">Category</div>
-                <a href="?<?= $viewModule ? 'module='.$viewModule.'&' : '' ?>" class="<?= !$filterCat ? 'active' : '' ?>">All modules</a>
+                <div class="cat-label"><?= pt('Category') ?></div>
+                <a href="?<?= $viewModule ? 'module='.$viewModule.'&' : '' ?>" class="<?= !$filterCat ? 'active' : '' ?>"><?= pt('All modules') ?></a>
                 <?php foreach ($categories as $cat): ?>
                 <a href="?cat=<?= urlencode($cat) ?>" class="<?= $filterCat === $cat ? 'active' : '' ?>"><?= e(ucfirst($cat)) ?></a>
                 <?php endforeach ?>
             </div>
-            <a href="<?= SITE_URL ?>/partner/certifications" class="btn btn-detail" style="width:100%;justify-content:center;margin-bottom:.5rem">My Certifications</a>
-            <a href="<?= SITE_URL ?>/partner/resources" class="btn btn-detail" style="width:100%;justify-content:center">Resources →</a>
+            <a href="<?= SITE_URL ?>/partner/certifications" class="btn btn-detail" style="width:100%;justify-content:center;margin-bottom:.5rem"><?= pt('My Certifications') ?></a>
+            <a href="<?= SITE_URL ?>/partner/resources" class="btn btn-detail" style="width:100%;justify-content:center"><?= pt('Resources') ?> →</a>
         </div>
 
         <div class="main">
             <?php if (!$modules): ?>
             <div class="empty">
                 <div style="font-size:2.5rem;margin-bottom:.5rem">🎓</div>
-                <p>No training modules available yet. Check back soon!</p>
+                <p><?= pt('No training modules available yet. Check back soon!') ?></p>
             </div>
             <?php else: ?>
             <?php foreach ($modules as $m):
@@ -366,15 +367,15 @@ require_once __DIR__ . '/../includes/header.php';
                         <div class="module-desc"><?= e(mb_strimwidth($m['description'] ?? '', 0, 100, '…')) ?></div>
                         <div class="module-badges">
                             <span class="badge <?= $lvlCls ?>"><?= ucfirst($lvl) ?></span>
-                            <?php if ($modDone): ?><span class="badge badge-done">✓ Complete</span><?php endif ?>
-                            <?php if (!$m['is_active']): ?><span class="badge badge-locked">Draft</span><?php endif ?>
-                            <span class="badge" style="background:#f3f4f6;color:#6b7280"><?= $total ?> lesson<?= $total!=1?'s':'' ?></span>
+                            <?php if ($modDone): ?><span class="badge badge-done">✓ <?= pt('Complete') ?></span><?php endif ?>
+                            <?php if (!$m['is_active']): ?><span class="badge badge-locked"><?= pt('Draft') ?></span><?php endif ?>
+                            <span class="badge" style="background:#f3f4f6;color:#6b7280"><?= $total ?> <?= pt('lessons') ?></span>
                         </div>
                     </div>
                 </div>
                 <div class="module-prog">
                     <div class="mini-track"><div class="mini-fill <?= $pct==100?'done':'' ?>" style="width:<?= $pct ?>%"></div></div>
-                    <div class="mini-label"><?= $done ?>/<?= $total ?> lessons · <?= $pct ?>%</div>
+                    <div class="mini-label"><?= $done ?>/<?= $total ?> <?= pt('lessons') ?> · <?= $pct ?>%</div>
                 </div>
             </a>
             <?php endforeach ?>

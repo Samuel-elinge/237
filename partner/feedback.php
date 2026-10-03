@@ -8,6 +8,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $pdo = db();
 $partnerProfile = requireGrowthPartner();
@@ -95,7 +96,7 @@ if ($isAdmin) {
 
 $flash = getFlash();
 $curRating = round((float)($partnerProfile['rating'] ?? 0));
-$pageTitle = 'My Feedback & Reviews';
+$pageTitle = pt('Feedback & Reviews');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <style>
@@ -148,12 +149,12 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="page-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem">
         <div>
-            <h1 style="margin:0;font-size:1.3rem;color:#111827">Feedback & Reviews</h1>
-            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280">Business feedback about your Growth Partner work</p>
+            <h1 style="margin:0;font-size:1.3rem;color:#111827"><?= pt('Feedback & Reviews') ?></h1>
+            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280"><?= pt('Business feedback about your Growth Partner work') ?></p>
         </div>
         <div style="display:flex;gap:.5rem">
-            <a href="<?= SITE_URL ?>/partner/profile?code=<?= urlencode($partnerProfile['referral_code'] ?? '') ?>" class="btn btn-detail" target="_blank">My Profile →</a>
-            <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← Dashboard</a>
+            <a href="<?= SITE_URL ?>/partner/profile?code=<?= urlencode($partnerProfile['referral_code'] ?? '') ?>" class="btn btn-detail" target="_blank"><?= pt('My Profile →') ?></a>
+            <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← <?= pt('Dashboard') ?></a>
         </div>
     </div>
 
@@ -167,7 +168,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div>
             <div class="big-rating"><?= number_format((float)$summary['avg_rating'], 1) ?></div>
             <div class="rating-stars"><?= str_repeat('★', $curRating) . str_repeat('☆', 5 - $curRating) ?></div>
-            <div class="rating-sub"><?= (int)$summary['total'] ?> review<?= $summary['total'] != 1 ? 's' : '' ?> · <?= (int)$summary['public_count'] ?> public</div>
+            <div class="rating-sub"><?= (int)$summary['total'] ?> <?= $summary['total'] != 1 ? pt('reviews') : pt('review') ?> · <?= (int)$summary['public_count'] ?> <?= pt('public') ?></div>
         </div>
         <div class="rating-bars">
             <?php
@@ -187,16 +188,16 @@ require_once __DIR__ . '/../includes/header.php';
     <!-- Admin: Submit Feedback -->
     <?php if ($isAdmin): ?>
     <div class="admin-form-card">
-        <h3>Submit Feedback (Admin)</h3>
+        <h3><?= pt('Submit Feedback (Admin)') ?></h3>
         <form method="post">
             <?= csrfField() ?>
             <input type="hidden" name="partner_id" value="<?= $partnerId ?>">
 
             <?php if ($adminBusinesses): ?>
             <div class="form-group">
-                <label>Business</label>
+                <label><?= pt('Business') ?></label>
                 <select name="listing_id">
-                    <option value="">— General / not linked to specific business —</option>
+                    <option value=""><?= pt('— General / not linked to specific business —') ?></option>
                     <?php foreach ($adminBusinesses as $b): ?>
                     <option value="<?= $b['id'] ?>"><?= e($b['business_name']) ?></option>
                     <?php endforeach ?>
@@ -205,7 +206,7 @@ require_once __DIR__ . '/../includes/header.php';
             <?php endif ?>
 
             <div class="form-group">
-                <label>Rating</label>
+                <label><?= pt('Rating') ?></label>
                 <div class="star-picker">
                     <?php for ($s = 5; $s >= 1; $s--): ?>
                     <input type="radio" name="rating" id="star<?= $s ?>" value="<?= $s ?>" <?= $s === 5 ? 'checked' : '' ?>>
@@ -215,23 +216,23 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
 
             <div class="form-group">
-                <label>Feedback</label>
-                <textarea name="feedback" placeholder="Describe the partner's performance, responsiveness, impact…" required></textarea>
+                <label><?= pt('Feedback') ?></label>
+                <textarea name="feedback" placeholder="<?= pt('Describe the partner\'s performance, responsiveness, impact…') ?>" required></textarea>
             </div>
 
             <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem">
                 <input type="checkbox" name="is_public" id="is_public" value="1" checked>
-                <label for="is_public" style="font-size:.83rem;color:#374151;cursor:pointer">Show on public profile</label>
+                <label for="is_public" style="font-size:.83rem;color:#374151;cursor:pointer"><?= pt('Show on public profile') ?></label>
             </div>
 
-            <button type="submit" class="btn btn-primary">Submit Feedback</button>
+            <button type="submit" class="btn btn-primary"><?= pt('Submit Feedback') ?></button>
         </form>
     </div>
     <?php endif ?>
 
     <!-- Filter tabs -->
     <div class="tabs">
-        <?php foreach (['all'=>'All','public'=>'Public','private'=>'Private'] as $v => $lbl): ?>
+        <?php foreach (['all'=>pt('All'),'public'=>pt('Public'),'private'=>pt('Private')] as $v => $lbl): ?>
         <a href="?vis=<?= $v ?>" class="tab<?= $filterVis===$v ? ' active' : '' ?>"><?= $lbl ?></a>
         <?php endforeach ?>
     </div>
@@ -240,7 +241,7 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if (!$feedbackRows): ?>
     <div class="empty">
         <div style="font-size:2rem;margin-bottom:.5rem">⭐</div>
-        <p>No feedback yet. Keep delivering great results and feedback will follow!</p>
+        <p><?= pt('No feedback yet. Keep delivering great results and feedback will follow!') ?></p>
     </div>
     <?php else: ?>
     <?php foreach ($feedbackRows as $f):
@@ -249,8 +250,8 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="fb-card">
         <div class="fb-top">
             <span class="fb-stars"><?= $stars ?></span>
-            <span class="fb-biz"><?= $f['business_name'] ? e($f['business_name']) : 'General Feedback' ?></span>
-            <span class="fb-public <?= $f['is_public'] ? 'yes' : 'no' ?>"><?= $f['is_public'] ? 'Public' : 'Private' ?></span>
+            <span class="fb-biz"><?= $f['business_name'] ? e($f['business_name']) : pt('General Feedback') ?></span>
+            <span class="fb-public <?= $f['is_public'] ? 'yes' : 'no' ?>"><?= $f['is_public'] ? pt('Public') : pt('Private') ?></span>
             <span class="fb-date"><?= date('d M Y', strtotime($f['created_at'])) ?></span>
         </div>
         <div class="fb-text"><?= e($f['feedback']) ?></div>

@@ -7,6 +7,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $pdo = db();
 $partnerProfile = requireGrowthPartner();
@@ -102,7 +103,7 @@ $typeIcons = [
 ];
 
 $flash     = getFlash();
-$pageTitle = 'Resource Library';
+$pageTitle = pt('Resource Library');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <style>
@@ -158,12 +159,12 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="page-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem">
         <div>
-            <h1 style="margin:0;font-size:1.3rem;color:#111827">Resource Library</h1>
-            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280">Templates, guides and tools to help you succeed</p>
+            <h1 style="margin:0;font-size:1.3rem;color:#111827"><?= pt('Resource Library') ?></h1>
+            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280"><?= pt('Templates, guides and tools to help you succeed') ?></p>
         </div>
         <div style="display:flex;gap:.5rem">
-            <a href="<?= SITE_URL ?>/partner/academy" class="btn btn-detail">Academy</a>
-            <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← Dashboard</a>
+            <a href="<?= SITE_URL ?>/partner/academy" class="btn btn-detail"><?= pt('Academy') ?></a>
+            <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← <?= pt('Dashboard') ?></a>
         </div>
     </div>
 
@@ -175,7 +176,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="sidebar">
             <?php if ($myRecent): ?>
             <div class="filter-box" style="margin-bottom:.75rem">
-                <div class="filter-title">Recently Accessed</div>
+                <div class="filter-title"><?= pt('Recently Accessed') ?></div>
                 <?php foreach ($myRecent as $r): ?>
                 <div style="padding:.45rem 1rem;border-bottom:1px solid #f9fafb">
                     <div style="font-size:.78rem;font-weight:600;color:#111827"><?= e(mb_strimwidth($r['title'],0,35,'…')) ?></div>
@@ -186,16 +187,16 @@ require_once __DIR__ . '/../includes/header.php';
             <?php endif ?>
 
             <div class="filter-box">
-                <div class="filter-title">Category</div>
-                <a href="?<?= $filterType ? 'type='.urlencode($filterType).'&' : '' ?><?= $search ? 'q='.urlencode($search).'&' : '' ?>" class="<?= !$filterCat ? 'active' : '' ?>">All</a>
+                <div class="filter-title"><?= pt('Category') ?></div>
+                <a href="?<?= $filterType ? 'type='.urlencode($filterType).'&' : '' ?><?= $search ? 'q='.urlencode($search).'&' : '' ?>" class="<?= !$filterCat ? 'active' : '' ?>"><?= pt('All') ?></a>
                 <?php foreach ($cats as $cat): ?>
                 <a href="?cat=<?= urlencode($cat) ?><?= $filterType ? '&type='.urlencode($filterType) : '' ?><?= $search ? '&q='.urlencode($search) : '' ?>" class="<?= $filterCat===$cat ? 'active' : '' ?>"><?= e(ucfirst($cat)) ?></a>
                 <?php endforeach ?>
             </div>
 
             <div class="filter-box" style="margin-top:.75rem">
-                <div class="filter-title">Type</div>
-                <a href="?<?= $filterCat ? 'cat='.urlencode($filterCat).'&' : '' ?><?= $search ? 'q='.urlencode($search).'&' : '' ?>" class="<?= !$filterType ? 'active' : '' ?>">All types</a>
+                <div class="filter-title"><?= pt('Type') ?></div>
+                <a href="?<?= $filterCat ? 'cat='.urlencode($filterCat).'&' : '' ?><?= $search ? 'q='.urlencode($search).'&' : '' ?>" class="<?= !$filterType ? 'active' : '' ?>"><?= pt('All types') ?></a>
                 <?php foreach ($types as $type): ?>
                 <a href="?type=<?= urlencode($type) ?><?= $filterCat ? '&cat='.urlencode($filterCat) : '' ?><?= $search ? '&q='.urlencode($search) : '' ?>" class="<?= $filterType===$type ? 'active' : '' ?>"><?= ($typeIcons[$type] ?? '📄') . ' ' . e(ucfirst($type)) ?></a>
                 <?php endforeach ?>
@@ -206,9 +207,9 @@ require_once __DIR__ . '/../includes/header.php';
             <form method="get" class="search-bar">
                 <?php if ($filterCat): ?><input type="hidden" name="cat" value="<?= e($filterCat) ?>"><?php endif ?>
                 <?php if ($filterType): ?><input type="hidden" name="type" value="<?= e($filterType) ?>"><?php endif ?>
-                <input type="text" name="q" value="<?= e($search) ?>" placeholder="Search resources…">
-                <button type="submit" class="btn btn-detail">Search</button>
-                <?php if ($search): ?><a href="?<?= $filterCat ? 'cat='.urlencode($filterCat) : '' ?><?= $filterType ? '&type='.urlencode($filterType) : '' ?>" class="btn btn-detail">Clear</a><?php endif ?>
+                <input type="text" name="q" value="<?= e($search) ?>" placeholder="<?= pt('Search resources…') ?>">
+                <button type="submit" class="btn btn-detail"><?= pt('Search') ?></button>
+                <?php if ($search): ?><a href="?<?= $filterCat ? 'cat='.urlencode($filterCat) : '' ?><?= $filterType ? '&type='.urlencode($filterType) : '' ?>" class="btn btn-detail"><?= pt('Clear') ?></a><?php endif ?>
             </form>
 
             <?php if ($filterCat || $filterType || $search): ?>
@@ -228,22 +229,22 @@ require_once __DIR__ . '/../includes/header.php';
             <?php if (!$resources): ?>
             <div class="empty">
                 <div style="font-size:2.5rem;margin-bottom:.5rem">📂</div>
-                <p>No resources found<?= ($filterCat || $filterType || $search) ? ' for your filters' : '' ?>.</p>
+                <p><?= pt('No resources found') ?><?= ($filterCat || $filterType || $search) ? ' ' . pt('for your filters') : '' ?>.</p>
                 <?php if ($filterCat || $filterType || $search): ?>
-                <a href="<?= SITE_URL ?>/partner/resources" class="btn btn-detail" style="margin-top:.5rem">Clear filters</a>
+                <a href="<?= SITE_URL ?>/partner/resources" class="btn btn-detail" style="margin-top:.5rem"><?= pt('Clear filters') ?></a>
                 <?php endif ?>
             </div>
             <?php else: ?>
 
             <?php if (!$filterCat && !$filterType && !$search && $featured): ?>
-            <p class="section-title">⭐ Featured Resources</p>
+            <p class="section-title"><?= pt('⭐ Featured Resources') ?></p>
             <div class="resource-grid">
                 <?php foreach ($featured as $r):
                     $typeBadge = 'badge-' . ($r['resource_type'] ?? 'guide');
                     $typeIcon  = $typeIcons[$r['resource_type'] ?? 'guide'] ?? '📄';
                 ?>
                 <div class="resource-card featured">
-                    <span class="badge badge-featured">⭐ Featured</span>
+                    <span class="badge badge-featured"><?= pt('⭐ Featured') ?></span>
                     <div class="res-type-icon"><?= $typeIcon ?></div>
                     <h3 class="res-title"><?= e($r['title']) ?></h3>
                     <p class="res-desc"><?= e($r['description'] ?? '') ?></p>
@@ -251,20 +252,20 @@ require_once __DIR__ . '/../includes/header.php';
                         <span class="badge <?= $typeBadge ?>"><?= e(ucfirst($r['resource_type'] ?? 'guide')) ?></span>
                         <?php if ($r['file_size']): ?><span><?= e($r['file_size']) ?></span><?php endif ?>
                         <span>⬇ <?= (int)$r['download_count'] ?></span>
-                        <?php if ($r['my_downloads']): ?><span style="color:#059669">✓ Downloaded</span><?php endif ?>
+                        <?php if ($r['my_downloads']): ?><span style="color:#059669"><?= pt('✓ Downloaded') ?></span><?php endif ?>
                     </div>
                     <div class="res-actions">
                         <form method="post" style="display:inline">
                             <?= csrfField() ?>
                             <input type="hidden" name="action" value="download">
                             <input type="hidden" name="resource_id" value="<?= $r['id'] ?>">
-                            <button type="submit" class="btn btn-primary btn-sm">⬇ Download</button>
+                            <button type="submit" class="btn btn-primary btn-sm"><?= pt('⬇ Download') ?></button>
                         </form>
                     </div>
                 </div>
                 <?php endforeach ?>
             </div>
-            <p class="section-title" style="margin-top:1rem">All Resources</p>
+            <p class="section-title" style="margin-top:1rem"><?= pt('All Resources') ?></p>
             <?php endif ?>
 
             <div class="resource-grid">
@@ -281,14 +282,14 @@ require_once __DIR__ . '/../includes/header.php';
                         <span class="badge <?= $typeBadge ?>"><?= e(ucfirst($r['resource_type'] ?? 'guide')) ?></span>
                         <?php if ($r['file_size']): ?><span><?= e($r['file_size']) ?></span><?php endif ?>
                         <span>⬇ <?= (int)$r['download_count'] ?></span>
-                        <?php if ($r['my_downloads']): ?><span style="color:#059669">✓ Downloaded</span><?php endif ?>
+                        <?php if ($r['my_downloads']): ?><span style="color:#059669"><?= pt('✓ Downloaded') ?></span><?php endif ?>
                     </div>
                     <div class="res-actions">
                         <form method="post" style="display:inline">
                             <?= csrfField() ?>
                             <input type="hidden" name="action" value="download">
                             <input type="hidden" name="resource_id" value="<?= $r['id'] ?>">
-                            <button type="submit" class="btn btn-primary btn-sm">⬇ Download</button>
+                            <button type="submit" class="btn btn-primary btn-sm"><?= pt('⬇ Download') ?></button>
                         </form>
                     </div>
                 </div>

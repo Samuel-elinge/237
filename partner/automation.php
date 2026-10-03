@@ -6,6 +6,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $partner = requireGrowthPartner();
 $pid     = (int)$partner['id'];
@@ -388,7 +389,7 @@ $GLOBALS['TRIGGERS'] = $TRIGGERS;
 $GLOBALS['ACTIONS']  = $ACTIONS;
 
 /* ─────────────────── HTML ──────────────────────────────────────── */
-$pageTitle = 'Automation Builder';
+$pageTitle = pt('Automation Builder');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <style>
@@ -488,15 +489,15 @@ select.fi,input.fi,textarea.fi{width:100%;padding:8px 10px;border:1px solid #d1d
 <!-- ══════════════════════════════════════════════════════ -->
 <!-- EDIT / BUILD VIEW                                       -->
 <!-- ══════════════════════════════════════════════════════ -->
-<a href="<?= SITE_URL ?>/partner/automation" class="back-link">← Back to Automations</a>
+<a href="<?= SITE_URL ?>/partner/automation" class="back-link">← <?= pt('Back to Automations') ?></a>
 
 <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:18px">
 <div>
     <h1 style="font-size:1.4rem;font-weight:700;color:#1f2937;margin:0 0 4px"><?= e($editWorkflow['name']) ?></h1>
     <p style="color:#6b7280;margin:0;font-size:.87rem">
-        <?= $editWorkflow['biz_name'] ? e($editWorkflow['biz_name']) . ' · ' : 'All portfolio · ' ?>
+        <?= $editWorkflow['biz_name'] ? e($editWorkflow['biz_name']) . ' · ' : pt('All portfolio') . ' · ' ?>
         <span class="mode-badge mode-<?= $editWorkflow['execution_mode']==='automatic'?'auto':($editWorkflow['execution_mode']==='requires_approval'?'approval':'manual') ?>">
-            <?= $editWorkflow['execution_mode']==='automatic'?'Runs automatically':($editWorkflow['execution_mode']==='requires_approval'?'Requires approval':'Manual only') ?>
+            <?= $editWorkflow['execution_mode']==='automatic'?pt('Runs automatically'):($editWorkflow['execution_mode']==='requires_approval'?pt('Requires approval'):pt('Manual only')) ?>
         </span>
     </p>
 </div>
@@ -507,7 +508,7 @@ select.fi,input.fi,textarea.fi{width:100%;padding:8px 10px;border:1px solid #d1d
         <input type="hidden" name="action" value="toggle_status">
         <input type="hidden" name="workflow_id" value="<?= $editWorkflow['id'] ?>">
         <input type="hidden" name="status" value="active">
-        <button type="submit" class="btn-xs green">▶ Activate</button>
+        <button type="submit" class="btn-xs green">▶ <?= pt('Activate') ?></button>
     </form>
     <?php endif; ?>
     <?php if ($editWorkflow['status'] === 'active'): ?>
@@ -516,14 +517,14 @@ select.fi,input.fi,textarea.fi{width:100%;padding:8px 10px;border:1px solid #d1d
         <input type="hidden" name="action" value="toggle_status">
         <input type="hidden" name="workflow_id" value="<?= $editWorkflow['id'] ?>">
         <input type="hidden" name="status" value="paused">
-        <button type="submit" class="btn-xs amber">⏸ Pause</button>
+        <button type="submit" class="btn-xs amber">⏸ <?= pt('Pause') ?></button>
     </form>
     <?php endif; ?>
-    <form method="post" style="display:inline" onsubmit="return confirm('Delete this workflow and all its steps?')">
+    <form method="post" style="display:inline" onsubmit="return confirm('<?= pt('Delete this workflow and all its steps?') ?>')">
         <?= csrfField() ?>
         <input type="hidden" name="action" value="delete_workflow">
         <input type="hidden" name="workflow_id" value="<?= $editWorkflow['id'] ?>">
-        <button type="submit" class="btn-xs red">🗑 Delete</button>
+        <button type="submit" class="btn-xs red">🗑 <?= pt('Delete') ?></button>
     </form>
 </div>
 </div>
@@ -533,16 +534,16 @@ select.fi,input.fi,textarea.fi{width:100%;padding:8px 10px;border:1px solid #d1d
 <div class="trigger-banner">
     <div class="trigger-icon"><?= $trig['icon'] ?></div>
     <div class="trigger-info">
-        <h3>WHEN: <?= e($trig['label']) ?></h3>
-        <p>Group: <?= e($trig['group']) ?> · Status: <strong><?= ucfirst($editWorkflow['status']) ?></strong> · Mode: <?= ucwords(str_replace('_',' ',$editWorkflow['execution_mode'])) ?></p>
+        <h3><?= pt('WHEN') ?>: <?= e($trig['label']) ?></h3>
+        <p><?= pt('Group') ?>: <?= e($trig['group']) ?> · <?= pt('Status') ?>: <strong><?= ucfirst($editWorkflow['status']) ?></strong> · <?= pt('Mode') ?>: <?= ucwords(str_replace('_',' ',$editWorkflow['execution_mode'])) ?></p>
     </div>
 </div>
 
 <!-- Step list -->
 <div class="section-card">
-    <h3>Workflow Steps</h3>
+    <h3><?= pt('Workflow Steps') ?></h3>
     <?php if (empty($editSteps)): ?>
-    <p style="color:#9ca3af;font-size:.9rem">No steps yet. Add your first step below.</p>
+    <p style="color:#9ca3af;font-size:.9rem"><?= pt('No steps yet. Add your first step below.') ?></p>
     <?php else: ?>
     <div class="step-list">
     <?php foreach ($editSteps as $i => $step): ?>
@@ -582,7 +583,7 @@ select.fi,input.fi,textarea.fi{width:100%;padding:8px 10px;border:1px solid #d1d
                 <input type="hidden" name="action" value="delete_step">
                 <input type="hidden" name="step_id" value="<?= $step['id'] ?>">
                 <input type="hidden" name="workflow_id" value="<?= $editWorkflow['id'] ?>">
-                <button type="submit" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:1rem;padding:0">✕</button>
+                <button type="submit" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:1rem;padding:0" title="<?= pt('Remove step') ?>">✕</button>
             </form>
         </div>
     </div>
@@ -596,11 +597,11 @@ select.fi,input.fi,textarea.fi{width:100%;padding:8px 10px;border:1px solid #d1d
 
 <!-- Add step form -->
 <div class="section-card">
-    <h3>Add Step</h3>
+    <h3><?= pt('Add Step') ?></h3>
     <div class="step-type-tabs" id="stepTypeTabs">
-        <button type="button" class="sttab active" onclick="switchStepType('condition',this)">IF Condition</button>
-        <button type="button" class="sttab active" onclick="switchStepType('action',this)" style="background:var(--pauto);color:#fff;border-color:var(--pauto)">THEN Action</button>
-        <button type="button" class="sttab" onclick="switchStepType('wait',this)">WAIT</button>
+        <button type="button" class="sttab active" onclick="switchStepType('condition',this)"><?= pt('IF Condition') ?></button>
+        <button type="button" class="sttab active" onclick="switchStepType('action',this)" style="background:var(--pauto);color:#fff;border-color:var(--pauto)"><?= pt('THEN Action') ?></button>
+        <button type="button" class="sttab" onclick="switchStepType('wait',this)"><?= pt('WAIT') ?></button>
     </div>
 
     <form method="post" id="addStepForm">
@@ -613,7 +614,7 @@ select.fi,input.fi,textarea.fi{width:100%;padding:8px 10px;border:1px solid #d1d
         <div id="conditionFields" style="display:none">
             <div class="form-row">
                 <div>
-                    <label class="fl">Field</label>
+                    <label class="fl"><?= pt('Field') ?></label>
                     <select name="condition_field" class="fi">
                         <?php foreach ($CONDITIONS as $k => $l): ?>
                         <option value="<?= $k ?>"><?= e($l) ?></option>
@@ -621,23 +622,23 @@ select.fi,input.fi,textarea.fi{width:100%;padding:8px 10px;border:1px solid #d1d
                     </select>
                 </div>
                 <div>
-                    <label class="fl">Operator</label>
+                    <label class="fl"><?= pt('Operator') ?></label>
                     <select name="condition_op" class="fi">
-                        <option value="equals">equals</option>
-                        <option value="not_equals">not equals</option>
-                        <option value="greater_than">greater than</option>
-                        <option value="less_than">less than</option>
-                        <option value="contains">contains</option>
+                        <option value="equals"><?= pt('equals') ?></option>
+                        <option value="not_equals"><?= pt('not equals') ?></option>
+                        <option value="greater_than"><?= pt('greater than') ?></option>
+                        <option value="less_than"><?= pt('less than') ?></option>
+                        <option value="contains"><?= pt('contains') ?></option>
                     </select>
                 </div>
             </div>
-            <label class="fl">Value</label>
-            <input type="text" name="condition_value" class="fi" placeholder="e.g. new, converted, 7">
+            <label class="fl"><?= pt('Value') ?></label>
+            <input type="text" name="condition_value" class="fi" placeholder="<?= pt('e.g. new, converted, 7') ?>">
         </div>
 
         <!-- Action fields -->
         <div id="actionFields">
-            <label class="fl">Action Type</label>
+            <label class="fl"><?= pt('Action Type') ?></label>
             <select name="action_type" class="fi" id="actionTypeSelect" onchange="switchActionConfig(this.value)">
                 <?php foreach ($ACTIONS as $k => $a): ?>
                 <option value="<?= $k ?>"><?= $a['icon'] ?> <?= e($a['label']) ?></option>
@@ -646,11 +647,11 @@ select.fi,input.fi,textarea.fi{width:100%;padding:8px 10px;border:1px solid #d1d
 
             <!-- create_task -->
             <div id="cfg_create_task">
-                <label class="fl">Task Title <span style="font-weight:400;color:#9ca3af">(use {lead_name}, {business})</span></label>
+                <label class="fl"><?= pt('Task Title') ?> <span style="font-weight:400;color:#9ca3af">(<?= pt('use {lead_name}, {business}') ?>)</span></label>
                 <input type="text" name="config[task_title]" class="fi" value="Follow up with {lead_name}">
                 <div class="form-row">
                     <div>
-                        <label class="fl">Category</label>
+                        <label class="fl"><?= pt('Category') ?></label>
                         <select name="config[task_category]" class="fi">
                             <?php foreach (['leads','reviews','marketing','content','social_media','customer_followup','campaign','other'] as $tc): ?>
                             <option value="<?= $tc ?>"><?= ucwords(str_replace('_',' ',$tc)) ?></option>
@@ -658,40 +659,40 @@ select.fi,input.fi,textarea.fi{width:100%;padding:8px 10px;border:1px solid #d1d
                         </select>
                     </div>
                     <div>
-                        <label class="fl">Priority</label>
+                        <label class="fl"><?= pt('Priority') ?></label>
                         <select name="config[task_priority]" class="fi">
-                            <option value="low">Low</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="high">High</option>
-                            <option value="urgent">Urgent</option>
+                            <option value="low"><?= pt('Low') ?></option>
+                            <option value="medium" selected><?= pt('Medium') ?></option>
+                            <option value="high"><?= pt('High') ?></option>
+                            <option value="urgent"><?= pt('Urgent') ?></option>
                         </select>
                     </div>
                 </div>
-                <label class="fl">Due In (days)</label>
+                <label class="fl"><?= pt('Due In (days)') ?></label>
                 <input type="number" name="config[due_days]" class="fi" value="1" min="0" max="90">
             </div>
 
             <!-- send_notification -->
             <div id="cfg_send_notification" style="display:none">
-                <label class="fl">Notification Message <span style="font-weight:400;color:#9ca3af">(use {lead_name}, {business}, {date})</span></label>
-                <textarea name="config[message]" class="fi" rows="2" placeholder="e.g. New lead received from {business}: {lead_name}"></textarea>
+                <label class="fl"><?= pt('Notification Message') ?> <span style="font-weight:400;color:#9ca3af">(<?= pt('use {lead_name}, {business}, {date}') ?>)</span></label>
+                <textarea name="config[message]" class="fi" rows="2" placeholder="<?= pt('e.g. New lead received from {business}: {lead_name}') ?>"></textarea>
             </div>
 
             <!-- log_lead_activity -->
             <div id="cfg_log_lead_activity" style="display:none">
-                <label class="fl">Activity Type</label>
+                <label class="fl"><?= pt('Activity Type') ?></label>
                 <select name="config[activity_type]" class="fi">
                     <?php foreach (['follow_up','contacted','email_sent','message_sent','phone_call','note'] as $at): ?>
                     <option value="<?= $at ?>"><?= ucwords(str_replace('_',' ',$at)) ?></option>
                     <?php endforeach; ?>
                 </select>
-                <label class="fl">Notes (optional)</label>
-                <input type="text" name="config[notes]" class="fi" placeholder="Auto-logged note…">
+                <label class="fl"><?= pt('Notes (optional)') ?></label>
+                <input type="text" name="config[notes]" class="fi" placeholder="<?= pt('Auto-logged note…') ?>">
             </div>
 
             <!-- update_lead_status -->
             <div id="cfg_update_lead_status" style="display:none">
-                <label class="fl">Set Lead Status To</label>
+                <label class="fl"><?= pt('Set Lead Status To') ?></label>
                 <select name="config[new_status]" class="fi">
                     <?php foreach (['contacted','follow_up','qualified','converted','lost','closed'] as $ls): ?>
                     <option value="<?= $ls ?>"><?= ucfirst($ls) ?></option>
@@ -701,15 +702,15 @@ select.fi,input.fi,textarea.fi{width:100%;padding:8px 10px;border:1px solid #d1d
 
             <!-- flag_for_review -->
             <div id="cfg_flag_for_review" style="display:none">
-                <label class="fl">Reason</label>
-                <input type="text" name="config[reason]" class="fi" placeholder="e.g. Converted lead — check commission eligibility">
+                <label class="fl"><?= pt('Reason') ?></label>
+                <input type="text" name="config[reason]" class="fi" placeholder="<?= pt('e.g. Converted lead — check commission eligibility') ?>">
             </div>
 
             <!-- create_followup -->
             <div id="cfg_create_followup" style="display:none">
-                <label class="fl">Follow-up Title</label>
-                <input type="text" name="config[followup_title]" class="fi" value="Follow up with customer">
-                <label class="fl">Due In (days)</label>
+                <label class="fl"><?= pt('Follow-up Title') ?></label>
+                <input type="text" name="config[followup_title]" class="fi" value="<?= pt('Follow up with customer') ?>">
+                <label class="fl"><?= pt('Due In (days)') ?></label>
                 <input type="number" name="config[due_days]" class="fi" value="3" min="1" max="90">
             </div>
 
@@ -722,23 +723,23 @@ select.fi,input.fi,textarea.fi{width:100%;padding:8px 10px;border:1px solid #d1d
                     <option value="<?= $tmpl['id'] ?>"><?= e($tmpl['name']) ?> (<?= $tmpl['channel'] ?>)</option>
                     <?php endforeach; ?>
                     <?php else: ?>
-                    <option value="0">— No active templates found —</option>
+                    <option value="0"><?= pt('— No active templates found —') ?></option>
                     <?php endif; ?>
                 </select>
                 <?php if (!$editTemplates): ?>
-                <p style="font-size:.82rem;color:#9ca3af">Create templates in <a href="<?= SITE_URL ?>/partner/templates" style="color:var(--pauto)">Message Templates</a> first.</p>
+                <p style="font-size:.82rem;color:#9ca3af"><?= pt('Create templates in') ?> <a href="<?= SITE_URL ?>/partner/templates" style="color:var(--pauto)"><?= pt('Message Templates') ?></a> <?= pt('first.') ?></p>
                 <?php endif; ?>
             </div>
         </div>
 
         <!-- Wait fields -->
         <div id="waitFields" style="display:none">
-            <label class="fl">Wait Duration (minutes)</label>
+            <label class="fl"><?= pt('Wait Duration (minutes)') ?></label>
             <input type="number" name="config[wait_minutes]" class="fi" value="60" min="1">
-            <p style="font-size:.82rem;color:#9ca3af;margin-top:-8px">Delays action steps that follow. Minimum 1 minute.</p>
+            <p style="font-size:.82rem;color:#9ca3af;margin-top:-8px"><?= pt('Delays action steps that follow. Minimum 1 minute.') ?></p>
         </div>
 
-        <button type="submit" class="btn-xs purple" style="padding:8px 20px;font-size:.9rem">+ Add Step</button>
+        <button type="submit" class="btn-xs purple" style="padding:8px 20px;font-size:.9rem">+ <?= pt('Add Step') ?></button>
     </form>
 </div>
 
@@ -768,32 +769,32 @@ switchStepType('action', document.querySelectorAll('.sttab')[1]);
 <!-- LIST VIEW                                               -->
 <!-- ══════════════════════════════════════════════════════ -->
 <div class="auto-header">
-    <h1>🤖 Automation Builder</h1>
-    <p>Create WHEN→IF→THEN workflows that run automatically across your portfolio.</p>
+    <h1>🤖 <?= pt('Automation Builder') ?></h1>
+    <p><?= pt('Create WHEN→IF→THEN workflows that run automatically across your portfolio.') ?></p>
 </div>
 
 <!-- Pending approvals -->
 <?php if ($pendingRuns): ?>
 <div class="section-card" style="border-color:#fde68a;background:#fffbeb">
-    <h3 style="color:#854d0e">⏳ Pending Approval (<?= count($pendingRuns) ?>)</h3>
+    <h3 style="color:#854d0e">⏳ <?= pt('Pending Approval') ?> (<?= count($pendingRuns) ?>)</h3>
     <?php foreach ($pendingRuns as $run): ?>
     <div class="pending-run">
         <div class="run-info">
             <strong><?= e($run['workflow_name']) ?></strong>
-            <div style="font-size:.82rem;color:#6b7280"><?= e($run['biz_name']) ?> · Triggered <?= date('d M, H:i', strtotime($run['created_at'])) ?></div>
+            <div style="font-size:.82rem;color:#6b7280"><?= e($run['biz_name']) ?> · <?= pt('Triggered') ?> <?= date('d M, H:i', strtotime($run['created_at'])) ?></div>
         </div>
         <div class="run-actions">
             <form method="post" style="display:inline">
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="approve_run">
                 <input type="hidden" name="run_id" value="<?= $run['id'] ?>">
-                <button type="submit" class="btn-xs green">✓ Approve</button>
+                <button type="submit" class="btn-xs green">✓ <?= pt('Approve') ?></button>
             </form>
             <form method="post" style="display:inline">
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="dismiss_run">
                 <input type="hidden" name="run_id" value="<?= $run['id'] ?>">
-                <button type="submit" class="btn-xs">✗ Dismiss</button>
+                <button type="submit" class="btn-xs">✗ <?= pt('Dismiss') ?></button>
             </form>
         </div>
     </div>
@@ -804,7 +805,7 @@ switchStepType('action', document.querySelectorAll('.sttab')[1]);
 <!-- Existing workflows -->
 <?php if ($workflows): ?>
 <div class="section-card">
-    <h3>Your Workflows (<?= count($workflows) ?>)</h3>
+    <h3><?= pt('Your Workflows') ?> (<?= count($workflows) ?>)</h3>
     <div class="wf-grid">
     <?php foreach ($workflows as $wf):
         $trig = $TRIGGERS[$wf['trigger_type']] ?? ['label'=>$wf['trigger_type'],'icon'=>'⚡'];
@@ -817,18 +818,18 @@ switchStepType('action', document.querySelectorAll('.sttab')[1]);
             <span class="wf-badge <?= $badgeClass ?>"><?= ucfirst($wf['status']) ?></span>
         </div>
         <div class="wf-meta">
-            <?= $trig['icon'] ?> <?= e($trig['label']) ?> · <?= $wf['biz_name'] ? e($wf['biz_name']) : 'All portfolio' ?>
+            <?= $trig['icon'] ?> <?= e($trig['label']) ?> · <?= $wf['biz_name'] ? e($wf['biz_name']) : pt('All portfolio') ?>
         </div>
-        <div class="step-count"><?= $wf['step_count'] ?> step<?= $wf['step_count']!==1?'s':'' ?> · Runs: <?= $wf['run_count'] ?></div>
+        <div class="step-count"><?= $wf['step_count'] ?> <?= pt('step(s)') ?> · <?= pt('Runs') ?>: <?= $wf['run_count'] ?></div>
         <div class="wf-actions">
-            <a href="<?= SITE_URL ?>/partner/automation?view=edit&wid=<?= $wf['id'] ?>" class="btn-xs purple">✏ Edit</a>
+            <a href="<?= SITE_URL ?>/partner/automation?view=edit&wid=<?= $wf['id'] ?>" class="btn-xs purple">✏ <?= pt('Edit') ?></a>
             <?php if ($wf['status'] !== 'active'): ?>
             <form method="post" style="display:inline">
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="toggle_status">
                 <input type="hidden" name="workflow_id" value="<?= $wf['id'] ?>">
                 <input type="hidden" name="status" value="active">
-                <button type="submit" class="btn-xs green">▶ Activate</button>
+                <button type="submit" class="btn-xs green">▶ <?= pt('Activate') ?></button>
             </form>
             <?php else: ?>
             <form method="post" style="display:inline">
@@ -836,7 +837,7 @@ switchStepType('action', document.querySelectorAll('.sttab')[1]);
                 <input type="hidden" name="action" value="toggle_status">
                 <input type="hidden" name="workflow_id" value="<?= $wf['id'] ?>">
                 <input type="hidden" name="status" value="paused">
-                <button type="submit" class="btn-xs amber">⏸ Pause</button>
+                <button type="submit" class="btn-xs amber">⏸ <?= pt('Pause') ?></button>
             </form>
             <?php endif; ?>
         </div>
@@ -848,8 +849,8 @@ switchStepType('action', document.querySelectorAll('.sttab')[1]);
 
 <!-- Starter templates -->
 <div class="section-card">
-    <h3>🚀 Quick-Start Templates</h3>
-    <p style="font-size:.87rem;color:#6b7280;margin:0 0 16px">Install a pre-built workflow and customise the steps.</p>
+    <h3>🚀 <?= pt('Quick-Start Templates') ?></h3>
+    <p style="font-size:.87rem;color:#6b7280;margin:0 0 16px"><?= pt('Install a pre-built workflow and customise the steps.') ?></p>
     <?php $starters = starterWorkflows(); ?>
     <div class="starters-grid">
     <?php foreach ($starters as $i => $s): ?>
@@ -863,13 +864,13 @@ switchStepType('action', document.querySelectorAll('.sttab')[1]);
             <input type="hidden" name="starter_index" value="<?= $i ?>">
             <div style="margin-bottom:8px">
                 <select name="listing_id" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.82rem">
-                    <option value="0">— All portfolio —</option>
+                    <option value="0">— <?= pt('All portfolio') ?> —</option>
                     <?php foreach ($listings as $l): ?>
                     <option value="<?= $l['id'] ?>"><?= e($l['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <button type="submit" class="btn-xs purple" style="width:100%;padding:7px">Install Workflow</button>
+            <button type="submit" class="btn-xs purple" style="width:100%;padding:7px"><?= pt('Install Workflow') ?></button>
         </form>
     </div>
     <?php endforeach; ?>
@@ -878,19 +879,19 @@ switchStepType('action', document.querySelectorAll('.sttab')[1]);
 
 <!-- Create from scratch -->
 <div class="section-card">
-    <h3>+ Create Custom Workflow</h3>
+    <h3>+ <?= pt('Create Custom Workflow') ?></h3>
     <form method="post">
         <?= csrfField() ?>
         <input type="hidden" name="action" value="create_workflow">
         <div class="form-row">
             <div>
-                <label class="fl">Workflow Name</label>
-                <input type="text" name="name" class="fi" placeholder="e.g. VIP Lead Fast-Track" required>
+                <label class="fl"><?= pt('Workflow Name') ?></label>
+                <input type="text" name="name" class="fi" placeholder="<?= pt('e.g. VIP Lead Fast-Track') ?>" required>
             </div>
             <div>
-                <label class="fl">Apply To</label>
+                <label class="fl"><?= pt('Apply To') ?></label>
                 <select name="listing_id" class="fi">
-                    <option value="0">— All portfolio —</option>
+                    <option value="0">— <?= pt('All portfolio') ?> —</option>
                     <?php foreach ($listings as $l): ?>
                     <option value="<?= $l['id'] ?>"><?= e($l['name']) ?></option>
                     <?php endforeach; ?>
@@ -899,7 +900,7 @@ switchStepType('action', document.querySelectorAll('.sttab')[1]);
         </div>
         <div class="form-row">
             <div>
-                <label class="fl">Trigger (WHEN)</label>
+                <label class="fl"><?= pt('Trigger (WHEN)') ?></label>
                 <select name="trigger_type" class="fi">
                     <?php
                     $grouped = [];
@@ -914,17 +915,17 @@ switchStepType('action', document.querySelectorAll('.sttab')[1]);
                 </select>
             </div>
             <div>
-                <label class="fl">Execution Mode</label>
+                <label class="fl"><?= pt('Execution Mode') ?></label>
                 <select name="execution_mode" class="fi">
-                    <option value="requires_approval">Requires my approval before running</option>
-                    <option value="automatic">Run automatically</option>
-                    <option value="manual">Manual only</option>
+                    <option value="requires_approval"><?= pt('Requires my approval before running') ?></option>
+                    <option value="automatic"><?= pt('Run automatically') ?></option>
+                    <option value="manual"><?= pt('Manual only') ?></option>
                 </select>
             </div>
         </div>
-        <label class="fl">Description (optional)</label>
-        <input type="text" name="description" class="fi" placeholder="What does this workflow do?">
-        <button type="submit" class="btn-xs purple" style="padding:9px 22px;font-size:.9rem">Create Workflow →</button>
+        <label class="fl"><?= pt('Description (optional)') ?></label>
+        <input type="text" name="description" class="fi" placeholder="<?= pt('What does this workflow do?') ?>">
+        <button type="submit" class="btn-xs purple" style="padding:9px 22px;font-size:.9rem"><?= pt('Create Workflow') ?> →</button>
     </form>
 </div>
 

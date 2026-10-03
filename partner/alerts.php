@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $profile = requireGrowthPartner();
 $pid     = (int)$profile['id'];
@@ -138,7 +139,7 @@ function alertPriorityClass(string $p): string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Growth Alerts — 237Biz Partner</title>
+<title><?= pt('Growth Alerts') ?> — 237Biz Partner</title>
 <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/partner.css">
 <style>
 /* ── Alert Cards ───────────────────────────────── */
@@ -225,15 +226,15 @@ function alertPriorityClass(string $p): string {
   <!-- Header -->
   <div class="alerts-header">
     <div>
-      <h1>Growth Alerts <span class="ai-badge">✦ SMART</span></h1>
+      <h1><?= pt('Growth Alerts') ?> <span class="ai-badge">✦ SMART</span></h1>
       <p style="margin:0;font-size:.875rem;color:#6b7280;">
-        Intelligent alerts about your portfolio — opportunities, attention areas, and positive signals.
+        <?= pt('Intelligent alerts about your portfolio — opportunities, attention areas, and positive signals.') ?>
       </p>
     </div>
     <form method="post" style="margin-left:auto;">
       <?= csrfField() ?>
       <input type="hidden" name="action" value="generate">
-      <button type="submit" class="btn btn-generate">↻ Refresh Alerts</button>
+      <button type="submit" class="btn btn-generate">↻ <?= pt('Refresh Alerts') ?></button>
     </form>
   </div>
 
@@ -241,23 +242,23 @@ function alertPriorityClass(string $p): string {
   <div class="summary-strip">
     <div class="stat-card">
       <div class="stat-num"><?= (int)$counts['active'] ?></div>
-      <div class="stat-lbl">Active</div>
+      <div class="stat-lbl"><?= pt('Active') ?></div>
     </div>
     <div class="stat-card urgent">
       <div class="stat-num" style="color:#ef4444"><?= (int)$counts['urgent'] ?></div>
-      <div class="stat-lbl">Urgent</div>
+      <div class="stat-lbl"><?= pt('Urgent') ?></div>
     </div>
     <div class="stat-card attention">
       <div class="stat-num" style="color:#f59e0b"><?= (int)$counts['attention'] ?></div>
-      <div class="stat-lbl">Attention</div>
+      <div class="stat-lbl"><?= pt('Attention') ?></div>
     </div>
     <div class="stat-card opp">
       <div class="stat-num" style="color:#10b981"><?= (int)$counts['opportunity'] ?></div>
-      <div class="stat-lbl">Opportunities</div>
+      <div class="stat-lbl"><?= pt('Opportunities') ?></div>
     </div>
     <div class="stat-card">
       <div class="stat-num"><?= (int)$counts['actioned'] ?></div>
-      <div class="stat-lbl">Actioned</div>
+      <div class="stat-lbl"><?= pt('Actioned') ?></div>
     </div>
   </div>
 
@@ -266,15 +267,15 @@ function alertPriorityClass(string $p): string {
     <form method="get" style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;width:100%;">
       <input type="hidden" name="status" value="<?= h($statusTab) ?>">
       <select name="priority" onchange="this.form.submit()">
-        <option value="">All Priorities</option>
-        <option value="urgent"      <?= $filterPriority==='urgent'      ? 'selected':'' ?>>🔴 Urgent</option>
-        <option value="attention"   <?= $filterPriority==='attention'   ? 'selected':'' ?>>🟡 Attention</option>
-        <option value="opportunity" <?= $filterPriority==='opportunity' ? 'selected':'' ?>>🟢 Opportunity</option>
-        <option value="informational" <?= $filterPriority==='informational' ? 'selected':'' ?>>🔵 Informational</option>
+        <option value=""><?= pt('All Priorities') ?></option>
+        <option value="urgent"      <?= $filterPriority==='urgent'      ? 'selected':'' ?>>🔴 <?= pt('Urgent') ?></option>
+        <option value="attention"   <?= $filterPriority==='attention'   ? 'selected':'' ?>>🟡 <?= pt('Attention') ?></option>
+        <option value="opportunity" <?= $filterPriority==='opportunity' ? 'selected':'' ?>>🟢 <?= pt('Opportunity') ?></option>
+        <option value="informational" <?= $filterPriority==='informational' ? 'selected':'' ?>>🔵 <?= pt('Informational') ?></option>
       </select>
       <?php if ($businesses): ?>
       <select name="listing_id" onchange="this.form.submit()">
-        <option value="">All Businesses</option>
+        <option value=""><?= pt('All Businesses') ?></option>
         <?php foreach ($businesses as $biz): ?>
           <option value="<?= $biz['id'] ?>" <?= $filterListing===$biz['id'] ? 'selected':'' ?>>
             <?= h($biz['business_name']) ?>
@@ -283,7 +284,7 @@ function alertPriorityClass(string $p): string {
       </select>
       <?php endif; ?>
       <?php if ($filterPriority || $filterListing): ?>
-        <a href="?status=<?= h($statusTab) ?>" class="btn btn-sm-outline">✕ Clear</a>
+        <a href="?status=<?= h($statusTab) ?>" class="btn btn-sm-outline">✕ <?= pt('Clear') ?></a>
       <?php endif; ?>
     </form>
   </div>
@@ -297,29 +298,29 @@ function alertPriorityClass(string $p): string {
   $extra = $qParts ? '&' . implode('&', $qParts) : '';
   ?>
   <div class="status-tabs">
-    <a href="?status=active<?= $extra ?>"    class="<?= $statusTab==='active'    ? 'active':'' ?>">Active</a>
-    <a href="?status=actioned<?= $extra ?>"  class="<?= $statusTab==='actioned'  ? 'active':'' ?>">Actioned</a>
-    <a href="?status=dismissed<?= $extra ?>" class="<?= $statusTab==='dismissed' ? 'active':'' ?>">Dismissed</a>
-    <a href="?status=all<?= $extra ?>"       class="<?= $statusTab==='all'       ? 'active':'' ?>">All</a>
+    <a href="?status=active<?= $extra ?>"    class="<?= $statusTab==='active'    ? 'active':'' ?>"><?= pt('Active') ?></a>
+    <a href="?status=actioned<?= $extra ?>"  class="<?= $statusTab==='actioned'  ? 'active':'' ?>"><?= pt('Actioned') ?></a>
+    <a href="?status=dismissed<?= $extra ?>" class="<?= $statusTab==='dismissed' ? 'active':'' ?>"><?= pt('Dismissed') ?></a>
+    <a href="?status=all<?= $extra ?>"       class="<?= $statusTab==='all'       ? 'active':'' ?>"><?= pt('All') ?></a>
   </div>
 
   <!-- Alert Cards -->
   <?php if (empty($alerts)): ?>
     <div class="empty-state">
       <div class="empty-icon">🔔</div>
-      <p><strong>No alerts found</strong></p>
+      <p><strong><?= pt('No alerts found.') ?></strong></p>
       <p>
         <?php if ($statusTab === 'active'): ?>
-          Great news — no active alerts for your portfolio right now.
+          <?= pt('Great news — no active alerts for your portfolio right now.') ?>
         <?php else: ?>
-          No <?= h($statusTab) ?> alerts to show.
+          <?= pt('No') ?> <?= h($statusTab) ?> <?= pt('alerts to show.') ?>
         <?php endif; ?>
       </p>
       <?php if ($statusTab === 'active'): ?>
       <form method="post" style="margin-top:1rem;">
         <?= csrfField() ?>
         <input type="hidden" name="action" value="generate">
-        <button type="submit" class="btn btn-generate">↻ Check for Alerts</button>
+        <button type="submit" class="btn btn-generate">↻ <?= pt('Check for Alerts') ?></button>
       </form>
       <?php endif; ?>
     </div>
@@ -333,16 +334,16 @@ function alertPriorityClass(string $p): string {
         <div class="alert-meta">
           <?= alertPriorityBadge($alert['priority']) ?>
           <?php if ($alert['status'] === 'actioned'): ?>
-            <span class="badge badge-actioned">Actioned</span>
+            <span class="badge badge-actioned"><?= pt('Actioned') ?></span>
           <?php elseif ($alert['status'] === 'dismissed'): ?>
-            <span class="badge badge-viewed">Dismissed</span>
+            <span class="badge badge-viewed"><?= pt('Dismissed') ?></span>
           <?php elseif ($alert['status'] === 'viewed'): ?>
-            <span class="badge badge-viewed">Viewed</span>
+            <span class="badge badge-viewed"><?= pt('Viewed') ?></span>
           <?php endif; ?>
           <?php if ($alert['business_name']): ?>
             <span class="alert-business">📍 <?= h($alert['business_name']) ?></span>
           <?php else: ?>
-            <span class="alert-business">📊 Portfolio-wide</span>
+            <span class="alert-business">📊 <?= pt('Portfolio-wide') ?></span>
           <?php endif; ?>
         </div>
 
@@ -361,13 +362,13 @@ function alertPriorityClass(string $p): string {
               <?= csrfField() ?>
               <input type="hidden" name="alert_id" value="<?= $alert['id'] ?>">
               <input type="hidden" name="action" value="mark_actioned">
-              <button type="submit" class="btn btn-sm-outline">✓ Mark Done</button>
+              <button type="submit" class="btn btn-sm-outline">✓ <?= pt('Mark Done') ?></button>
             </form>
             <form method="post" style="display:inline;">
               <?= csrfField() ?>
               <input type="hidden" name="alert_id" value="<?= $alert['id'] ?>">
               <input type="hidden" name="action" value="dismiss">
-              <button type="submit" class="btn btn-dismiss">✕ Dismiss</button>
+              <button type="submit" class="btn btn-dismiss">✕ <?= pt('Dismiss') ?></button>
             </form>
           <?php endif; ?>
 

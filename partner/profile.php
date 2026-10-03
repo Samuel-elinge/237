@@ -5,6 +5,7 @@
  * No login required — publicly visible (if partner has public_profile=1)
  */
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $pdo  = db();
 $code = trim($_GET['code'] ?? '');
@@ -321,34 +322,34 @@ require_once __DIR__ . '/../includes/header.php';
           </span>
         <?php endif; ?>
         <?php if ($partner['verified']): ?>
-          <span class="pp-badge verified">✅ Verified Partner</span>
+          <span class="pp-badge verified">✅ <?= pt('Verified Partner') ?></span>
         <?php endif; ?>
         <span class="pp-badge" style="background:#fef9c3;color:#92400e;border-color:#fde68a">
-          <?= $partner['capacity_status'] === 'accepting' ? '🟢 Accepting clients' : ($partner['capacity_status'] === 'limited' ? '🟡 Limited availability' : '🔴 Fully booked') ?>
+          <?= $partner['capacity_status'] === 'accepting' ? '🟢 ' . pt('Accepting clients') : ($partner['capacity_status'] === 'limited' ? '🟡 ' . pt('Limited availability') : '🔴 ' . pt('Fully booked')) ?>
         </span>
       </div>
 
       <div class="pp-stats">
         <div class="pp-stat">
           <span class="val"><?= $managedCount ?></span>
-          <span class="lbl">Businesses</span>
+          <span class="lbl"><?= pt('Businesses') ?></span>
         </div>
         <?php if ($rating): ?>
           <div class="pp-stat">
             <span class="val"><?= $rating ?> ⭐</span>
-            <span class="lbl"><?= $ratingCount ?> review<?= $ratingCount !== 1 ? 's' : '' ?></span>
+            <span class="lbl"><?= $ratingCount ?> <?= $ratingCount !== 1 ? pt('reviews') : pt('review') ?></span>
           </div>
         <?php endif; ?>
         <?php if ($certList): ?>
           <div class="pp-stat">
             <span class="val"><?= count($certList) ?></span>
-            <span class="lbl">Certifications</span>
+            <span class="lbl"><?= pt('Certifications') ?></span>
           </div>
         <?php endif; ?>
         <?php if ($partner['profile_views'] > 10): ?>
           <div class="pp-stat">
             <span class="val"><?= number_format((int)$partner['profile_views']) ?></span>
-            <span class="lbl">Profile views</span>
+            <span class="lbl"><?= pt('Profile views') ?></span>
           </div>
         <?php endif; ?>
       </div>
@@ -357,7 +358,7 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if ($partner['capacity_status'] !== 'full'): ?>
     <div class="pp-cta">
       <a href="<?= SITE_URL ?>/partner-request?partner=<?= urlencode($code) ?>" class="btn-request">
-        Request This Partner →
+        <?= pt('Request This Partner') ?> →
       </a>
     </div>
     <?php endif; ?>
@@ -370,14 +371,14 @@ require_once __DIR__ . '/../includes/header.php';
     <div>
       <?php if ($partner['bio']): ?>
       <div class="pp-card">
-        <h3>About</h3>
+        <h3><?= pt('About') ?></h3>
         <p><?= nl2br(e($partner['bio'])) ?></p>
       </div>
       <?php endif; ?>
 
       <?php if ($specialisms): ?>
       <div class="pp-card">
-        <h3>Specialisms</h3>
+        <h3><?= pt('Specialisms') ?></h3>
         <div class="chip-list">
           <?php foreach ($specialisms as $s): ?>
             <span class="chip"><?= e($s) ?></span>
@@ -388,7 +389,7 @@ require_once __DIR__ . '/../includes/header.php';
 
       <?php if ($services): ?>
       <div class="pp-card">
-        <h3>Services Offered</h3>
+        <h3><?= pt('Services Offered') ?></h3>
         <div class="chip-list">
           <?php foreach ($services as $s): ?>
             <span class="chip">✓ <?= e($s) ?></span>
@@ -399,7 +400,7 @@ require_once __DIR__ . '/../includes/header.php';
 
       <?php if ($feedback): ?>
       <div class="pp-card">
-        <h3>Business Reviews</h3>
+        <h3><?= pt('Business Reviews') ?></h3>
         <?php if ($rating): ?>
           <div class="rating-big">
             <span class="stars-big">
@@ -408,7 +409,7 @@ require_once __DIR__ . '/../includes/header.php';
               <?php endfor; ?>
             </span>
             <span class="stars-big-label"><?= $rating ?></span>
-            <span class="stars-big-count">(<?= $ratingCount ?> review<?= $ratingCount !== 1 ? 's' : '' ?>)</span>
+            <span class="stars-big-count">(<?= $ratingCount ?> <?= $ratingCount !== 1 ? pt('reviews') : pt('review') ?>)</span>
           </div>
         <?php endif; ?>
         <?php foreach ($feedback as $fb): ?>
@@ -433,7 +434,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div>
       <?php if ($certList): ?>
       <div class="pp-card">
-        <h3>Certifications</h3>
+        <h3><?= pt('Certifications') ?></h3>
         <?php foreach ($certList as $cert): ?>
           <div class="cert-item">
             <div class="cert-icon" style="background:<?= e($cert['badge_color'] ?? '#7c3aed') ?>18">
@@ -441,7 +442,7 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
             <div class="cert-info">
               <div class="cn"><?= e($cert['name']) ?></div>
-              <div class="cl"><?= e($cert['level']) ?> · Awarded <?= date('M Y', strtotime($cert['awarded_at'])) ?></div>
+              <div class="cl"><?= e($cert['level']) ?> · <?= pt('Awarded') ?> <?= date('M Y', strtotime($cert['awarded_at'])) ?></div>
             </div>
           </div>
         <?php endforeach; ?>
@@ -450,13 +451,13 @@ require_once __DIR__ . '/../includes/header.php';
 
       <?php if ($locations): ?>
       <div class="pp-card">
-        <h3>Coverage Areas</h3>
+        <h3><?= pt('Coverage Areas') ?></h3>
         <?php foreach ($locations as $loc): ?>
           <div class="loc-item">
             <div class="<?= $loc['is_primary'] ? 'loc-primary-dot' : 'loc-dot' ?>"></div>
             <span><?= e($loc['region']) ?><?= $loc['city'] ? ', ' . e($loc['city']) : '' ?></span>
             <?php if ($loc['is_primary']): ?>
-              <span style="font-size:0.72rem;color:#059669;font-weight:600">Primary</span>
+              <span style="font-size:0.72rem;color:#059669;font-weight:600"><?= pt('Primary') ?></span>
             <?php endif; ?>
           </div>
         <?php endforeach; ?>
@@ -465,16 +466,16 @@ require_once __DIR__ . '/../includes/header.php';
 
       <?php if ($partner['experience']): ?>
       <div class="pp-card">
-        <h3>Experience</h3>
+        <h3><?= pt('Experience') ?></h3>
         <p style="font-size:0.88rem"><?= nl2br(e($partner['experience'])) ?></p>
       </div>
       <?php endif; ?>
 
       <!-- Referral code -->
       <div class="pp-referral">
-        <h4>Work with <?= e(explode(' ', $displayName)[0]) ?>?</h4>
-        <p>Use this partner's referral code when listing your business to connect automatically.</p>
-        <div class="ref-code-box" onclick="navigator.clipboard.writeText('<?= e($code) ?>');this.textContent='Copied!';setTimeout(()=>this.textContent='<?= e($code) ?>',1500)">
+        <h4><?= pt('Work with') ?> <?= e(explode(' ', $displayName)[0]) ?>?</h4>
+        <p><?= pt('Use this partner\'s referral code when listing your business to connect automatically.') ?></p>
+        <div class="ref-code-box" onclick="navigator.clipboard.writeText('<?= e($code) ?>');this.textContent='<?= pt('Copied!') ?>';setTimeout(()=>this.textContent='<?= e($code) ?>',1500)">
           <?= e($code) ?>
         </div>
       </div>
@@ -482,7 +483,7 @@ require_once __DIR__ . '/../includes/header.php';
       <!-- Back to marketplace -->
       <div style="text-align:center;margin-top:10px">
         <a href="<?= SITE_URL ?>/partners" style="font-size:0.85rem;color:var(--muted,#6b7280);text-decoration:none">
-          ← Browse all partners
+          ← <?= pt('Browse all partners') ?>
         </a>
       </div>
     </div>

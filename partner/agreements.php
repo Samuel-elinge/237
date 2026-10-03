@@ -8,6 +8,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $pdo = db();
 $partnerProfile = requireGrowthPartner();
@@ -160,7 +161,7 @@ if ($signMode) {
 }
 
 $flash     = getFlash();
-$pageTitle = 'My Agreements';
+$pageTitle = pt('My Agreements');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <style>
@@ -213,14 +214,14 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="page-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem">
         <div>
-            <h1 style="margin:0;font-size:1.3rem;color:#111827">Partner Agreements</h1>
-            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280">Your Growth Partner agreement and signing history</p>
+            <h1 style="margin:0;font-size:1.3rem;color:#111827"><?= pt('Partner Agreements') ?></h1>
+            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280"><?= pt('Your Growth Partner agreement and signing history') ?></p>
         </div>
         <div style="display:flex;gap:.5rem">
             <?php if ($isAdmin && !$signMode): ?>
-            <button onclick="document.getElementById('issueModal').classList.add('open')" class="btn btn-primary">+ Issue Agreement</button>
+            <button onclick="document.getElementById('issueModal').classList.add('open')" class="btn btn-primary"><?= pt('+ Issue Agreement') ?></button>
             <?php endif ?>
-            <a href="<?= $signMode ? SITE_URL.'/partner/agreements' : SITE_URL.'/partner/dashboard' ?>" class="btn btn-detail"><?= $signMode ? '← Back' : '← Dashboard' ?></a>
+            <a href="<?= $signMode ? SITE_URL.'/partner/agreements' : SITE_URL.'/partner/dashboard' ?>" class="btn btn-detail"><?= $signMode ? ('← ' . pt('Back')) : ('← ' . pt('Dashboard')) ?></a>
         </div>
     </div>
 
@@ -234,13 +235,13 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="sign-header">
             <div style="font-size:2rem;margin-bottom:.5rem">📄</div>
             <h2><?= e($signAgreement['template_title']) ?></h2>
-            <p>Version <?= e($signAgreement['version']) ?> · Please read carefully before signing</p>
+            <p><?= pt('Version') ?> <?= e($signAgreement['version']) ?> · <?= pt('Please read carefully before signing') ?></p>
         </div>
         <div class="meta-line" style="padding:.75rem 1.5rem;border-bottom:1px solid #f3f4f6;margin:0">
-            <div>Issued <span class="meta-val"><?= date('d M Y', strtotime($signAgreement['issued_at'])) ?></span></div>
-            <div>By <span class="meta-val"><?= e($signAgreement['issued_by_name'] ?? 'Admin') ?></span></div>
+            <div><?= pt('Issued') ?> <span class="meta-val"><?= date('d M Y', strtotime($signAgreement['issued_at'])) ?></span></div>
+            <div><?= pt('By') ?> <span class="meta-val"><?= e($signAgreement['issued_by_name'] ?? 'Admin') ?></span></div>
             <?php if ($signAgreement['notes']): ?>
-            <div>Note: <span class="meta-val"><?= e($signAgreement['notes']) ?></span></div>
+            <div><?= pt('Note:') ?> <span class="meta-val"><?= e($signAgreement['notes']) ?></span></div>
             <?php endif ?>
         </div>
         <div class="agreement-text"><?= e($signAgreement['template_content'] ?? 'Agreement content not available.') ?></div>
@@ -252,10 +253,10 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="agree-check">
                     <input type="checkbox" name="i_agree" id="i_agree" value="1" required>
                     <label for="i_agree">
-                        I, <strong><?= e($partnerProfile['display_name'] ?? '') ?></strong>, have read and understood the above agreement in full. I agree to be bound by its terms and conditions as a Growth Partner of 237biz.
+                        <?= pt('I,') ?> <strong><?= e($partnerProfile['display_name'] ?? '') ?></strong>, <?= pt('have read and understood the above agreement in full. I agree to be bound by its terms and conditions as a Growth Partner of 237biz.') ?>
                     </label>
                 </div>
-                <button type="submit" class="btn btn-success" style="padding:.6rem 1.5rem;font-size:.9rem">✓ Sign Agreement</button>
+                <button type="submit" class="btn btn-success" style="padding:.6rem 1.5rem;font-size:.9rem">✓ <?= pt('Sign Agreement') ?></button>
             </form>
         </div>
     </div>
@@ -267,27 +268,27 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if ($isAdmin && $templates): ?>
     <div id="issueModal" class="modal-overlay">
         <div class="modal" style="max-width:480px">
-            <h3>Issue Agreement</h3>
+            <h3><?= pt('Issue Agreement') ?></h3>
             <form method="post">
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="issue">
                 <input type="hidden" name="partner_id" value="<?= $partnerId ?>">
                 <div class="form-group">
-                    <label>Agreement Template</label>
+                    <label><?= pt('Agreement Template') ?></label>
                     <select name="template_id" required>
-                        <option value="">— Select template —</option>
+                        <option value="">— <?= pt('Select template') ?> —</option>
                         <?php foreach ($templates as $tpl): ?>
                         <option value="<?= $tpl['id'] ?>"><?= e($tpl['title']) ?> (v<?= e($tpl['version']) ?>)</option>
                         <?php endforeach ?>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Notes (optional)</label>
-                    <textarea name="notes" rows="2" placeholder="Any notes for the partner…"></textarea>
+                    <label><?= pt('Notes (optional)') ?></label>
+                    <textarea name="notes" rows="2" placeholder="<?= pt('Any notes for the partner…') ?>"></textarea>
                 </div>
                 <div style="display:flex;gap:.5rem">
-                    <button type="submit" class="btn btn-primary">Issue Agreement</button>
-                    <button type="button" onclick="closeModals()" class="btn btn-detail">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><?= pt('Issue Agreement') ?></button>
+                    <button type="button" onclick="closeModals()" class="btn btn-detail"><?= pt('Cancel') ?></button>
                 </div>
             </form>
         </div>
@@ -296,17 +297,17 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Unsigned agreements -->
     <?php if ($unsigned): ?>
-    <div class="section-title" style="color:#92400e">⚠ Awaiting Your Signature (<?= count($unsigned) ?>)</div>
+    <div class="section-title" style="color:#92400e">⚠ <?= pt('Awaiting Your Signature') ?> (<?= count($unsigned) ?>)</div>
     <?php foreach ($unsigned as $a): ?>
     <div class="agr-card">
         <div class="agr-header">
             <div class="agr-icon">📋</div>
             <div class="agr-meta">
                 <div class="agr-title"><?= e($a['template_title']) ?></div>
-                <div class="agr-sub">Issued <?= date('d M Y', strtotime($a['issued_at'])) ?> by <?= e($a['issued_by_name'] ?? 'Admin') ?></div>
+                <div class="agr-sub"><?= pt('Issued') ?> <?= date('d M Y', strtotime($a['issued_at'])) ?> <?= pt('by') ?> <?= e($a['issued_by_name'] ?? 'Admin') ?></div>
                 <div class="agr-badges">
-                    <span class="badge badge-unsigned">Action Required</span>
-                    <span class="badge" style="background:#f3f4f6;color:#374151">Version <?= e($a['version']) ?></span>
+                    <span class="badge badge-unsigned"><?= pt('Action Required') ?></span>
+                    <span class="badge" style="background:#f3f4f6;color:#374151"><?= pt('Version') ?> <?= e($a['version']) ?></span>
                 </div>
             </div>
         </div>
@@ -314,9 +315,9 @@ require_once __DIR__ . '/../includes/header.php';
         <div style="padding:.5rem 1.1rem;font-size:.82rem;color:#374151;border-bottom:1px solid #f9fafb"><?= e($a['notes']) ?></div>
         <?php endif ?>
         <div class="agr-actions">
-            <a href="?sign=<?= $a['id'] ?>" class="btn btn-success">Read & Sign →</a>
+            <a href="?sign=<?= $a['id'] ?>" class="btn btn-success"><?= pt('Read & Sign') ?> →</a>
             <?php if ($isAdmin): ?>
-            <button onclick="openRevoke(<?= $a['id'] ?>)" class="btn btn-danger">Revoke</button>
+            <button onclick="openRevoke(<?= $a['id'] ?>)" class="btn btn-danger"><?= pt('Revoke') ?></button>
             <?php endif ?>
         </div>
     </div>
@@ -325,24 +326,24 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Signed agreements -->
     <?php if ($signed): ?>
-    <div class="section-title">✓ Signed Agreements</div>
+    <div class="section-title">✓ <?= pt('Signed Agreements') ?></div>
     <?php foreach ($signed as $a): ?>
     <div class="agr-card">
         <div class="agr-header">
             <div class="agr-icon">✅</div>
             <div class="agr-meta">
                 <div class="agr-title"><?= e($a['template_title']) ?></div>
-                <div class="agr-sub">Signed <?= date('d M Y H:i', strtotime($a['signed_at'])) ?> · From IP <?= e($a['signed_ip'] ?? '') ?></div>
+                <div class="agr-sub"><?= pt('Signed') ?> <?= date('d M Y H:i', strtotime($a['signed_at'])) ?> · <?= pt('From IP') ?> <?= e($a['signed_ip'] ?? '') ?></div>
                 <div class="agr-badges">
-                    <span class="badge badge-signed">Signed</span>
-                    <span class="badge" style="background:#f3f4f6;color:#374151">Version <?= e($a['version']) ?></span>
+                    <span class="badge badge-signed"><?= pt('Signed') ?></span>
+                    <span class="badge" style="background:#f3f4f6;color:#374151"><?= pt('Version') ?> <?= e($a['version']) ?></span>
                 </div>
             </div>
         </div>
         <div class="agr-actions">
-            <button onclick="this.closest('.agr-card').querySelector('.agr-content').style.display='block';this.remove()" class="btn btn-detail btn-sm">View Agreement Text</button>
+            <button onclick="this.closest('.agr-card').querySelector('.agr-content').style.display='block';this.remove()" class="btn btn-detail btn-sm"><?= pt('View Agreement Text') ?></button>
             <?php if ($isAdmin): ?>
-            <button onclick="openRevoke(<?= $a['id'] ?>)" class="btn btn-danger btn-sm">Revoke</button>
+            <button onclick="openRevoke(<?= $a['id'] ?>)" class="btn btn-danger btn-sm"><?= pt('Revoke') ?></button>
             <?php endif ?>
         </div>
         <div class="agr-content" style="display:none;padding:1rem 1.25rem;font-size:.83rem;color:#374151;line-height:1.65;max-height:300px;overflow-y:auto;border-top:1px solid #f3f4f6;white-space:pre-wrap"><?= e($a['template_content'] ?? '') ?></div>
@@ -352,15 +353,15 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Revoked agreements -->
     <?php if ($revoked): ?>
-    <div class="section-title" style="color:#9ca3af">Revoked Agreements</div>
+    <div class="section-title" style="color:#9ca3af"><?= pt('Revoked Agreements') ?></div>
     <?php foreach ($revoked as $a): ?>
     <div class="agr-card" style="opacity:.6">
         <div class="agr-header">
             <div class="agr-icon">❌</div>
             <div class="agr-meta">
                 <div class="agr-title"><?= e($a['template_title']) ?></div>
-                <div class="agr-sub">Revoked <?= date('d M Y', strtotime($a['revoked_at'])) ?><?= $a['revoke_reason'] ? ' — ' . e($a['revoke_reason']) : '' ?></div>
-                <div class="agr-badges"><span class="badge badge-revoked">Revoked</span></div>
+                <div class="agr-sub"><?= pt('Revoked') ?> <?= date('d M Y', strtotime($a['revoked_at'])) ?><?= $a['revoke_reason'] ? ' — ' . e($a['revoke_reason']) : '' ?></div>
+                <div class="agr-badges"><span class="badge badge-revoked"><?= pt('Revoked') ?></span></div>
             </div>
         </div>
     </div>
@@ -370,7 +371,7 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if (!$agreements): ?>
     <div class="empty">
         <div style="font-size:2.5rem;margin-bottom:.5rem">📄</div>
-        <p>No agreements yet. An admin will issue your Growth Partner agreement when your application is approved.</p>
+        <p><?= pt('No agreements yet. An admin will issue your Growth Partner agreement when your application is approved.') ?></p>
     </div>
     <?php endif ?>
 
@@ -381,18 +382,18 @@ require_once __DIR__ . '/../includes/header.php';
 <?php if ($isAdmin): ?>
 <div class="modal-overlay" id="revokeModal">
     <div class="modal">
-        <h3>Revoke Agreement</h3>
+        <h3><?= pt('Revoke Agreement') ?></h3>
         <form method="post">
             <?= csrfField() ?>
             <input type="hidden" name="action" value="revoke">
             <input type="hidden" name="agreement_id" id="revokeAgreementId">
             <div class="form-group">
-                <label>Reason (optional)</label>
-                <textarea name="reason" rows="3" placeholder="Reason for revoking this agreement…"></textarea>
+                <label><?= pt('Reason (optional)') ?></label>
+                <textarea name="reason" rows="3" placeholder="<?= pt('Reason for revoking this agreement…') ?>"></textarea>
             </div>
             <div style="display:flex;gap:.5rem">
-                <button type="submit" class="btn btn-danger">Revoke</button>
-                <button type="button" onclick="closeModals()" class="btn btn-detail">Cancel</button>
+                <button type="submit" class="btn btn-danger"><?= pt('Revoke') ?></button>
+                <button type="button" onclick="closeModals()" class="btn btn-detail"><?= pt('Cancel') ?></button>
             </div>
         </form>
     </div>

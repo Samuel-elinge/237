@@ -7,6 +7,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $pdo = db();
 
@@ -89,7 +90,7 @@ $awardedIds = array_column($awarded, 'cert_id');
 // Flash
 $flash = getFlash();
 
-$pageTitle = $adminMode ? "Certifications — $targetName" : 'My Certifications';
+$pageTitle = $adminMode ? pt('Certifications') . ' — ' . $targetName : pt('My Certifications');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <style>
@@ -133,15 +134,15 @@ require_once __DIR__ . '/../includes/header.php';
 <div style="max-width:860px;margin:0 auto;padding:1.5rem">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem">
         <div>
-            <h1 style="margin:0;font-size:1.3rem;color:#111827"><?= $adminMode ? "Certifications — " . e($targetName) : 'My Certifications' ?></h1>
+            <h1 style="margin:0;font-size:1.3rem;color:#111827"><?= $adminMode ? pt('Certifications') . ' — ' . e($targetName) : pt('My Certifications') ?></h1>
             <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280">
-                <?= $adminMode ? 'Award or revoke certifications for this partner' : 'Track your certifications and professional development' ?>
+                <?= $adminMode ? pt('Award or revoke certifications for this partner') : pt('Track your certifications and professional development') ?>
             </p>
         </div>
         <?php if ($adminMode): ?>
-        <a href="<?= SITE_URL ?>/admin/manage-growth-partners" class="btn btn-detail">← Partners</a>
+        <a href="<?= SITE_URL ?>/admin/manage-growth-partners" class="btn btn-detail"><?= pt('← Partners') ?></a>
         <?php else: ?>
-        <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← Dashboard</a>
+        <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← <?= pt('Dashboard') ?></a>
         <?php endif ?>
     </div>
 
@@ -151,13 +152,13 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Awarded Certs -->
     <?php if ($awarded): ?>
-    <p class="section-title">Awarded Certifications (<?= count($awarded) ?>)</p>
+    <p class="section-title"><?= pt('Awarded Certifications') ?> (<?= count($awarded) ?>)</p>
     <div class="cert-grid">
         <?php foreach ($awarded as $c):
             $isRevoked  = !empty($c['revoked_at']);
             $isExpired  = $c['expires_at'] && strtotime($c['expires_at']) < time();
             $cardClass  = $isRevoked ? 'revoked' : 'awarded';
-            $badgeLabel = $isRevoked ? 'Revoked' : ($isExpired ? 'Expired' : 'Awarded');
+            $badgeLabel = $isRevoked ? pt('Revoked') : ($isExpired ? pt('Expired') : pt('Awarded'));
             $badgeClass = $isRevoked || $isExpired ? 'revoked' : 'awarded';
         ?>
         <div class="cert-card <?= $cardClass ?>">
@@ -167,8 +168,8 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="cert-name"><?= e($c['name']) ?></div>
             <div class="cert-desc"><?= e($c['description']) ?></div>
             <div class="cert-date">
-                Awarded <?= date('d M Y', strtotime($c['awarded_at'])) ?>
-                <?php if ($c['expires_at']): ?>· Expires <?= date('d M Y', strtotime($c['expires_at'])) ?><?php endif ?>
+                <?= pt('Awarded') ?> <?= date('d M Y', strtotime($c['awarded_at'])) ?>
+                <?php if ($c['expires_at']): ?>· <?= pt('Expires') ?> <?= date('d M Y', strtotime($c['expires_at'])) ?><?php endif ?>
             </div>
             <?php if ($adminMode && !$isRevoked): ?>
             <div class="cert-actions">
@@ -177,7 +178,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <input type="hidden" name="action" value="revoke">
                     <input type="hidden" name="cert_id" value="<?= $c['cert_id'] ?>">
                     <input type="hidden" name="pid" value="<?= $partnerId ?>">
-                    <button type="submit" class="btn btn-revoke" onclick="return confirm('Revoke this certification?')">Revoke</button>
+                    <button type="submit" class="btn btn-revoke" onclick="return confirm('<?= pt('Revoke this certification?') ?>')"><?= pt('Revoke') ?></button>
                 </form>
             </div>
             <?php endif ?>
@@ -187,27 +188,27 @@ require_once __DIR__ . '/../includes/header.php';
     <?php endif ?>
 
     <!-- Available Certs -->
-    <p class="section-title">Available Certifications</p>
+    <p class="section-title"><?= pt('Available Certifications') ?></p>
     <?php if (!$allCerts): ?>
-    <div class="empty-hint">No certifications configured yet.</div>
+    <div class="empty-hint"><?= pt('No certifications configured yet.') ?></div>
     <?php else: ?>
     <div class="cert-grid">
         <?php foreach ($allCerts as $c):
             $alreadyAwarded = in_array($c['id'], $awardedIds);
         ?>
         <div class="cert-card <?= $alreadyAwarded ? 'awarded' : '' ?>">
-            <?php if ($alreadyAwarded): ?><span class="cert-badge awarded">Awarded</span><?php endif ?>
+            <?php if ($alreadyAwarded): ?><span class="cert-badge awarded"><?= pt('Awarded') ?></span><?php endif ?>
             <div class="cert-icon"><?= e($c['badge_icon'] ?: '🎖️') ?></div>
             <span class="cert-level level-<?= e($c['level']) ?>"><?= ucfirst($c['level']) ?></span>
             <div class="cert-name"><?= e($c['name']) ?></div>
             <div class="cert-desc"><?= e($c['description']) ?></div>
             <?php if ($adminMode && !$alreadyAwarded): ?>
             <div class="cert-actions">
-                <button class="btn btn-award" onclick="openAward(<?= $c['id'] ?>, <?= e(json_encode($c['name'])) ?>)">Award</button>
+                <button class="btn btn-award" onclick="openAward(<?= $c['id'] ?>, <?= e(json_encode($c['name'])) ?>)"><?= pt('Award') ?></button>
             </div>
             <?php endif ?>
             <?php if (!$adminMode && !$alreadyAwarded): ?>
-            <div class="cert-date" style="color:#9ca3af">Complete requirements to earn this</div>
+            <div class="cert-date" style="color:#9ca3af"><?= pt('Complete requirements to earn this') ?></div>
             <?php endif ?>
         </div>
         <?php endforeach ?>
@@ -219,7 +220,7 @@ require_once __DIR__ . '/../includes/header.php';
 <!-- Award Modal -->
 <div class="modal-overlay" id="modal-award">
     <div class="modal">
-        <h3>Award Certification</h3>
+        <h3><?= pt('Award Certification') ?></h3>
         <p id="award-cert-name" style="color:#6b7280;font-size:.875rem;margin:.25rem 0 .75rem"></p>
         <form method="post">
             <?= csrfField() ?>
@@ -227,12 +228,12 @@ require_once __DIR__ . '/../includes/header.php';
             <input type="hidden" name="cert_id" id="award-cert-id" value="">
             <input type="hidden" name="pid" value="<?= $partnerId ?>">
 
-            <label>Expiry Date <span style="color:#9ca3af;font-weight:400">(leave blank = no expiry)</span></label>
+            <label><?= pt('Expiry Date') ?> <span style="color:#9ca3af;font-weight:400"><?= pt('(leave blank = no expiry)') ?></span></label>
             <input type="date" name="expires_at" min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
 
             <div class="modal-actions">
-                <button type="button" class="btn btn-detail" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="btn btn-award">Award Certification</button>
+                <button type="button" class="btn btn-detail" onclick="closeModal()"><?= pt('Cancel') ?></button>
+                <button type="submit" class="btn btn-award"><?= pt('Award Certification') ?></button>
             </div>
         </form>
     </div>

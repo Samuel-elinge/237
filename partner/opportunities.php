@@ -9,6 +9,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $pdo = db();
 $partnerProfile = requireGrowthPartner();
@@ -137,7 +138,7 @@ $categories = $pdo->query("SELECT DISTINCT category FROM partner_opportunities W
 $urgencyColors = ['high'=>['#fee2e2','#991b1b'],'medium'=>['#fef3c7','#92400e'],'low'=>['#d1fae5','#065f46']];
 
 $flash     = getFlash();
-$pageTitle = 'Opportunities';
+$pageTitle = pt('Opportunities');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <style>
@@ -191,14 +192,14 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="page-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem">
         <div>
-            <h1 style="margin:0;font-size:1.3rem;color:#111827">Opportunities</h1>
-            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280">Businesses looking for a Growth Partner — register your interest</p>
+            <h1 style="margin:0;font-size:1.3rem;color:#111827"><?= pt('Opportunities') ?></h1>
+            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280"><?= pt('Businesses looking for a Growth Partner — register your interest') ?></p>
         </div>
         <div style="display:flex;gap:.5rem">
             <?php if ($isAdmin): ?>
-            <button onclick="document.getElementById('postModal').classList.add('open')" class="btn btn-primary">+ Post Opportunity</button>
+            <button onclick="document.getElementById('postModal').classList.add('open')" class="btn btn-primary">+ <?= pt('Post Opportunity') ?></button>
             <?php endif ?>
-            <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← Dashboard</a>
+            <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← <?= pt('Dashboard') ?></a>
         </div>
     </div>
 
@@ -209,17 +210,17 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="layout">
         <div class="sidebar">
             <div class="filter-box">
-                <div class="filter-title">Urgency</div>
-                <a href="?<?= http_build_query(array_filter(['region'=>$filterRegion,'cat'=>$filterCat,'q'=>$search])) ?>" class="<?= !$filterUrgency ? 'active' : '' ?>">All</a>
-                <?php foreach (['high'=>'🔴 High','medium'=>'🟡 Medium','low'=>'🟢 Low'] as $u => $lbl): ?>
+                <div class="filter-title"><?= pt('Urgency') ?></div>
+                <a href="?<?= http_build_query(array_filter(['region'=>$filterRegion,'cat'=>$filterCat,'q'=>$search])) ?>" class="<?= !$filterUrgency ? 'active' : '' ?>"><?= pt('All') ?></a>
+                <?php foreach (['high'=>'🔴 '.pt('High'),'medium'=>'🟡 '.pt('Medium'),'low'=>'🟢 '.pt('Low')] as $u => $lbl): ?>
                 <a href="?<?= http_build_query(array_filter(['urgency'=>$u,'region'=>$filterRegion,'cat'=>$filterCat,'q'=>$search])) ?>" class="<?= $filterUrgency===$u ? 'active' : '' ?>"><?= $lbl ?></a>
                 <?php endforeach ?>
             </div>
 
             <?php if ($regions): ?>
             <div class="filter-box">
-                <div class="filter-title">Region</div>
-                <a href="?<?= http_build_query(array_filter(['urgency'=>$filterUrgency,'cat'=>$filterCat,'q'=>$search])) ?>" class="<?= !$filterRegion ? 'active' : '' ?>">All regions</a>
+                <div class="filter-title"><?= pt('Region') ?></div>
+                <a href="?<?= http_build_query(array_filter(['urgency'=>$filterUrgency,'cat'=>$filterCat,'q'=>$search])) ?>" class="<?= !$filterRegion ? 'active' : '' ?>"><?= pt('All regions') ?></a>
                 <?php foreach ($regions as $r): ?>
                 <a href="?<?= http_build_query(array_filter(['region'=>$r,'urgency'=>$filterUrgency,'cat'=>$filterCat,'q'=>$search])) ?>" class="<?= $filterRegion===$r ? 'active' : '' ?>"><?= e($r) ?></a>
                 <?php endforeach ?>
@@ -228,8 +229,8 @@ require_once __DIR__ . '/../includes/header.php';
 
             <?php if ($categories): ?>
             <div class="filter-box">
-                <div class="filter-title">Category</div>
-                <a href="?<?= http_build_query(array_filter(['urgency'=>$filterUrgency,'region'=>$filterRegion,'q'=>$search])) ?>" class="<?= !$filterCat ? 'active' : '' ?>">All</a>
+                <div class="filter-title"><?= pt('Category') ?></div>
+                <a href="?<?= http_build_query(array_filter(['urgency'=>$filterUrgency,'region'=>$filterRegion,'q'=>$search])) ?>" class="<?= !$filterCat ? 'active' : '' ?>"><?= pt('All') ?></a>
                 <?php foreach ($categories as $cat): ?>
                 <a href="?<?= http_build_query(array_filter(['cat'=>$cat,'urgency'=>$filterUrgency,'region'=>$filterRegion,'q'=>$search])) ?>" class="<?= $filterCat===$cat ? 'active' : '' ?>"><?= e(ucfirst($cat)) ?></a>
                 <?php endforeach ?>
@@ -242,14 +243,14 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php foreach (array_filter(['urgency'=>$filterUrgency,'region'=>$filterRegion,'cat'=>$filterCat]) as $k=>$v): ?>
                 <input type="hidden" name="<?= e($k) ?>" value="<?= e($v) ?>">
                 <?php endforeach ?>
-                <input type="text" name="q" value="<?= e($search) ?>" placeholder="Search opportunities…">
-                <button type="submit" class="btn btn-detail">Search</button>
-                <?php if ($search): ?><a href="?<?= http_build_query(array_filter(['urgency'=>$filterUrgency,'region'=>$filterRegion,'cat'=>$filterCat])) ?>" class="btn btn-detail">Clear</a><?php endif ?>
+                <input type="text" name="q" value="<?= e($search) ?>" placeholder="<?= pt('Search opportunities…') ?>">
+                <button type="submit" class="btn btn-detail"><?= pt('Search') ?></button>
+                <?php if ($search): ?><a href="?<?= http_build_query(array_filter(['urgency'=>$filterUrgency,'region'=>$filterRegion,'cat'=>$filterCat])) ?>" class="btn btn-detail"><?= pt('Clear') ?></a><?php endif ?>
             </form>
 
             <!-- Posted opportunities -->
             <?php if ($opps): ?>
-            <p class="section-title">📢 Posted Opportunities (<?= count($opps) ?>)</p>
+            <p class="section-title">📢 <?= pt('Posted Opportunities') ?> (<?= count($opps) ?>)</p>
             <?php foreach ($opps as $o):
                 [$urgBg, $urgCol] = $urgencyColors[$o['urgency'] ?? 'medium'] ?? $urgencyColors['medium'];
             ?>
@@ -262,26 +263,26 @@ require_once __DIR__ . '/../includes/header.php';
                             <?php if ($o['business_name']): ?>
                             <a href="<?= SITE_URL ?>/listing/<?= e($o['listing_slug']) ?>" target="_blank" style="color:#2563eb"><?= e($o['business_name']) ?></a> ·
                             <?php endif ?>
-                            Posted <?= date('d M Y', strtotime($o['created_at'])) ?>
-                            <?php if ($o['expires_at']): ?> · Expires <?= date('d M Y', strtotime($o['expires_at'])) ?><?php endif ?>
+                            <?= pt('Posted') ?> <?= date('d M Y', strtotime($o['created_at'])) ?>
+                            <?php if ($o['expires_at']): ?> · <?= pt('Expires') ?> <?= date('d M Y', strtotime($o['expires_at'])) ?><?php endif ?>
                         </div>
                         <div class="opp-badges">
                             <span class="badge" style="background:<?= $urgBg ?>;color:<?= $urgCol ?>"><?= ucfirst($o['urgency']) ?> urgency</span>
                             <?php if ($o['region']): ?><span class="badge" style="background:#f3f4f6;color:#374151">📍 <?= e($o['region']) ?></span><?php endif ?>
                             <?php if ($o['category']): ?><span class="badge" style="background:#f3f4f6;color:#374151"><?= e($o['category']) ?></span><?php endif ?>
-                            <?php if ($o['i_am_interested']): ?><span class="badge" style="background:#d1fae5;color:#065f46">✓ Interested</span><?php endif ?>
+                            <?php if ($o['i_am_interested']): ?><span class="badge" style="background:#d1fae5;color:#065f46">✓ <?= pt('Interested') ?></span><?php endif ?>
                         </div>
                     </div>
-                    <div style="font-size:.78rem;color:#9ca3af;text-align:right;white-space:nowrap"><?= (int)$o['interest_count'] ?> interested</div>
+                    <div style="font-size:.78rem;color:#9ca3af;text-align:right;white-space:nowrap"><?= (int)$o['interest_count'] ?> <?= pt('interested') ?></div>
                 </div>
                 <div class="opp-body"><?= e($o['description']) ?></div>
                 <div class="opp-footer">
                     <?php if ($o['i_am_interested']): ?>
-                    <span style="color:#059669;font-size:.8rem;font-weight:600">✓ You've registered interest</span>
+                    <span style="color:#059669;font-size:.8rem;font-weight:600">✓ <?= pt("You've registered interest") ?></span>
                     <?php else: ?>
-                    <button onclick="openInterest(<?= $o['id'] ?>, '<?= addslashes(e($o['title'])) ?>')" class="btn btn-success btn-sm">Register Interest</button>
+                    <button onclick="openInterest(<?= $o['id'] ?>, '<?= addslashes(e($o['title'])) ?>')" class="btn btn-success btn-sm"><?= pt('Register Interest') ?></button>
                     <?php endif ?>
-                    <span class="interest-detail">Posted by <?= e($o['posted_by_name'] ?? 'Admin') ?></span>
+                    <span class="interest-detail"><?= pt('Posted by') ?> <?= e($o['posted_by_name'] ?? 'Admin') ?></span>
                 </div>
             </div>
             <?php endforeach ?>
@@ -289,7 +290,7 @@ require_once __DIR__ . '/../includes/header.php';
 
             <!-- Open partner requests -->
             <?php if ($openRequests): ?>
-            <p class="section-title" style="margin-top:1rem">🏢 Businesses Seeking a Partner (<?= count($openRequests) ?>)</p>
+            <p class="section-title" style="margin-top:1rem">🏢 <?= pt('Businesses Seeking a Partner') ?> (<?= count($openRequests) ?>)</p>
             <?php foreach ($openRequests as $r):
                 [$urgBg, $urgCol] = $urgencyColors[$r['urgency'] ?? 'medium'] ?? $urgencyColors['medium'];
             ?>
@@ -300,7 +301,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <div class="opp-title">
                             <a href="<?= SITE_URL ?>/listing/<?= e($r['listing_slug']) ?>" target="_blank" style="color:#111827;text-decoration:none"><?= e($r['business_name']) ?></a>
                         </div>
-                        <div class="opp-sub">Requested <?= date('d M Y', strtotime($r['created_at'])) ?></div>
+                        <div class="opp-sub"><?= pt('Requested') ?> <?= date('d M Y', strtotime($r['created_at'])) ?></div>
                         <div class="opp-badges">
                             <span class="badge" style="background:<?= $urgBg ?>;color:<?= $urgCol ?>"><?= ucfirst($r['urgency']) ?> urgency</span>
                             <?php if ($r['biz_category']): ?><span class="badge" style="background:#f3f4f6;color:#374151"><?= e($r['biz_category']) ?></span><?php endif ?>
@@ -312,8 +313,8 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="opp-body"><?= e($r['message']) ?></div>
                 <?php endif ?>
                 <div class="opp-footer">
-                    <a href="<?= SITE_URL ?>/listing/<?= e($r['listing_slug']) ?>" target="_blank" class="btn btn-detail btn-sm">View Business</a>
-                    <span style="font-size:.78rem;color:#6b7280;margin-left:.5rem">Contact admin to express interest in this assignment.</span>
+                    <a href="<?= SITE_URL ?>/listing/<?= e($r['listing_slug']) ?>" target="_blank" class="btn btn-detail btn-sm"><?= pt('View Business') ?></a>
+                    <span style="font-size:.78rem;color:#6b7280;margin-left:.5rem"><?= pt('Contact admin to express interest in this assignment.') ?></span>
                 </div>
             </div>
             <?php endforeach ?>
@@ -322,7 +323,7 @@ require_once __DIR__ . '/../includes/header.php';
             <?php if (!$opps && !$openRequests): ?>
             <div class="empty">
                 <div style="font-size:2.5rem;margin-bottom:.5rem">🔍</div>
-                <p>No opportunities available right now. Check back soon or adjust your filters.</p>
+                <p><?= pt('No opportunities available right now. Check back soon or adjust your filters.') ?></p>
             </div>
             <?php endif ?>
         </div>
@@ -332,18 +333,18 @@ require_once __DIR__ . '/../includes/header.php';
 <!-- Interest modal -->
 <div class="modal-overlay" id="interestModal">
     <div class="modal">
-        <h3>Register Interest — <span id="interestOppName"></span></h3>
+        <h3><?= pt('Register Interest') ?> — <span id="interestOppName"></span></h3>
         <form method="post">
             <?= csrfField() ?>
             <input type="hidden" name="action" value="interest">
             <input type="hidden" name="opportunity_id" id="interestOppId">
             <div class="form-group">
-                <label>Why are you a good fit? (optional)</label>
-                <textarea name="message" placeholder="Briefly explain your relevant experience and why you're interested in this opportunity…"></textarea>
+                <label><?= pt('Why are you a good fit? (optional)') ?></label>
+                <textarea name="message" placeholder="<?= pt('Briefly explain your relevant experience and why you are interested in this opportunity...') ?>"></textarea>
             </div>
             <div style="display:flex;gap:.5rem">
-                <button type="submit" class="btn btn-success">Register Interest</button>
-                <button type="button" onclick="closeModals()" class="btn btn-detail">Cancel</button>
+                <button type="submit" class="btn btn-success"><?= pt('Register Interest') ?></button>
+                <button type="button" onclick="closeModals()" class="btn btn-detail"><?= pt('Cancel') ?></button>
             </div>
         </form>
     </div>
@@ -353,30 +354,30 @@ require_once __DIR__ . '/../includes/header.php';
 <?php if ($isAdmin): ?>
 <div class="modal-overlay" id="postModal">
     <div class="modal">
-        <h3>Post New Opportunity</h3>
+        <h3><?= pt('Post New Opportunity') ?></h3>
         <form method="post">
             <?= csrfField() ?>
             <input type="hidden" name="action" value="post_opportunity">
             <div class="form-group">
-                <label>Title *</label>
-                <input type="text" name="title" required placeholder="e.g. Retail business seeking local partner in Manchester">
+                <label><?= pt('Title') ?> *</label>
+                <input type="text" name="title" required placeholder="<?= pt('e.g. Retail business seeking local partner') ?>">
             </div>
             <div class="form-group">
-                <label>Description *</label>
-                <textarea name="description" required placeholder="Describe the opportunity, what's needed, what the partner will do…"></textarea>
+                <label><?= pt('Description') ?> *</label>
+                <textarea name="description" required placeholder="<?= pt('Describe the opportunity, what\'s needed, what the partner will do…') ?>"></textarea>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
                 <div class="form-group">
-                    <label>Region</label>
-                    <input type="text" name="region" placeholder="e.g. London">
+                    <label><?= pt('Region') ?></label>
+                    <input type="text" name="region" placeholder="<?= pt('e.g. Douala') ?>">
                 </div>
                 <div class="form-group">
-                    <label>Category</label>
-                    <input type="text" name="category" placeholder="e.g. Retail">
+                    <label><?= pt('Category') ?></label>
+                    <input type="text" name="category" placeholder="<?= pt('e.g. Retail') ?>">
                 </div>
             </div>
             <div class="form-group">
-                <label>Urgency</label>
+                <label><?= pt('Urgency') ?></label>
                 <div class="urgency-pills" id="postUrgencyPills">
                     <?php foreach (['low','medium','high'] as $u): ?>
                     <div class="urgency-pill <?= $u==='medium'?'selected':'' ?>" data-u="<?= $u ?>" onclick="selectPostUrgency(this)"><?= ucfirst($u) ?></div>
@@ -385,12 +386,12 @@ require_once __DIR__ . '/../includes/header.php';
                 <input type="hidden" name="urgency" id="postUrgencyInput" value="medium">
             </div>
             <div class="form-group">
-                <label>Expires (optional)</label>
+                <label><?= pt('Expires (optional)') ?></label>
                 <input type="date" name="expires_at">
             </div>
             <div style="display:flex;gap:.5rem">
-                <button type="submit" class="btn btn-primary">Post Opportunity</button>
-                <button type="button" onclick="closeModals()" class="btn btn-detail">Cancel</button>
+                <button type="submit" class="btn btn-primary"><?= pt('Post Opportunity') ?></button>
+                <button type="button" onclick="closeModals()" class="btn btn-detail"><?= pt('Cancel') ?></button>
             </div>
         </form>
     </div>

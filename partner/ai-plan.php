@@ -8,6 +8,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $partnerProfile = requireGrowthPartner();
 $partnerId      = (int)$partnerProfile['id'];
@@ -376,7 +377,7 @@ function healthClass(int|float $val, int $good, int $warn): string {
     return '#dc2626';
 }
 
-$pageTitle = 'AI Growth Plan — ' . e($listing['title']);
+$pageTitle = pt('AI Growth Plan Assistant') . ' — ' . e($listing['title']);
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -403,134 +404,132 @@ require_once __DIR__ . '/../includes/header.php';
 
   <!-- Breadcrumb -->
   <div style="font-size:.82rem; color:var(--muted); margin-bottom:1rem;">
-    <a href="<?= SITE_URL ?>/partner/portfolio" style="color:var(--muted); text-decoration:none;">Portfolio</a> →
+    <a href="<?= SITE_URL ?>/partner/portfolio" style="color:var(--muted); text-decoration:none;"><?= pt('Portfolio') ?></a> →
     <a href="<?= SITE_URL ?>/partner/business?id=<?= $listingId ?>" style="color:var(--muted); text-decoration:none;"><?= e($listing['title']) ?></a> →
-    AI Growth Plan
+    <?= pt('AI Growth Plan Assistant') ?>
   </div>
 
   <!-- Header -->
   <div style="margin-bottom:1.4rem;">
-    <h1 style="margin:0 0 .3rem; font-size:1.4rem;">✦ AI Growth Plan Assistant</h1>
+    <h1 style="margin:0 0 .3rem; font-size:1.4rem;">✦ <?= pt('AI Growth Plan Assistant') ?></h1>
     <p style="margin:0; font-size:.87rem; color:var(--muted);">
-      Generates a structured growth plan for <strong><?= e($listing['title']) ?></strong> based on its current state.
-      The plan is saved as a draft — review and activate it in the Growth Plan tab.
+      <?= pt('Generates a structured growth plan based on current state. The plan is saved as a draft — review and activate it in the Growth Plan tab.') ?>
     </p>
   </div>
 
   <?php if ($successMsg): ?>
   <div style="background:#d1fae5; border:1px solid #6ee7b7; border-radius:8px; padding:.8rem 1.1rem; margin-bottom:1.2rem; color:#065f46; font-size:.88rem;">
     ✅ <?= e($successMsg) ?>
-    <a href="<?= SITE_URL ?>/partner/business?id=<?= $listingId ?>&tab=growth_plan" style="margin-left:1rem; color:#065f46; font-weight:600;">View Growth Plan →</a>
+    <a href="<?= SITE_URL ?>/partner/business?id=<?= $listingId ?>&tab=growth_plan" style="margin-left:1rem; color:#065f46; font-weight:600;"><?= pt('View Growth Plan') ?> →</a>
   </div>
   <?php endif; ?>
 
   <!-- Business intelligence snapshot -->
   <div style="margin-bottom:1.1rem;">
-    <h3 style="font-size:.95rem; margin:0 0 .7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-size:.78rem;">Current Business State</h3>
+    <h3 style="font-size:.95rem; margin:0 0 .7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-size:.78rem;"><?= pt('Current Business State') ?></h3>
     <div class="intel-grid">
       <div class="intel-card">
         <div class="val" style="color:<?= healthClass($intel['review_count'], 10, 3) ?>;"><?= $intel['review_count'] ?></div>
-        <div class="lbl">Reviews</div>
+        <div class="lbl"><?= pt('Reviews') ?></div>
       </div>
       <div class="intel-card">
         <div class="val" style="color:<?= $intel['avg_rating'] ? healthClass($intel['avg_rating'], 4.0, 3.0) : 'var(--muted)' ?>;">
           <?= $intel['avg_rating'] ? number_format($intel['avg_rating'],1).'★' : '—' ?>
         </div>
-        <div class="lbl">Avg Rating</div>
+        <div class="lbl"><?= pt('Avg Rating') ?></div>
       </div>
       <div class="intel-card">
         <div class="val" style="color:<?= healthClass($intel['active_leads'], 5, 1) ?>;"><?= $intel['active_leads'] ?></div>
-        <div class="lbl">Active Leads</div>
+        <div class="lbl"><?= pt('Active Leads') ?></div>
       </div>
       <div class="intel-card">
         <div class="val" style="color:<?= healthClass($intel['active_campaigns'], 2, 1) ?>;"><?= $intel['active_campaigns'] ?></div>
-        <div class="lbl">Active Campaigns</div>
+        <div class="lbl"><?= pt('Active Campaigns') ?></div>
       </div>
       <div class="intel-card">
         <div class="val" style="color:<?= healthClass($intel['recent_content'], 4, 1) ?>;"><?= $intel['recent_content'] ?></div>
-        <div class="lbl">Content (30 days)</div>
+        <div class="lbl"><?= pt('Content (30 days)') ?></div>
       </div>
       <div class="intel-card">
         <div class="val" style="color:<?= $intel['open_tasks'] > 10 ? '#dc2626' : ($intel['open_tasks'] > 0 ? '#d97706' : '#059669') ?>;"><?= $intel['open_tasks'] ?></div>
-        <div class="lbl">Open Tasks</div>
+        <div class="lbl"><?= pt('Open Tasks') ?></div>
       </div>
       <div class="intel-card">
         <div class="val" style="color:<?= $intel['has_tagline'] ? '#059669' : '#dc2626' ?>;"><?= $intel['has_tagline'] ? '✓' : '✗' ?></div>
-        <div class="lbl">Tagline</div>
+        <div class="lbl"><?= pt('Tagline') ?></div>
       </div>
       <div class="intel-card">
         <div class="val" style="color:<?= $intel['has_services'] ? '#059669' : '#dc2626' ?>;"><?= $intel['has_services'] ? '✓' : '✗' ?></div>
-        <div class="lbl">Services Listed</div>
+        <div class="lbl"><?= pt('Services Listed') ?></div>
       </div>
     </div>
   </div>
 
   <!-- GENERATE FORM -->
   <div class="plan-form">
-    <h3 style="margin:0 0 1rem;">Generate a Growth Plan</h3>
+    <h3 style="margin:0 0 1rem;"><?= pt('Generate a Growth Plan') ?></h3>
     <form method="POST" action="?id=<?= $listingId ?>">
       <?= csrfField() ?>
       <input type="hidden" name="action" value="generate_plan">
 
       <div class="form-row-3">
         <div>
-          <label>Plan Duration</label>
+          <label><?= pt('Plan Duration') ?></label>
           <select name="duration">
-            <option value="30">30 Days (Quick Sprint)</option>
-            <option value="60">60 Days (Short Term)</option>
-            <option value="90" selected>90 Days (Quarter — Recommended)</option>
+            <option value="30"><?= pt('30 Days (Quick Sprint)') ?></option>
+            <option value="60"><?= pt('60 Days (Short Term)') ?></option>
+            <option value="90" selected><?= pt('90 Days (Quarter — Recommended)') ?></option>
           </select>
         </div>
         <div>
-          <label>Primary Focus</label>
+          <label><?= pt('Primary Focus') ?></label>
           <select name="focus">
-            <option value="balanced">Balanced (All Areas)</option>
-            <option value="reviews">Reputation &amp; Reviews</option>
-            <option value="leads">Lead Generation</option>
-            <option value="content">Content &amp; Visibility</option>
-            <option value="campaigns">Campaign Activation</option>
-            <option value="tasks">Operations &amp; Optimisation</option>
+            <option value="balanced"><?= pt('Balanced (All Areas)') ?></option>
+            <option value="reviews"><?= pt('Reputation &amp; Reviews') ?></option>
+            <option value="leads"><?= pt('Lead Generation') ?></option>
+            <option value="content"><?= pt('Content &amp; Visibility') ?></option>
+            <option value="campaigns"><?= pt('Campaign Activation') ?></option>
+            <option value="tasks"><?= pt('Operations &amp; Optimisation') ?></option>
           </select>
         </div>
         <div style="display:flex; align-items:flex-end;">
           <button type="submit" style="width:100%; background:var(--primary); color:#fff; border:none; border-radius:6px; padding:.65rem 1rem; cursor:pointer; font-weight:600; font-size:.95rem;">
-            ✦ Generate Plan Draft
+            <?= pt('✦ Generate Plan Draft') ?>
           </button>
         </div>
       </div>
 
       <div style="margin-top:.5rem;">
-        <label>Additional Notes <span style="font-weight:400; color:var(--muted);">(optional — anything specific to focus on this period)</span></label>
+        <label><?= pt('Additional Notes') ?> <span style="font-weight:400; color:var(--muted);"><?= pt('(optional — anything specific to focus on this period)') ?></span></label>
         <textarea name="notes" rows="2" maxlength="500"
           placeholder="e.g. Focus on WhatsApp outreach, business is launching a new service in month 2..."></textarea>
       </div>
 
       <p style="font-size:.75rem; color:var(--muted); margin:.7rem 0 0;">
-        The plan is saved as a <strong>Draft</strong> and does not activate automatically. All tasks are created as 'To Do' — review, edit and activate in the Growth Plan tab.
-        Content within the plan uses only verified business information — no prices, offers, or statistics are fabricated.
+        <?= pt('The plan is saved as a Draft and does not activate automatically. All tasks are created as \'To Do\' — review, edit and activate in the Growth Plan tab. Content within the plan uses only verified business information — no prices, offers, or statistics are fabricated.') ?>
       </p>
     </form>
   </div>
 
   <!-- WHAT GETS GENERATED panel -->
   <div style="background:var(--card-bg,#fff); border:1px solid var(--border); border-radius:10px; padding:1.2rem 1.4rem; margin-bottom:1.5rem;">
-    <h4 style="margin:0 0 .7rem; font-size:.95rem;">What the assistant generates</h4>
+    <h4 style="margin:0 0 .7rem; font-size:.95rem;"><?= pt('What the assistant generates') ?></h4>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; font-size:.85rem;">
       <div>
-        <strong style="display:block; margin-bottom:.4rem;">📋 Growth Plan</strong>
+        <strong style="display:block; margin-bottom:.4rem;"><?= pt('📋 Growth Plan') ?></strong>
         <ul style="padding-left:1.1rem; color:var(--muted); line-height:1.7; margin:0;">
-          <li>Plan title and period (30 / 60 / 90 days)</li>
-          <li>Measurable objectives (reviews, leads, content, campaigns)</li>
-          <li>Baseline from current business state</li>
+          <li><?= pt('Plan title and period (30 / 60 / 90 days)') ?></li>
+          <li><?= pt('Measurable objectives (reviews, leads, content, campaigns)') ?></li>
+          <li><?= pt('Baseline from current business state') ?></li>
         </ul>
       </div>
       <div>
-        <strong style="display:block; margin-bottom:.4rem;">✅ Growth Tasks</strong>
+        <strong style="display:block; margin-bottom:.4rem;"><?= pt('✅ Growth Tasks') ?></strong>
         <ul style="padding-left:1.1rem; color:var(--muted); line-height:1.7; margin:0;">
-          <li>8–14 structured tasks linked to the plan</li>
-          <li>Prioritised and spread across the period</li>
-          <li>Covers reviews, content, leads, campaigns</li>
-          <li>Mid-plan review task included</li>
+          <li><?= pt('8–14 structured tasks linked to the plan') ?></li>
+          <li><?= pt('Prioritised and spread across the period') ?></li>
+          <li><?= pt('Covers reviews, content, leads, campaigns') ?></li>
+          <li><?= pt('Mid-plan review task included') ?></li>
         </ul>
       </div>
     </div>
@@ -539,7 +538,7 @@ require_once __DIR__ . '/../includes/header.php';
   <!-- EXISTING PLANS -->
   <?php if (!empty($existingPlans)): ?>
   <div style="background:var(--card-bg,#fff); border:1px solid var(--border); border-radius:10px; padding:1.2rem 1.4rem;">
-    <h4 style="margin:0 0 .8rem;">Previous Plans</h4>
+    <h4 style="margin:0 0 .8rem;"><?= pt('Previous Plans') ?></h4>
     <?php foreach ($existingPlans as $ep):
       $statusColour = match($ep['status']) {
         'active'    => '#059669',
@@ -561,7 +560,7 @@ require_once __DIR__ . '/../includes/header.php';
       <div style="display:flex; align-items:center; gap:.8rem;">
         <span style="font-weight:600; font-size:.8rem; color:<?= $statusColour ?>;"><?= ucfirst($ep['status']) ?></span>
         <a href="<?= SITE_URL ?>/partner/business?id=<?= $listingId ?>&tab=growth_plan"
-           style="font-size:.8rem; color:var(--primary); text-decoration:none; font-weight:500;">View →</a>
+           style="font-size:.8rem; color:var(--primary); text-decoration:none; font-weight:500;"><?= pt('View →') ?></a>
       </div>
     </div>
     <?php endforeach; ?>

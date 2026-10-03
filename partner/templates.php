@@ -4,6 +4,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $partnerProfile = requireGrowthPartner();
 $partnerId      = (int)$partnerProfile['id'];
@@ -208,7 +209,7 @@ function starterTemplates(): array {
     ];
 }
 
-$pageTitle = 'Communication Templates';
+$pageTitle = pt('Communication Templates');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -261,15 +262,15 @@ require_once __DIR__ . '/../includes/header.php';
   <!-- Header -->
   <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
     <div>
-      <h1 style="margin:0 0 .2rem; font-size:1.4rem;">📨 Communication Templates</h1>
+      <h1 style="margin:0 0 .2rem; font-size:1.4rem;">📨 <?= pt('Communication Templates') ?></h1>
       <p style="margin:0; font-size:.85rem; color:var(--muted);">
-        Reusable message templates for email, WhatsApp and SMS.
-        Use <code style="background:var(--bg); border:1px solid var(--border); border-radius:3px; padding:.1rem .3rem;">{name}</code>,
+        <?= pt('Reusable message templates for email, WhatsApp and SMS.') ?>
+        <?= pt('Use') ?> <code style="background:var(--bg); border:1px solid var(--border); border-radius:3px; padding:.1rem .3rem;">{name}</code>,
         <code style="background:var(--bg); border:1px solid var(--border); border-radius:3px; padding:.1rem .3rem;">{business}</code>
         and other placeholders to personalise messages.
       </p>
     </div>
-    <a href="?new=1" style="background:var(--primary); color:#fff; text-decoration:none; border-radius:7px; padding:.55rem 1.2rem; font-weight:600; font-size:.9rem; white-space:nowrap;">+ New Template</a>
+    <a href="?new=1" style="background:var(--primary); color:#fff; text-decoration:none; border-radius:7px; padding:.55rem 1.2rem; font-weight:600; font-size:.9rem; white-space:nowrap;"><?= pt('+ New Template') ?></a>
   </div>
 
   <?php if ($successMsg): ?>
@@ -281,9 +282,9 @@ require_once __DIR__ . '/../includes/header.php';
   <!-- Stat strip -->
   <div style="display:flex; gap:.8rem; flex-wrap:wrap; margin-bottom:1.4rem;">
     <?php foreach ([
-      ['Total',    $totalCount,         '#3b82f6'],
-      ['Active',   $counts['active'],   '#059669'],
-      ['Inactive', $counts['inactive'], '#9ca3af'],
+      [pt('Total'),    $totalCount,         '#3b82f6'],
+      [pt('Active'),   $counts['active'],   '#059669'],
+      [pt('Inactive'), $counts['inactive'], '#9ca3af'],
     ] as [$label, $val, $col]): ?>
     <div style="background:var(--card-bg,#fff); border:1px solid var(--border); border-radius:8px; padding:.6rem 1.1rem; min-width:90px; text-align:center;">
       <div style="font-size:1.3rem; font-weight:700; color:<?= $col ?>;"><?= $val ?></div>
@@ -295,7 +296,7 @@ require_once __DIR__ . '/../includes/header.php';
   <!-- CREATE / EDIT FORM -->
   <?php if (isset($_GET['new']) || $editTemplate): ?>
   <div class="tpl-form" style="margin-bottom:1.5rem;">
-    <h3 style="margin:0 0 1rem;"><?= $editTemplate ? 'Edit Template' : 'New Template' ?></h3>
+    <h3 style="margin:0 0 1rem;"><?= $editTemplate ? pt('Edit Template') : pt('New Template') ?></h3>
     <form method="POST" action="<?= SITE_URL ?>/partner/templates">
       <?= csrfField() ?>
       <input type="hidden" name="action" value="save_template">
@@ -305,13 +306,13 @@ require_once __DIR__ . '/../includes/header.php';
 
       <div class="form-row">
         <div>
-          <label>Template Name *</label>
+          <label><?= pt('Template Name *') ?></label>
           <input type="text" name="name" required maxlength="200"
             value="<?= e($editTemplate['name'] ?? '') ?>"
             placeholder="e.g. New Lead Welcome Message">
         </div>
         <div>
-          <label>Channel *</label>
+          <label><?= pt('Channel *') ?></label>
           <select name="channel">
             <?php foreach (['email' => '📧 Email', 'whatsapp' => '💬 WhatsApp', 'sms' => '📱 SMS', 'internal' => '📋 Internal Note'] as $v => $l): ?>
             <option value="<?= $v ?>" <?= ($editTemplate['channel'] ?? 'email') === $v ? 'selected' : '' ?>><?= $l ?></option>
@@ -322,7 +323,7 @@ require_once __DIR__ . '/../includes/header.php';
 
       <div class="form-row">
         <div>
-          <label>Template Type</label>
+          <label><?= pt('Template Type') ?></label>
           <select name="template_type">
             <?php foreach ([
               'welcome'              => 'Welcome',
@@ -341,7 +342,7 @@ require_once __DIR__ . '/../includes/header.php';
           </select>
         </div>
         <div id="subjectWrap">
-          <label>Subject Line <span style="font-weight:400; color:var(--muted);">(email only)</span></label>
+          <label><?= pt('Subject Line') ?> <span style="font-weight:400; color:var(--muted);"><?= pt('(email only)') ?></span></label>
           <input type="text" name="subject" maxlength="300"
             value="<?= e($editTemplate['subject'] ?? '') ?>"
             placeholder="e.g. Thanks for your enquiry — {business}">
@@ -349,7 +350,7 @@ require_once __DIR__ . '/../includes/header.php';
       </div>
 
       <div style="margin-bottom:.9rem;">
-        <label>Message Body *
+        <label><?= pt('Message Body *') ?>
           <span style="font-weight:400; color:var(--muted);">— use <code>{name}</code>, <code>{business}</code>, <code>{date}</code>, <code>{service}</code> as placeholders</span>
         </label>
         <textarea name="body" rows="8" required
@@ -358,9 +359,9 @@ require_once __DIR__ . '/../includes/header.php';
 
       <div style="display:flex; gap:.7rem; flex-wrap:wrap;">
         <button type="submit" style="background:var(--primary); color:#fff; border:none; border-radius:6px; padding:.55rem 1.4rem; cursor:pointer; font-weight:600;">
-          <?= $editTemplate ? '💾 Save Changes' : '+ Create Template' ?>
+          <?= $editTemplate ? pt('💾 Save Changes') : pt('+ Create Template') ?>
         </button>
-        <a href="<?= SITE_URL ?>/partner/templates" style="display:inline-block; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:.55rem 1.1rem; font-size:.88rem; color:var(--muted); text-decoration:none;">Cancel</a>
+        <a href="<?= SITE_URL ?>/partner/templates" style="display:inline-block; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:.55rem 1.1rem; font-size:.88rem; color:var(--muted); text-decoration:none;"><?= pt('Cancel') ?></a>
       </div>
     </form>
   </div>
@@ -369,8 +370,8 @@ require_once __DIR__ . '/../includes/header.php';
   <!-- STARTER TEMPLATES (only if zero templates exist and not creating) -->
   <?php if ($totalCount === 0 && !isset($_GET['new']) && !$editTemplate): ?>
   <div style="background:var(--card-bg,#fff); border:1px solid var(--border); border-radius:10px; padding:1.4rem; margin-bottom:1.5rem;">
-    <h3 style="margin:0 0 .5rem;">🚀 Get started with starter templates</h3>
-    <p style="font-size:.85rem; color:var(--muted); margin:0 0 1rem;">You don't have any templates yet. Click below to add any of these ready-made templates to your library.</p>
+    <h3 style="margin:0 0 .5rem;"><?= pt('🚀 Get started with starter templates') ?></h3>
+    <p style="font-size:.85rem; color:var(--muted); margin:0 0 1rem;"><?= pt('You don\'t have any templates yet. Click below to add any of these ready-made templates to your library.') ?></p>
     <div class="tpl-grid">
       <?php foreach (starterTemplates() as $idx => $st): ?>
       <div class="tpl-card" style="border-top:3px solid var(--primary);">
@@ -389,7 +390,7 @@ require_once __DIR__ . '/../includes/header.php';
           <input type="hidden" name="subject" value="<?= e($st['subject']) ?>">
           <input type="hidden" name="body" value="<?= e($st['body']) ?>">
           <button type="submit" style="background:var(--primary); color:#fff; border:none; border-radius:6px; padding:.4rem 1rem; cursor:pointer; font-size:.83rem; font-weight:600; width:100%;">
-            + Add This Template
+            <?= pt('+ Add This Template') ?>
           </button>
         </form>
       </div>
@@ -400,15 +401,15 @@ require_once __DIR__ . '/../includes/header.php';
 
   <!-- FILTER BAR -->
   <form method="GET" class="filter-bar">
-    <span style="font-size:.83rem; color:var(--muted); font-weight:500;">Filter:</span>
+    <span style="font-size:.83rem; color:var(--muted); font-weight:500;"><?= pt('Filter:') ?></span>
     <select name="channel" onchange="this.form.submit()">
-      <option value="">All Channels</option>
+      <option value=""><?= pt('All Channels') ?></option>
       <?php foreach (['email' => 'Email', 'whatsapp' => 'WhatsApp', 'sms' => 'SMS', 'internal' => 'Internal'] as $v => $l): ?>
       <option value="<?= $v ?>" <?= $filterChannel === $v ? 'selected' : '' ?>><?= $l ?></option>
       <?php endforeach; ?>
     </select>
     <select name="type" onchange="this.form.submit()">
-      <option value="">All Types</option>
+      <option value=""><?= pt('All Types') ?></option>
       <?php foreach ([
         'welcome','lead_followup','appointment_reminder','review_request','promotion',
         're_engagement','thank_you','event_reminder','customer_followup','custom'
@@ -417,12 +418,12 @@ require_once __DIR__ . '/../includes/header.php';
       <?php endforeach; ?>
     </select>
     <select name="status" onchange="this.form.submit()">
-      <option value="active" <?= $filterStatus==='active' ? 'selected' : '' ?>>Active</option>
-      <option value="inactive" <?= $filterStatus==='inactive' ? 'selected' : '' ?>>Inactive</option>
-      <option value="all" <?= $filterStatus==='all' ? 'selected' : '' ?>>All</option>
+      <option value="active" <?= $filterStatus==='active' ? 'selected' : '' ?>><?= pt('Active') ?></option>
+      <option value="inactive" <?= $filterStatus==='inactive' ? 'selected' : '' ?>><?= pt('Inactive') ?></option>
+      <option value="all" <?= $filterStatus==='all' ? 'selected' : '' ?>><?= pt('All') ?></option>
     </select>
     <?php if ($filterChannel || $filterType || $filterStatus !== 'active'): ?>
-    <a href="<?= SITE_URL ?>/partner/templates" style="font-size:.8rem; color:var(--muted);">Clear</a>
+    <a href="<?= SITE_URL ?>/partner/templates" style="font-size:.8rem; color:var(--muted);"><?= pt('Clear') ?></a>
     <?php endif; ?>
   </form>
 
@@ -430,8 +431,8 @@ require_once __DIR__ . '/../includes/header.php';
   <?php if (empty($templates)): ?>
   <div style="background:var(--card-bg,#fff); border:1px solid var(--border); border-radius:10px; padding:2.5rem; text-align:center; color:var(--muted);">
     <div style="font-size:2rem; margin-bottom:.6rem;">📨</div>
-    <p style="margin:0 0 .8rem;">No templates found<?= $filterChannel || $filterType ? ' matching your filter' : '' ?>.</p>
-    <a href="?new=1" style="color:var(--primary); font-weight:600; text-decoration:none;">+ Create your first template</a>
+    <p style="margin:0 0 .8rem;"><?= pt('No templates found') ?><?= $filterChannel || $filterType ? ' ' . pt('matching your filter') : '' ?>.</p>
+    <a href="?new=1" style="color:var(--primary); font-weight:600; text-decoration:none;"><?= pt('+ Create your first template') ?></a>
   </div>
   <?php else: ?>
   <div class="tpl-grid">
@@ -444,7 +445,7 @@ require_once __DIR__ . '/../includes/header.php';
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:.5rem;">
         <div style="font-weight:600; font-size:.95rem; flex:1;"><?= e($t['name']) ?></div>
         <?php if ($t['status'] === 'inactive'): ?>
-        <span style="font-size:.72rem; background:#f3f4f6; color:#6b7280; border-radius:20px; padding:.15rem .6rem; white-space:nowrap;">Inactive</span>
+        <span style="font-size:.72rem; background:#f3f4f6; color:#6b7280; border-radius:20px; padding:.15rem .6rem; white-space:nowrap;"><?= pt('Inactive') ?></span>
         <?php endif; ?>
       </div>
 
@@ -453,7 +454,7 @@ require_once __DIR__ . '/../includes/header.php';
         <?= channelBadge($t['channel']) ?>
         <?= typeBadge($t['template_type']) ?>
         <?php if ($t['use_count'] > 0): ?>
-        <span style="font-size:.73rem; color:var(--muted);">Used <?= (int)$t['use_count'] ?>×</span>
+        <span style="font-size:.73rem; color:var(--muted);"><?= pt('Used') ?> <?= (int)$t['use_count'] ?>×</span>
         <?php endif; ?>
       </div>
 
@@ -476,10 +477,10 @@ require_once __DIR__ . '/../includes/header.php';
 
       <!-- Action row -->
       <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.4rem; padding-top:.6rem; border-top:1px solid var(--border);">
-        <a href="?edit=<?= $t['id'] ?>" style="font-size:.8rem; color:var(--primary); font-weight:600; text-decoration:none;">✏️ Edit</a>
+        <a href="?edit=<?= $t['id'] ?>" style="font-size:.8rem; color:var(--primary); font-weight:600; text-decoration:none;"><?= pt('✏️ Edit') ?></a>
 
         <!-- Copy body to clipboard -->
-        <button onclick="copyTemplate(<?= $t['id'] ?>)" style="background:none; border:none; font-size:.8rem; color:var(--muted); cursor:pointer; padding:0; font-family:inherit;">📋 Copy</button>
+        <button onclick="copyTemplate(<?= $t['id'] ?>)" style="background:none; border:none; font-size:.8rem; color:var(--muted); cursor:pointer; padding:0; font-family:inherit;"><?= pt('📋 Copy') ?></button>
         <textarea id="tpl-body-<?= $t['id'] ?>" style="position:absolute;left:-9999px;"><?= e($t['body']) ?></textarea>
 
         <!-- Toggle status -->
@@ -488,17 +489,17 @@ require_once __DIR__ . '/../includes/header.php';
           <input type="hidden" name="action" value="toggle_status">
           <input type="hidden" name="template_id" value="<?= $t['id'] ?>">
           <button type="submit" style="background:none; border:none; font-size:.8rem; color:var(--muted); cursor:pointer; padding:0; font-family:inherit;">
-            <?= $t['status'] === 'active' ? '⏸ Disable' : '▶ Enable' ?>
+            <?= $t['status'] === 'active' ? pt('⏸ Disable') : pt('▶ Enable') ?>
           </button>
         </form>
 
         <!-- Delete -->
         <form method="POST" action="<?= SITE_URL ?>/partner/templates" style="display:inline;"
-              onsubmit="return confirm('Delete this template? This cannot be undone.');">
+              onsubmit="return confirm('<?= pt('Delete this template? This cannot be undone.') ?>');">
           <?= csrfField() ?>
           <input type="hidden" name="action" value="delete_template">
           <input type="hidden" name="template_id" value="<?= $t['id'] ?>">
-          <button type="submit" style="background:none; border:none; font-size:.8rem; color:#e63946; cursor:pointer; padding:0; font-family:inherit;">🗑 Delete</button>
+          <button type="submit" style="background:none; border:none; font-size:.8rem; color:#e63946; cursor:pointer; padding:0; font-family:inherit;"><?= pt('🗑 Delete') ?></button>
         </form>
       </div>
     </div>
@@ -508,18 +509,18 @@ require_once __DIR__ . '/../includes/header.php';
 
   <!-- Variable reference -->
   <div style="background:var(--card-bg,#fff); border:1px solid var(--border); border-radius:10px; padding:1.1rem 1.3rem; margin-top:1.5rem;">
-    <h4 style="margin:0 0 .7rem; font-size:.9rem;">📌 Available Placeholders</h4>
+    <h4 style="margin:0 0 .7rem; font-size:.9rem;"><?= pt('📌 Available Placeholders') ?></h4>
     <div style="display:flex; flex-wrap:wrap; gap:.4rem; font-size:.8rem;">
       <?php foreach ([
-        '{name}'     => 'Customer / contact name',
-        '{business}' => 'Business name',
-        '{date}'     => 'Today\'s date',
-        '{service}'  => 'Service name',
-        '{phone}'    => 'Business phone',
-        '{email}'    => 'Business email',
-        '{website}'  => 'Business website',
-        '{city}'     => 'Business city',
-        '{partner}'  => 'Your (partner) name',
+        '{name}'     => pt('Customer / contact name'),
+        '{business}' => pt('Business name'),
+        '{date}'     => pt('Today\'s date'),
+        '{service}'  => pt('Service name'),
+        '{phone}'    => pt('Business phone'),
+        '{email}'    => pt('Business email'),
+        '{website}'  => pt('Business website'),
+        '{city}'     => pt('Business city'),
+        '{partner}'  => pt('Your (partner) name'),
       ] as $ph => $desc): ?>
       <div style="background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:.35rem .7rem;">
         <code style="color:#1d4ed8;"><?= $ph ?></code>
@@ -539,7 +540,7 @@ function copyTemplate(id) {
   // Brief visual feedback
   const btn = event.target;
   const orig = btn.textContent;
-  btn.textContent = '✅ Copied!';
+  btn.textContent = '<?= pt('✅ Copied!') ?>';
   setTimeout(() => btn.textContent = orig, 1800);
 }
 

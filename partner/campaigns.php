@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $partner = requireGrowthPartner();
 $pid     = (int)$partner['id'];
@@ -249,7 +250,7 @@ $statusCounts = [];
 foreach ($sumSt->fetchAll() as $r) $statusCounts[$r['status']] = (int)$r['cnt'];
 $totalCampaigns = array_sum($statusCounts);
 
-$pageTitle = 'Campaign Management';
+$pageTitle = pt('Campaign Management');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/partner.css">
@@ -324,10 +325,10 @@ require_once __DIR__ . '/../includes/header.php';
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- CAMPAIGN AI CONTENT VIEW                                         -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<a href="<?= SITE_URL ?>/partner/campaigns" class="back-link">← Back to Campaigns</a>
+<a href="<?= SITE_URL ?>/partner/campaigns" class="back-link">← <?= pt('Back to Campaigns') ?></a>
 
 <div class="camp-header">
-    <h1>✦ AI Content: <?= e($campaignDetail['name']) ?></h1>
+    <h1>✦ <?= pt('AI Content') ?>: <?= e($campaignDetail['name']) ?></h1>
     <p><?= e($campaignDetail['biz_name']) ?> · <?= ucwords(str_replace('_',' ',$campaignDetail['campaign_type'])) ?> · <?= ucfirst($campaignDetail['status']) ?></p>
 </div>
 
@@ -338,7 +339,7 @@ if ($aiCampaignFlash):
     $genCid = (int)$genCid;
 ?>
 <div style="background:#f5f3ff;border:2px solid #7c3aed;border-radius:12px;padding:20px;margin-bottom:24px">
-    <h3 style="color:#5b21b6;margin:0 0 12px">✦ Generated — Review Before Using</h3>
+    <h3 style="color:#5b21b6;margin:0 0 12px">✦ <?= pt('Generated — Review Before Using') ?></h3>
     <form method="post">
         <?= csrfField() ?>
         <input type="hidden" name="action" value="campaign_ai_approve">
@@ -346,15 +347,15 @@ if ($aiCampaignFlash):
         <input type="hidden" name="campaign_id" value="<?= $genCid ?>">
         <textarea name="edited_text" rows="6" style="width:100%;border:1px solid #ddd6fe;border-radius:8px;padding:12px;font-size:.95rem;resize:vertical;box-sizing:border-box"><?= e($genText) ?></textarea>
         <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
-            <button type="submit" class="btn-xs primary" style="padding:8px 18px;font-size:.9rem">✓ Approve &amp; Save Draft</button>
+            <button type="submit" class="btn-xs primary" style="padding:8px 18px;font-size:.9rem">✓ <?= pt('Approve & Save Draft') ?></button>
             <form method="post" style="display:inline">
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="campaign_ai_reject">
                 <input type="hidden" name="content_id" value="<?= $genId ?>">
                 <input type="hidden" name="campaign_id" value="<?= $genCid ?>">
-                <button type="submit" class="btn-xs red">✗ Reject</button>
+                <button type="submit" class="btn-xs red">✗ <?= pt('Reject') ?></button>
             </form>
-            <a href="<?= SITE_URL ?>/partner/campaigns?view=ai&cid=<?= $campaignDetail['id'] ?>" style="font-size:.85rem;color:#6b7280;margin-left:4px">Discard</a>
+            <a href="<?= SITE_URL ?>/partner/campaigns?view=ai&cid=<?= $campaignDetail['id'] ?>" style="font-size:.85rem;color:#6b7280;margin-left:4px"><?= pt('Discard') ?></a>
         </div>
     </form>
     <p style="font-size:.8rem;color:#7c3aed;margin:10px 0 0">⚠ Review carefully — approved content saves as a Draft in your Content Calendar.</p>
@@ -368,14 +369,14 @@ if ($aiCampaignFlash):
 <div style="display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start">
 <!-- Generate Form -->
 <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px">
-    <h3 style="margin:0 0 16px;color:#1f2937">Generate Campaign Content</h3>
+    <h3 style="margin:0 0 16px;color:#1f2937"><?= pt('Generate Campaign Content') ?></h3>
     <form method="post">
         <?= csrfField() ?>
         <input type="hidden" name="action" value="campaign_ai_generate">
         <input type="hidden" name="campaign_id" value="<?= $campaignDetail['id'] ?>">
 
         <div style="margin-bottom:14px">
-            <label style="display:block;font-size:.87rem;font-weight:600;color:#374151;margin-bottom:5px">Content Type</label>
+            <label style="display:block;font-size:.87rem;font-weight:600;color:#374151;margin-bottom:5px"><?= pt('Content Type') ?></label>
             <select name="content_type" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:.9rem">
                 <optgroup label="Social Media">
                     <option value="social_post">Social Post (general)</option>
@@ -395,7 +396,7 @@ if ($aiCampaignFlash):
         </div>
 
         <div style="margin-bottom:14px">
-            <label style="display:block;font-size:.87rem;font-weight:600;color:#374151;margin-bottom:5px">Style</label>
+            <label style="display:block;font-size:.87rem;font-weight:600;color:#374151;margin-bottom:5px"><?= pt('Style') ?></label>
             <div style="display:flex;flex-wrap:wrap;gap:8px">
                 <?php foreach (['professional'=>'Professional','friendly'=>'Friendly','short'=>'Short & Punchy','promotional'=>'Promotional','whatsapp'=>'WhatsApp','tiktok'=>'TikTok'] as $sv=>$sl): ?>
                 <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.85rem">
@@ -407,7 +408,7 @@ if ($aiCampaignFlash):
         </div>
 
         <div style="margin-bottom:14px">
-            <label style="display:block;font-size:.87rem;font-weight:600;color:#374151;margin-bottom:5px">Platform (optional)</label>
+            <label style="display:block;font-size:.87rem;font-weight:600;color:#374151;margin-bottom:5px"><?= pt('Platform (optional)') ?></label>
             <input type="text" name="platform" placeholder="e.g. Instagram, Facebook, WhatsApp" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:.9rem;box-sizing:border-box">
         </div>
 
@@ -416,7 +417,7 @@ if ($aiCampaignFlash):
             <textarea name="notes" rows="3" placeholder="Any specific angle, tone, or context for this piece…" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:.9rem;resize:vertical;box-sizing:border-box"></textarea>
         </div>
 
-        <button type="submit" style="background:#7c3aed;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;width:100%">✦ Generate Content</button>
+        <button type="submit" style="background:#7c3aed;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;width:100%">✦ <?= pt('Generate Content') ?></button>
     </form>
 </div>
 
@@ -449,7 +450,7 @@ if ($aiCampaignFlash):
 
 <?php if ($aiHistory): ?>
 <div style="margin-top:28px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px">
-    <h3 style="margin:0 0 14px;color:#1f2937">Previous Generations for This Campaign</h3>
+    <h3 style="margin:0 0 14px;color:#1f2937"><?= pt('Previous Generations for This Campaign') ?></h3>
     <table style="width:100%;border-collapse:collapse;font-size:.85rem">
         <thead>
             <tr style="background:#f9fafb">
@@ -484,7 +485,7 @@ if ($aiCampaignFlash):
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- METRICS VIEW                                                     -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<a href="<?= SITE_URL ?>/partner/campaigns?lid=<?= $campaignDetail['listing_id'] ?>" class="back-link">← Back to Campaigns</a>
+<a href="<?= SITE_URL ?>/partner/campaigns?lid=<?= $campaignDetail['listing_id'] ?>" class="back-link">← <?= pt('Back to Campaigns') ?></a>
 
 <div class="camp-header">
     <h1>📊 <?= e($campaignDetail['name']) ?></h1>
@@ -493,75 +494,75 @@ if ($aiCampaignFlash):
 
 <!-- Log Metrics Form -->
 <div class="create-form" style="margin-bottom:24px">
-    <h3>Log Performance Metrics</h3>
+    <h3><?= pt('Log Performance Metrics') ?></h3>
     <form method="post">
         <?= csrfField() ?>
         <input type="hidden" name="action" value="log_metrics">
         <input type="hidden" name="campaign_id" value="<?= $campaignDetail['id'] ?>">
         <div class="f-grid">
             <div class="form-group">
-                <label>Date</label>
+                <label><?= pt('Date') ?></label>
                 <input type="date" name="metric_date" value="<?= date('Y-m-d') ?>" required>
             </div>
             <div class="form-group">
-                <label>Source</label>
+                <label><?= pt('Source') ?></label>
                 <select name="source">
-                    <option value="platform">Platform (verified)</option>
-                    <option value="partner_reported">Partner Reported</option>
+                    <option value="platform"><?= pt('Platform (verified)') ?></option>
+                    <option value="partner_reported"><?= pt('Partner Reported') ?></option>
                 </select>
             </div>
             <div class="form-group">
-                <label>Impressions</label>
+                <label><?= pt('Impressions') ?></label>
                 <input type="number" name="impressions" value="0" min="0">
             </div>
             <div class="form-group">
-                <label>Profile Visits</label>
+                <label><?= pt('Profile Visits') ?></label>
                 <input type="number" name="profile_visits" value="0" min="0">
             </div>
             <div class="form-group">
-                <label>Clicks</label>
+                <label><?= pt('Clicks') ?></label>
                 <input type="number" name="clicks" value="0" min="0">
             </div>
             <div class="form-group">
-                <label>Website Clicks</label>
+                <label><?= pt('Website Clicks') ?></label>
                 <input type="number" name="website_clicks" value="0" min="0">
             </div>
             <div class="form-group">
-                <label>WhatsApp Clicks</label>
+                <label><?= pt('WhatsApp Clicks') ?></label>
                 <input type="number" name="whatsapp_clicks" value="0" min="0">
             </div>
             <div class="form-group">
-                <label>Phone Calls</label>
+                <label><?= pt('Phone Calls') ?></label>
                 <input type="number" name="calls" value="0" min="0">
             </div>
             <div class="form-group">
-                <label>Leads</label>
+                <label><?= pt('Leads') ?></label>
                 <input type="number" name="leads" value="0" min="0">
             </div>
             <div class="form-group">
-                <label>Bookings</label>
+                <label><?= pt('Bookings') ?></label>
                 <input type="number" name="bookings" value="0" min="0">
             </div>
             <div class="form-group">
-                <label>Conversions</label>
+                <label><?= pt('Conversions') ?></label>
                 <input type="number" name="conversions" value="0" min="0">
             </div>
             <div class="form-group">
-                <label>Notes</label>
-                <input type="text" name="notes" placeholder="Optional notes">
+                <label><?= pt('Notes') ?></label>
+                <input type="text" name="notes" placeholder="<?= pt('Optional notes') ?>">
             </div>
         </div>
         <div style="margin-top:14px">
-            <button type="submit" class="btn-xs primary" style="padding:8px 20px;font-size:.9rem">Save Metrics</button>
+            <button type="submit" class="btn-xs primary" style="padding:8px 20px;font-size:.9rem"><?= pt('Save Metrics') ?></button>
         </div>
     </form>
 </div>
 
 <!-- Metrics History -->
 <div class="create-form">
-    <p class="section-title">Metrics History</p>
+    <p class="section-title"><?= pt('Metrics History') ?></p>
     <?php if (empty($metrics)): ?>
-    <div class="empty-state"><p>No metrics logged yet for this campaign.</p></div>
+    <div class="empty-state"><p><?= pt('No metrics logged yet for this campaign.') ?></p></div>
     <?php else: ?>
     <div style="overflow-x:auto">
     <table class="metrics-table">
@@ -604,8 +605,8 @@ if ($aiCampaignFlash):
 <!-- CAMPAIGN LIST VIEW                                               -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <div class="camp-header">
-    <h1>📣 Campaign Management</h1>
-    <p><?= $totalCampaigns ?> campaign<?= $totalCampaigns !== 1 ? 's' : '' ?> across your portfolio</p>
+    <h1>📣 <?= pt('Campaign Management') ?></h1>
+    <p><?= $totalCampaigns ?> <?= pt('campaign(s) across your portfolio') ?></p>
 </div>
 
 <!-- Summary strip -->
@@ -623,45 +624,45 @@ if ($aiCampaignFlash):
 <div class="filter-bar">
     <form method="get" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;width:100%">
         <select name="lid" onchange="this.form.submit()">
-            <option value="">All Businesses</option>
+            <option value=""><?= pt('All Businesses') ?></option>
             <?php foreach ($listings as $l): ?>
             <option value="<?= $l['id'] ?>" <?= $filterLid==$l['id']?'selected':'' ?>><?= e($l['name']) ?></option>
             <?php endforeach; ?>
         </select>
         <select name="status" onchange="this.form.submit()">
-            <option value="">All Statuses</option>
+            <option value=""><?= pt('All Statuses') ?></option>
             <?php foreach (['draft','scheduled','active','paused','completed','cancelled'] as $s): ?>
             <option value="<?= $s ?>" <?= $filterStatus===$s?'selected':'' ?>><?= ucfirst($s) ?></option>
             <?php endforeach; ?>
         </select>
         <select name="type" onchange="this.form.submit()">
-            <option value="">All Types</option>
+            <option value=""><?= pt('All Types') ?></option>
             <?php foreach (['business_promotion','product_promotion','service_promotion','special_offer','event','review_campaign','social_media_campaign','seasonal_campaign'] as $t): ?>
             <option value="<?= $t ?>" <?= $filterType===$t?'selected':'' ?>><?= ucwords(str_replace('_',' ',$t)) ?></option>
             <?php endforeach; ?>
         </select>
-        <a href="<?= SITE_URL ?>/partner/campaigns" class="btn-xs">Clear</a>
+        <a href="<?= SITE_URL ?>/partner/campaigns" class="btn-xs"><?= pt('Clear') ?></a>
     </form>
 </div>
 
 <!-- Create campaign form -->
 <div class="create-form">
-    <h3>➕ Create Campaign</h3>
+    <h3>➕ <?= pt('Create Campaign') ?></h3>
     <form method="post">
         <?= csrfField() ?>
         <input type="hidden" name="action" value="create_campaign">
         <div class="f-grid">
             <div class="form-group">
-                <label>Business <span style="color:red">*</span></label>
+                <label><?= pt('Business') ?> <span style="color:red">*</span></label>
                 <select name="listing_id" required>
-                    <option value="">Select business…</option>
+                    <option value=""><?= pt('Select business…') ?></option>
                     <?php foreach ($listings as $l): ?>
                     <option value="<?= $l['id'] ?>" <?= $filterLid==$l['id']?'selected':'' ?>><?= e($l['name']) ?> — <?= e($l['city']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="form-group">
-                <label>Campaign Type <span style="color:red">*</span></label>
+                <label><?= pt('Campaign Type') ?> <span style="color:red">*</span></label>
                 <select name="campaign_type">
                     <?php foreach (['business_promotion'=>'Business Promotion','product_promotion'=>'Product Promotion','service_promotion'=>'Service Promotion','special_offer'=>'Special Offer','event'=>'Event','review_campaign'=>'Review Campaign','social_media_campaign'=>'Social Media Campaign','seasonal_campaign'=>'Seasonal Campaign'] as $v => $lbl): ?>
                     <option value="<?= $v ?>"><?= $lbl ?></option>
@@ -669,44 +670,44 @@ if ($aiCampaignFlash):
                 </select>
             </div>
             <div class="form-group f-full">
-                <label>Campaign Name <span style="color:red">*</span></label>
-                <input type="text" name="name" placeholder="e.g. Ramadan Special Offer" required maxlength="200">
+                <label><?= pt('Campaign Name') ?> <span style="color:red">*</span></label>
+                <input type="text" name="name" placeholder="<?= pt('e.g. Ramadan Special Offer') ?>" required maxlength="200">
             </div>
             <div class="form-group">
-                <label>Objective</label>
-                <input type="text" name="objective" placeholder="e.g. Increase foot traffic by 20%" maxlength="200">
+                <label><?= pt('Objective') ?></label>
+                <input type="text" name="objective" placeholder="<?= pt('e.g. Increase foot traffic by 20%') ?>" maxlength="200">
             </div>
             <div class="form-group">
-                <label>Target Audience</label>
-                <input type="text" name="target_audience" placeholder="e.g. Women 25-45 in Yaounde" maxlength="300">
+                <label><?= pt('Target Audience') ?></label>
+                <input type="text" name="target_audience" placeholder="<?= pt('e.g. Women 25-45 in Yaounde') ?>" maxlength="300">
             </div>
             <div class="form-group f-full">
-                <label>Offer / Promotion</label>
-                <input type="text" name="offer" placeholder="e.g. 20% off all services this week" maxlength="500">
+                <label><?= pt('Offer / Promotion') ?></label>
+                <input type="text" name="offer" placeholder="<?= pt('e.g. 20% off all services this week') ?>" maxlength="500">
             </div>
             <div class="form-group">
-                <label>Call to Action</label>
-                <input type="text" name="call_to_action" placeholder="e.g. Book now on WhatsApp" maxlength="200">
+                <label><?= pt('Call to Action') ?></label>
+                <input type="text" name="call_to_action" placeholder="<?= pt('e.g. Book now on WhatsApp') ?>" maxlength="200">
             </div>
             <div class="form-group">
-                <label>Budget (XAF)</label>
-                <input type="number" name="budget" min="0" step="100" placeholder="Optional">
+                <label><?= pt('Budget (XAF)') ?></label>
+                <input type="number" name="budget" min="0" step="100" placeholder="<?= pt('Optional') ?>">
             </div>
             <div class="form-group">
-                <label>Start Date</label>
+                <label><?= pt('Start Date') ?></label>
                 <input type="date" name="start_date">
             </div>
             <div class="form-group">
-                <label>End Date</label>
+                <label><?= pt('End Date') ?></label>
                 <input type="date" name="end_date">
             </div>
             <div class="form-group f-full">
-                <label>Description</label>
-                <textarea name="description" placeholder="Campaign details, notes…"></textarea>
+                <label><?= pt('Description') ?></label>
+                <textarea name="description" placeholder="<?= pt('Campaign details, notes…') ?>"></textarea>
             </div>
         </div>
         <div style="margin-top:14px">
-            <button type="submit" class="btn-xs primary" style="padding:8px 20px;font-size:.9rem">Create Campaign</button>
+            <button type="submit" class="btn-xs primary" style="padding:8px 20px;font-size:.9rem"><?= pt('Create Campaign') ?></button>
         </div>
     </form>
 </div>
@@ -715,7 +716,7 @@ if ($aiCampaignFlash):
 <?php if (empty($campaigns)): ?>
 <div class="empty-state">
     <div class="icon">📣</div>
-    <p>No campaigns found. Create your first campaign above.</p>
+    <p><?= pt('No campaigns found. Create your first campaign above.') ?></p>
 </div>
 <?php else: ?>
 <div class="camp-grid">
@@ -749,9 +750,9 @@ if ($aiCampaignFlash):
     <div style="font-size:.82rem;color:#6b7280;margin-top:4px">CTA: <?= e($c['call_to_action']) ?></div>
     <?php endif; ?>
     <div class="camp-actions">
-        <a href="<?= SITE_URL ?>/partner/business?lid=<?= $c['listing_id'] ?>&tab=campaigns" class="btn-xs">Edit</a>
-        <a href="<?= SITE_URL ?>/partner/campaigns?view=metrics&cid=<?= $c['id'] ?>" class="btn-xs primary">📊 Metrics</a>
-        <a href="<?= SITE_URL ?>/partner/campaigns?view=ai&cid=<?= $c['id'] ?>" class="btn-xs" style="border-color:#7c3aed;color:#7c3aed">✦ AI Content</a>
+        <a href="<?= SITE_URL ?>/partner/business?lid=<?= $c['listing_id'] ?>&tab=campaigns" class="btn-xs"><?= pt('Edit') ?></a>
+        <a href="<?= SITE_URL ?>/partner/campaigns?view=metrics&cid=<?= $c['id'] ?>" class="btn-xs primary">📊 <?= pt('Metrics') ?></a>
+        <a href="<?= SITE_URL ?>/partner/campaigns?view=ai&cid=<?= $c['id'] ?>" class="btn-xs" style="border-color:#7c3aed;color:#7c3aed">✦ <?= pt('AI Content') ?></a>
         <!-- Status actions -->
         <?php if ($c['status'] === 'draft' || $c['status'] === 'paused'): ?>
         <form method="post">
@@ -759,7 +760,7 @@ if ($aiCampaignFlash):
             <input type="hidden" name="action" value="update_status">
             <input type="hidden" name="campaign_id" value="<?= $c['id'] ?>">
             <input type="hidden" name="status" value="active">
-            <button type="submit" class="btn-xs green">▶ Activate</button>
+            <button type="submit" class="btn-xs green">▶ <?= pt('Activate') ?></button>
         </form>
         <?php elseif ($c['status'] === 'active'): ?>
         <form method="post">
@@ -767,16 +768,16 @@ if ($aiCampaignFlash):
             <input type="hidden" name="action" value="update_status">
             <input type="hidden" name="campaign_id" value="<?= $c['id'] ?>">
             <input type="hidden" name="status" value="paused">
-            <button type="submit" class="btn-xs" style="border-color:#ca8a04;color:#854d0e">⏸ Pause</button>
+            <button type="submit" class="btn-xs" style="border-color:#ca8a04;color:#854d0e">⏸ <?= pt('Pause') ?></button>
         </form>
         <?php endif; ?>
         <?php if (!in_array($c['status'],['completed','cancelled'])): ?>
-        <form method="post" onsubmit="return confirm('Mark as completed?')">
+        <form method="post" onsubmit="return confirm('<?= pt('Mark as completed?') ?>')"  >
             <?= csrfField() ?>
             <input type="hidden" name="action" value="update_status">
             <input type="hidden" name="campaign_id" value="<?= $c['id'] ?>">
             <input type="hidden" name="status" value="completed">
-            <button type="submit" class="btn-xs">✓ Complete</button>
+            <button type="submit" class="btn-xs">✓ <?= pt('Complete') ?></button>
         </form>
         <?php endif; ?>
     </div>

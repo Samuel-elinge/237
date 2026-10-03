@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $partner = requireGrowthPartner();
 $pid     = (int)$partner['id'];
@@ -92,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $rid = (int)$pdo->lastInsertId();
         logBusinessActivity($lid,$pid,$userId,'report_generated',"Growth report '$title' generated",'report',$rid);
         partnerAuditLog($pid,$userId,'report_generated',"Report $rid: $title",[]);
-        setFlash('success','Report generated successfully.');
+        setFlash('success', pt('Report generated successfully.'));
         redirect(SITE_URL.'/partner/reports?view=report&rid='.$rid);
     }
 
@@ -103,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $report = $r->fetch();
         if (!$report) die('Forbidden');
         $pdo->prepare("UPDATE growth_reports SET status='shared', shared_at=NOW() WHERE id=?")->execute([$rid]);
-        setFlash('success','Report marked as shared with business owner.');
+        setFlash('success', pt('Report marked as shared with business owner.'));
         redirect(SITE_URL.'/partner/reports?view=report&rid='.$rid);
     }
 }
@@ -145,7 +146,7 @@ if ($view === 'report' && $viewRid) {
     }
 }
 
-$pageTitle = 'Growth Reports';
+$pageTitle = pt('Growth Reports');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/partner.css">
@@ -215,20 +216,20 @@ require_once __DIR__ . '/../includes/header.php';
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- SINGLE REPORT VIEW                                              -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<a href="<?= SITE_URL ?>/partner/reports" class="back-link">← Back to Reports</a>
+<a href="<?= SITE_URL ?>/partner/reports" class="back-link">← <?= pt('Back to Reports') ?></a>
 
 <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap">
     <div class="report-actions">
-        <button onclick="window.print()" class="btn-xs">🖨 Print / PDF</button>
+        <button onclick="window.print()" class="btn-xs">🖨 <?= pt('Print / PDF') ?></button>
         <?php if ($reportDetail['status'] !== 'shared'): ?>
         <form method="post" style="display:inline">
             <?= csrfField() ?>
             <input type="hidden" name="action" value="share_report">
             <input type="hidden" name="report_id" value="<?= $reportDetail['id'] ?>">
-            <button type="submit" class="btn-xs green">✓ Mark Shared</button>
+            <button type="submit" class="btn-xs green">✓ <?= pt('Mark Shared') ?></button>
         </form>
         <?php else: ?>
-        <span class="status-badge st-shared">✓ Shared with Owner</span>
+        <span class="status-badge st-shared">✓ <?= pt('Shared with Owner') ?></span>
         <?php endif; ?>
     </div>
 </div>
@@ -245,59 +246,59 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 
     <!-- Key metrics -->
-    <h3 class="section-h">📈 Performance Overview</h3>
+    <h3 class="section-h">📈 <?= pt('Performance Overview') ?></h3>
     <div class="metric-grid">
         <div class="metric-box">
             <div class="val"><?= $snap['reviews_in_period'] ?? 0 ?></div>
-            <div class="lbl">New Reviews</div>
+            <div class="lbl"><?= pt('New Reviews') ?></div>
         </div>
         <div class="metric-box">
             <div class="val"><?= round($snap['reviews']['avg_rating'] ?? 0, 1) ?></div>
-            <div class="lbl">Avg Rating</div>
+            <div class="lbl"><?= pt('Avg Rating') ?></div>
         </div>
         <div class="metric-box">
             <div class="val"><?= $snap['leads_in_period'] ?? 0 ?></div>
-            <div class="lbl">New Leads</div>
+            <div class="lbl"><?= pt('New Leads') ?></div>
         </div>
         <div class="metric-box">
             <div class="val"><?= $snap['leads_converted_period'] ?? 0 ?></div>
-            <div class="lbl">Leads Converted</div>
+            <div class="lbl"><?= pt('Leads Converted') ?></div>
         </div>
         <div class="metric-box">
             <div class="val"><?= $snap['tasks_completed_period'] ?? 0 ?></div>
-            <div class="lbl">Tasks Done</div>
+            <div class="lbl"><?= pt('Tasks Done') ?></div>
         </div>
         <div class="metric-box">
             <div class="val"><?= $snap['profile_completion'] ?? 0 ?>%</div>
-            <div class="lbl">Profile Complete</div>
+            <div class="lbl"><?= pt('Profile Complete') ?></div>
         </div>
     </div>
     <?php if (!empty($snap['profile_completion'])): ?>
     <div style="margin-bottom:8px">
-        <div style="font-size:.8rem;color:#6b7280;margin-bottom:4px">Profile Completion</div>
+        <div style="font-size:.8rem;color:#6b7280;margin-bottom:4px"><?= pt('Profile Completion') ?></div>
         <div class="progress-bar"><div class="progress-fill" style="width:<?= $snap['profile_completion'] ?>%"></div></div>
     </div>
     <?php endif; ?>
 
     <!-- Campaign metrics -->
     <?php if (!empty($snap['campaign_metrics']) && ($snap['campaign_metrics']['impr'] > 0)): $cm = $snap['campaign_metrics']; ?>
-    <h3 class="section-h">📣 Campaign Performance (Period)</h3>
+    <h3 class="section-h">📣 <?= pt('Campaign Performance (Period)') ?></h3>
     <div class="two-col">
         <div>
-            <div class="stat-row"><span class="label">Impressions</span><span class="value"><?= number_format($cm['impr']) ?></span></div>
-            <div class="stat-row"><span class="label">Profile Visits</span><span class="value"><?= number_format($cm['pv']) ?></span></div>
-            <div class="stat-row"><span class="label">Clicks</span><span class="value"><?= number_format($cm['cl']) ?></span></div>
+            <div class="stat-row"><span class="label"><?= pt('Impressions') ?></span><span class="value"><?= number_format($cm['impr']) ?></span></div>
+            <div class="stat-row"><span class="label"><?= pt('Profile Visits') ?></span><span class="value"><?= number_format($cm['pv']) ?></span></div>
+            <div class="stat-row"><span class="label"><?= pt('Clicks') ?></span><span class="value"><?= number_format($cm['cl']) ?></span></div>
         </div>
         <div>
-            <div class="stat-row"><span class="label">WhatsApp Clicks</span><span class="value"><?= number_format($cm['wa']) ?></span></div>
-            <div class="stat-row"><span class="label">Leads Generated</span><span class="value"><?= number_format($cm['leads']) ?></span></div>
-            <div class="stat-row"><span class="label">Conversions</span><span class="value"><?= number_format($cm['conv']) ?></span></div>
+            <div class="stat-row"><span class="label"><?= pt('WhatsApp Clicks') ?></span><span class="value"><?= number_format($cm['wa']) ?></span></div>
+            <div class="stat-row"><span class="label"><?= pt('Leads Generated') ?></span><span class="value"><?= number_format($cm['leads']) ?></span></div>
+            <div class="stat-row"><span class="label"><?= pt('Conversions') ?></span><span class="value"><?= number_format($cm['conv']) ?></span></div>
         </div>
     </div>
     <?php endif; ?>
 
     <!-- Leads breakdown -->
-    <h3 class="section-h">🎯 Lead Pipeline</h3>
+    <h3 class="section-h">🎯 <?= pt('Lead Pipeline') ?></h3>
     <?php if (!empty($snap['leads'])): ?>
     <div class="two-col">
         <div>
@@ -305,60 +306,60 @@ require_once __DIR__ . '/../includes/header.php';
               foreach ($snap['leads'] as $st => $cnt): ?>
         <div class="stat-row"><span class="label"><?= ucfirst($st) ?></span><span class="value"><?= $cnt ?></span></div>
         <?php endforeach; ?>
-        <div class="stat-row" style="border-top:2px solid #e5e7eb"><span class="label"><strong>Total</strong></span><span class="value"><strong><?= $totalLeads ?></strong></span></div>
+        <div class="stat-row" style="border-top:2px solid #e5e7eb"><span class="label"><strong><?= pt('Total') ?></strong></span><span class="value"><strong><?= $totalLeads ?></strong></span></div>
         </div>
         <div>
             <?php $conv = $snap['leads']['converted'] ?? 0;
                   $rate = $totalLeads > 0 ? round($conv/$totalLeads*100) : 0; ?>
             <div class="metric-box" style="background:#f0fdf4;border-color:#86efac">
                 <div class="val" style="color:#16a34a"><?= $rate ?>%</div>
-                <div class="lbl">Conversion Rate</div>
+                <div class="lbl"><?= pt('Conversion Rate') ?></div>
             </div>
         </div>
     </div>
     <?php else: ?>
-    <p class="no-data">No lead data for this period.</p>
+    <p class="no-data"><?= pt('No lead data for this period.') ?></p>
     <?php endif; ?>
 
     <!-- Reviews -->
-    <h3 class="section-h">⭐ Reviews & Reputation</h3>
+    <h3 class="section-h">⭐ <?= pt('Reviews & Reputation') ?></h3>
     <div class="two-col">
         <div>
-            <div class="stat-row"><span class="label">Total Reviews</span><span class="value"><?= $snap['reviews']['cnt'] ?? 0 ?></span></div>
-            <div class="stat-row"><span class="label">Avg Rating</span><span class="value"><?= round($snap['reviews']['avg_rating'] ?? 0, 1) ?> / 5</span></div>
-            <div class="stat-row"><span class="label">Reviews in Period</span><span class="value"><?= $snap['reviews_in_period'] ?? 0 ?></span></div>
+            <div class="stat-row"><span class="label"><?= pt('Total Reviews') ?></span><span class="value"><?= $snap['reviews']['cnt'] ?? 0 ?></span></div>
+            <div class="stat-row"><span class="label"><?= pt('Avg Rating') ?></span><span class="value"><?= round($snap['reviews']['avg_rating'] ?? 0, 1) ?> / 5</span></div>
+            <div class="stat-row"><span class="label"><?= pt('Reviews in Period') ?></span><span class="value"><?= $snap['reviews_in_period'] ?? 0 ?></span></div>
         </div>
         <div>
             <?php $avgR = $snap['reviews']['avg_rating'] ?? 0; ?>
             <div class="metric-box" style="background:#fffbeb;border-color:#fcd34d">
                 <div class="val" style="color:#b45309"><?= round($avgR,1) ?>⭐</div>
-                <div class="lbl">Avg Rating</div>
+                <div class="lbl"><?= pt('Avg Rating') ?></div>
             </div>
         </div>
     </div>
 
     <!-- Tasks -->
-    <h3 class="section-h">✅ Task Progress</h3>
+    <h3 class="section-h">✅ <?= pt('Task Progress') ?></h3>
     <?php if (!empty($snap['tasks'])): ?>
     <?php $totalT = array_sum($snap['tasks']);
           $doneT = $snap['tasks']['completed'] ?? 0;
           $doneRate = $totalT > 0 ? round($doneT/$totalT*100) : 0; ?>
-    <div class="stat-row"><span class="label">Completed</span><span class="value"><?= $doneT ?> / <?= $totalT ?></span></div>
+    <div class="stat-row"><span class="label"><?= pt('Completed') ?></span><span class="value"><?= $doneT ?> / <?= $totalT ?></span></div>
     <div class="progress-bar" style="margin:8px 0 16px">
         <div class="progress-fill" style="width:<?= $doneRate ?>%;background:linear-gradient(90deg,#16a34a,#4ade80)"></div>
     </div>
     <?php else: ?>
-    <p class="no-data">No tasks recorded.</p>
+    <p class="no-data"><?= pt('No tasks recorded.') ?></p>
     <?php endif; ?>
 
     <!-- Campaigns summary -->
-    <h3 class="section-h">📣 Campaign Summary</h3>
+    <h3 class="section-h">📣 <?= pt('Campaign Summary') ?></h3>
     <?php if (!empty($snap['campaigns'])): ?>
     <?php foreach ($snap['campaigns'] as $cst => $cnt): ?>
     <div class="stat-row"><span class="label"><?= ucfirst($cst) ?></span><span class="value"><?= $cnt ?></span></div>
     <?php endforeach; ?>
     <?php else: ?>
-    <p class="no-data">No campaigns in portfolio.</p>
+    <p class="no-data"><?= pt('No campaigns in portfolio.') ?></p>
     <?php endif; ?>
 
     <div style="margin-top:32px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:.8rem;color:#9ca3af;text-align:center">
@@ -371,41 +372,41 @@ require_once __DIR__ . '/../includes/header.php';
 <!-- REPORTS LIST VIEW                                               -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <div class="rep-header">
-    <h1>📊 Growth Reports</h1>
-    <p><?= count($reports) ?> report<?= count($reports) !== 1 ? 's' : '' ?> generated</p>
+    <h1>📊 <?= pt('Growth Reports') ?></h1>
+    <p><?= count($reports) ?> <?= pt('report(s) generated') ?></p>
 </div>
 
 <!-- Generate report form -->
 <div class="create-form">
-    <h3>📋 Generate New Report</h3>
+    <h3>📋 <?= pt('Generate New Report') ?></h3>
     <form method="post">
         <?= csrfField() ?>
         <input type="hidden" name="action" value="generate_report">
         <div class="f-grid">
             <div class="form-group">
-                <label>Business <span style="color:red">*</span></label>
+                <label><?= pt('Business') ?> <span style="color:red">*</span></label>
                 <select name="listing_id" required>
-                    <option value="">Select business…</option>
+                    <option value=""><?= pt('Select business…') ?></option>
                     <?php foreach ($listings as $l): ?>
                     <option value="<?= $l['id'] ?>" <?= $filterLid==$l['id']?'selected':'' ?>><?= e($l['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="form-group">
-                <label>Report Title (optional)</label>
-                <input type="text" name="title" placeholder="Auto-generated if blank">
+                <label><?= pt('Report Title (optional)') ?></label>
+                <input type="text" name="title" placeholder="<?= pt('Auto-generated if blank') ?>">
             </div>
             <div class="form-group">
-                <label>Period Start <span style="color:red">*</span></label>
+                <label><?= pt('Period Start') ?> <span style="color:red">*</span></label>
                 <input type="date" name="period_start" value="<?= date('Y-m-01') ?>" required>
             </div>
             <div class="form-group">
-                <label>Period End <span style="color:red">*</span></label>
+                <label><?= pt('Period End') ?> <span style="color:red">*</span></label>
                 <input type="date" name="period_end" value="<?= date('Y-m-d') ?>" required>
             </div>
         </div>
         <div style="margin-top:14px">
-            <button type="submit" class="btn-xs primary" style="padding:8px 20px;font-size:.9rem">📊 Generate Report</button>
+            <button type="submit" class="btn-xs primary" style="padding:8px 20px;font-size:.9rem">📊 <?= pt('Generate Report') ?></button>
         </div>
     </form>
 </div>
@@ -414,12 +415,12 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="filter-bar">
     <form method="get" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
         <select name="lid" onchange="this.form.submit()">
-            <option value="">All Businesses</option>
+            <option value=""><?= pt('All Businesses') ?></option>
             <?php foreach ($listings as $l): ?>
             <option value="<?= $l['id'] ?>" <?= $filterLid==$l['id']?'selected':'' ?>><?= e($l['name']) ?></option>
             <?php endforeach; ?>
         </select>
-        <a href="<?= SITE_URL ?>/partner/reports" class="btn-xs">Clear</a>
+        <a href="<?= SITE_URL ?>/partner/reports" class="btn-xs"><?= pt('Clear') ?></a>
     </form>
 </div>
 
@@ -427,7 +428,7 @@ require_once __DIR__ . '/../includes/header.php';
 <?php if (empty($reports)): ?>
 <div class="empty-state">
     <div style="font-size:3rem;margin-bottom:12px">📊</div>
-    <p>No reports generated yet. Generate your first report above.</p>
+    <p><?= pt('No reports generated yet. Generate your first report above.') ?></p>
 </div>
 <?php else: ?>
 <div class="reports-list">
@@ -440,16 +441,16 @@ require_once __DIR__ . '/../includes/header.php';
             <span>🏢 <?= e($report['biz_name']) ?></span>
             <span>📅 <?= date('d M Y', strtotime($report['period_start'])) ?> – <?= date('d M Y', strtotime($report['period_end'])) ?></span>
             <?php if ($report['generated_at']): ?>
-            <span>⏱ Generated <?= date('d M Y', strtotime($report['generated_at'])) ?></span>
+            <span>⏱ <?= pt('Generated') ?> <?= date('d M Y', strtotime($report['generated_at'])) ?></span>
             <?php endif; ?>
             <?php if ($report['shared_at']): ?>
-            <span>✓ Shared <?= date('d M Y', strtotime($report['shared_at'])) ?></span>
+            <span>✓ <?= pt('Shared') ?> <?= date('d M Y', strtotime($report['shared_at'])) ?></span>
             <?php endif; ?>
             <span class="status-badge st-<?= $report['status'] ?>"><?= ucfirst($report['status']) ?></span>
         </div>
     </div>
     <div class="report-actions" style="display:flex;gap:8px;flex-shrink:0">
-        <a href="<?= SITE_URL ?>/partner/reports?view=report&rid=<?= $report['id'] ?>" class="btn-xs primary">View</a>
+        <a href="<?= SITE_URL ?>/partner/reports?view=report&rid=<?= $report['id'] ?>" class="btn-xs primary"><?= pt('View') ?></a>
     </div>
 </div>
 <?php endforeach; ?>

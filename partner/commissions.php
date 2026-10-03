@@ -4,6 +4,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $partnerProfile = requireGrowthPartner();
 $partnerId      = (int)$partnerProfile['id'];
@@ -67,7 +68,7 @@ $monthly = $pdo->prepare("
 $monthly->execute([$partnerId, $year]);
 $monthlyData = $monthly->fetchAll();
 
-$pageTitle = 'Commissions — Partner Centre';
+$pageTitle = pt('Commissions') . ' — ' . pt('Partner Centre');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -105,45 +106,45 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="partner-wrap">
   <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
-    <h1 style="font-family:'Fraunces',serif; font-size:2rem; font-weight:900; margin:0;">💰 Commissions</h1>
+    <h1 style="font-family:'Fraunces',serif; font-size:2rem; font-weight:900; margin:0;">💰 <?= pt('Commissions') ?></h1>
   </div>
 
   <nav class="partner-nav">
-    <a href="<?= SITE_URL ?>/partner/dashboard">🏠 Dashboard</a>
-    <a href="<?= SITE_URL ?>/partner/portfolio">📋 Portfolio</a>
-    <a href="<?= SITE_URL ?>/partner/tasks">✅ Tasks</a>
-    <a href="<?= SITE_URL ?>/partner/leads">💬 Leads</a>
-    <a href="<?= SITE_URL ?>/partner/commissions" class="active">💰 Commissions</a>
+    <a href="<?= SITE_URL ?>/partner/dashboard">🏠 <?= pt('Dashboard') ?></a>
+    <a href="<?= SITE_URL ?>/partner/portfolio">📋 <?= pt('Portfolio') ?></a>
+    <a href="<?= SITE_URL ?>/partner/tasks">✅ <?= pt('Tasks') ?></a>
+    <a href="<?= SITE_URL ?>/partner/leads">💬 <?= pt('Leads') ?></a>
+    <a href="<?= SITE_URL ?>/partner/commissions" class="active">💰 <?= pt('Commissions') ?></a>
   </nav>
 
   <!-- Summary stats -->
   <div class="stat-grid">
     <div class="stat-card" style="border-color:#00A878;">
       <div class="n" style="color:#00A878;"><?= number_format($stats['this_month']) ?></div>
-      <div class="l">This Month (XAF)</div>
+      <div class="l"><?= pt('This Month (XAF)') ?></div>
     </div>
     <div class="stat-card">
       <div class="n"><?= number_format($stats['total_paid']) ?></div>
-      <div class="l">Total Paid (XAF)</div>
+      <div class="l"><?= pt('Total Paid (XAF)') ?></div>
     </div>
     <div class="stat-card" style="border-color:#fcd116;">
       <div class="n" style="color:#b8960f;"><?= number_format($stats['pending']) ?></div>
-      <div class="l">Pending (XAF)</div>
+      <div class="l"><?= pt('Pending (XAF)') ?></div>
     </div>
     <div class="stat-card">
       <div class="n" style="color:#2ec4b6;"><?= number_format($stats['approved']) ?></div>
-      <div class="l">Approved (XAF)</div>
+      <div class="l"><?= pt('Approved (XAF)') ?></div>
     </div>
     <div class="stat-card">
       <div class="n"><?= (int)$stats['total_records'] ?></div>
-      <div class="l">Total Records</div>
+      <div class="l"><?= pt('Total Records') ?></div>
     </div>
   </div>
 
   <!-- Monthly bar chart (current year) -->
   <?php if ($monthlyData): ?>
   <div style="background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1.25rem; margin-bottom:1.5rem;">
-    <div style="font-weight:700; font-size:0.9rem; margin-bottom:0.75rem;">📊 Monthly Earnings <?= $year ?></div>
+    <div style="font-weight:700; font-size:0.9rem; margin-bottom:0.75rem;">📊 <?= pt('Monthly Earnings') ?> <?= $year ?></div>
     <?php
     $maxMonthly = max(array_column($monthlyData, 'total')) ?: 1;
     $monthByNum = [];
@@ -167,7 +168,7 @@ require_once __DIR__ . '/../includes/header.php';
   <!-- Filters -->
   <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1rem;">
     <?php
-    $tabs = ['all'=>'All','pending'=>'Pending','approved'=>'Approved','paid'=>'Paid','disputed'=>'Disputed'];
+    $tabs = ['all'=>pt('All'),'pending'=>pt('Pending'),'approved'=>pt('Approved'),'paid'=>pt('Paid'),'disputed'=>pt('Disputed')];
     foreach ($tabs as $tk => $tl): ?>
     <a href="?status=<?= $tk ?>&year=<?= $year ?><?= $month ? '&month='.$month : '' ?>" class="status-tab <?= $statusFilter===$tk?'active':'' ?>"><?= $tl ?></a>
     <?php endforeach; ?>
@@ -181,12 +182,12 @@ require_once __DIR__ . '/../includes/header.php';
       <?php endfor; ?>
     </select>
     <select name="month" style="padding:0.4rem; border:1px solid var(--border); border-radius:8px; background:var(--card); color:var(--text); font-size:0.875rem;">
-      <option value="0">All Months</option>
+      <option value="0"><?= pt('All Months') ?></option>
       <?php for ($m = 1; $m <= 12; $m++): ?>
       <option value="<?= $m ?>" <?= $month===$m?'selected':'' ?>><?= date('F', mktime(0,0,0,$m,1)) ?></option>
       <?php endfor; ?>
     </select>
-    <button type="submit" class="btn btn-primary" style="font-size:0.85rem;">Filter</button>
+    <button type="submit" class="btn btn-primary" style="font-size:0.85rem;"><?= pt('Filter') ?></button>
   </form>
 
   <!-- Commission table -->
@@ -195,12 +196,12 @@ require_once __DIR__ . '/../includes/header.php';
       <table class="comm-table">
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Description</th>
-            <th>Business</th>
-            <th>Type</th>
-            <th style="text-align:right;">Amount</th>
-            <th>Status</th>
+            <th><?= pt('Date') ?></th>
+            <th><?= pt('Description') ?></th>
+            <th><?= pt('Business') ?></th>
+            <th><?= pt('Type') ?></th>
+            <th style="text-align:right;"><?= pt('Amount') ?></th>
+            <th><?= pt('Status') ?></th>
           </tr>
         </thead>
         <tbody>
@@ -211,7 +212,7 @@ require_once __DIR__ . '/../includes/header.php';
               <td>
                 <?= e($c['source'] ?: $c['rule_name'] ?: 'Commission') ?>
                 <?php if ($c['transaction_ref']): ?>
-                  <div style="font-size:0.75rem; color:var(--muted);">Ref: <?= e($c['transaction_ref']) ?></div>
+                  <div style="font-size:0.75rem; color:var(--muted);"><?= pt('Ref') ?>: <?= e($c['transaction_ref']) ?></div>
                 <?php endif; ?>
               </td>
               <td><?= $c['listing_title'] ? e($c['listing_title']) : '—' ?></td>
@@ -223,13 +224,13 @@ require_once __DIR__ . '/../includes/header.php';
             </tr>
             <?php endforeach; ?>
           <?php else: ?>
-            <tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--muted);">No commission records found.</td></tr>
+            <tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--muted);"><?= pt('No commission records found.') ?></td></tr>
           <?php endif; ?>
         </tbody>
         <?php if ($commissions): ?>
         <tfoot>
           <tr style="font-weight:700; background:var(--card);">
-            <td colspan="4" style="padding:0.75rem 1rem;">Total shown</td>
+            <td colspan="4" style="padding:0.75rem 1rem;"><?= pt('Total shown') ?></td>
             <td style="text-align:right; padding:0.75rem 1rem; font-family:'Fraunces',serif;">
               <?= number_format(array_sum(array_column($commissions, 'amount'))) ?> XAF
             </td>

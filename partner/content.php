@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $partner = requireGrowthPartner();
 $pid     = (int)$partner['id'];
@@ -132,7 +133,7 @@ $platformLabels = ['facebook'=>'Facebook','instagram'=>'Instagram','tiktok'=>'Ti
                    'linkedin'=>'LinkedIn','twitter'=>'Twitter/X','whatsapp'=>'WhatsApp',
                    'youtube'=>'YouTube','other'=>'Other'];
 
-$pageTitle = 'Content Management';
+$pageTitle = pt('Content Management');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/partner.css">
@@ -208,8 +209,8 @@ require_once __DIR__ . '/../includes/header.php';
 <?php endif; ?>
 
 <div class="cont-header">
-    <h1>📅 Content Management</h1>
-    <p><?= $totalItems ?> content item<?= $totalItems !== 1 ? 's' : '' ?> across your portfolio</p>
+    <h1>📅 <?= pt('Content Management') ?></h1>
+    <p><?= $totalItems ?> <?= pt('content item(s) across your portfolio') ?></p>
 </div>
 
 <?php if ($totalItems > 0): ?>
@@ -231,24 +232,24 @@ require_once __DIR__ . '/../includes/header.php';
         <input type="hidden" name="month" value="<?= $calMonth ?>">
         <?php endif; ?>
         <select name="lid" onchange="this.form.submit()">
-            <option value="">All Businesses</option>
+            <option value=""><?= pt('All Businesses') ?></option>
             <?php foreach ($listings as $l): ?>
             <option value="<?= $l['id'] ?>" <?= $filterLid==$l['id']?'selected':'' ?>><?= e($l['name']) ?></option>
             <?php endforeach; ?>
         </select>
         <select name="status" onchange="this.form.submit()">
-            <option value="">All Statuses</option>
+            <option value=""><?= pt('All Statuses') ?></option>
             <?php foreach (['draft','scheduled','published','archived'] as $s): ?>
             <option value="<?= $s ?>" <?= $filterStatus===$s?'selected':'' ?>><?= ucfirst($s) ?></option>
             <?php endforeach; ?>
         </select>
         <select name="platform" onchange="this.form.submit()">
-            <option value="">All Platforms</option>
+            <option value=""><?= pt('All Platforms') ?></option>
             <?php foreach ($platforms as $p): ?>
             <option value="<?= $p ?>" <?= $filterPlat===$p?'selected':'' ?>><?= $platformLabels[$p] ?></option>
             <?php endforeach; ?>
         </select>
-        <a href="<?= SITE_URL ?>/partner/content?view=<?= $view ?>" class="btn-xs">Clear</a>
+        <a href="<?= SITE_URL ?>/partner/content?view=<?= $view ?>" class="btn-xs"><?= pt('Clear') ?></a>
     </form>
     <div class="view-toggle">
         <a href="?lid=<?= $filterLid ?>&status=<?= $filterStatus ?>&platform=<?= $filterPlat ?>&view=list" class="<?= $view==='list'?'active':'' ?>">☰ List</a>
@@ -258,22 +259,22 @@ require_once __DIR__ . '/../includes/header.php';
 
 <!-- Create content form -->
 <div class="create-form">
-    <h3>➕ Add Content</h3>
+    <h3>➕ <?= pt('Add Content') ?></h3>
     <form method="post">
         <?= csrfField() ?>
         <input type="hidden" name="action" value="add_content">
         <div class="f-grid">
             <div class="form-group">
-                <label>Business <span style="color:red">*</span></label>
+                <label><?= pt('Business') ?> <span style="color:red">*</span></label>
                 <select name="listing_id" required onchange="this.form.submit()">
-                    <option value="">Select business…</option>
+                    <option value=""><?= pt('Select business…') ?></option>
                     <?php foreach ($listings as $l): ?>
                     <option value="<?= $l['id'] ?>" <?= $filterLid==$l['id']?'selected':'' ?>><?= e($l['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="form-group">
-                <label>Content Type <span style="color:red">*</span></label>
+                <label><?= pt('Content Type') ?> <span style="color:red">*</span></label>
                 <select name="content_type">
                     <?php foreach (['social_post'=>'Social Post','promotional_post'=>'Promotional Post','product_post'=>'Product Post','service_post'=>'Service Post','event_post'=>'Event Post','review_post'=>'Review Post','video'=>'Video','image'=>'Image','announcement'=>'Announcement'] as $v=>$lbl): ?>
                     <option value="<?= $v ?>"><?= $lbl ?></option>
@@ -281,42 +282,42 @@ require_once __DIR__ . '/../includes/header.php';
                 </select>
             </div>
             <div class="form-group f-full">
-                <label>Title</label>
-                <input type="text" name="title" placeholder="Post caption or title" maxlength="200">
+                <label><?= pt('Title') ?></label>
+                <input type="text" name="title" placeholder="<?= pt('Post caption or title') ?>" maxlength="200">
             </div>
             <div class="form-group">
-                <label>Platform</label>
+                <label><?= pt('Platform') ?></label>
                 <select name="platform">
-                    <option value="">Select platform…</option>
+                    <option value=""><?= pt('Select platform…') ?></option>
                     <?php foreach ($platforms as $p): ?>
                     <option value="<?= $p ?>"><?= $platformLabels[$p] ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="form-group">
-                <label>Link to Campaign</label>
+                <label><?= pt('Link to Campaign') ?></label>
                 <select name="campaign_id">
-                    <option value="">None</option>
+                    <option value=""><?= pt('None') ?></option>
                     <?php foreach ($campaigns as $c): ?>
                     <option value="<?= $c['id'] ?>"><?= e($c['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="form-group">
-                <label>Scheduled Date &amp; Time</label>
+                <label><?= pt('Scheduled Date & Time') ?></label>
                 <input type="datetime-local" name="scheduled_date">
             </div>
             <div class="form-group">
-                <label>Media URL</label>
+                <label><?= pt('Media URL') ?></label>
                 <input type="url" name="media_url" placeholder="https://…">
             </div>
             <div class="form-group f-full">
-                <label>Body / Caption</label>
-                <textarea name="body" placeholder="Post text, caption, or description…"></textarea>
+                <label><?= pt('Body / Caption') ?></label>
+                <textarea name="body" placeholder="<?= pt('Post text, caption, or description…') ?>"></textarea>
             </div>
         </div>
         <div style="margin-top:14px">
-            <button type="submit" class="btn-xs primary" style="padding:8px 20px;font-size:.9rem">Save Content</button>
+            <button type="submit" class="btn-xs primary" style="padding:8px 20px;font-size:.9rem"><?= pt('Save Content') ?></button>
         </div>
     </form>
 </div>
@@ -339,10 +340,10 @@ require_once __DIR__ . '/../includes/header.php';
     $monthName = date('F Y', $firstDay);
 ?>
 <div class="cal-nav">
-    <a href="?lid=<?= $filterLid ?>&view=calendar&year=<?= $prevYear ?>&month=<?= $prevMonth ?>" class="btn-xs">← Prev</a>
+    <a href="?lid=<?= $filterLid ?>&view=calendar&year=<?= $prevYear ?>&month=<?= $prevMonth ?>" class="btn-xs">← <?= pt('Prev') ?></a>
     <h2><?= $monthName ?></h2>
-    <a href="?lid=<?= $filterLid ?>&view=calendar&year=<?= $nextYear ?>&month=<?= $nextMonth ?>" class="btn-xs">Next →</a>
-    <a href="?lid=<?= $filterLid ?>&view=calendar&year=<?= date('Y') ?>&month=<?= date('n') ?>" class="btn-xs" style="margin-left:8px">Today</a>
+    <a href="?lid=<?= $filterLid ?>&view=calendar&year=<?= $nextYear ?>&month=<?= $nextMonth ?>" class="btn-xs"><?= pt('Next') ?> →</a>
+    <a href="?lid=<?= $filterLid ?>&view=calendar&year=<?= date('Y') ?>&month=<?= date('n') ?>" class="btn-xs" style="margin-left:8px"><?= pt('Today') ?></a>
 </div>
 <div class="cal-grid">
     <?php foreach (['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] as $dh): ?>
@@ -378,7 +379,7 @@ require_once __DIR__ . '/../includes/header.php';
 <?php if (empty($items)): ?>
 <div class="empty-state">
     <div style="font-size:3rem;margin-bottom:12px">📝</div>
-    <p>No content found. Create your first content item above.</p>
+    <p><?= pt('No content found. Create your first content item above.') ?></p>
 </div>
 <?php else: ?>
 <div class="content-list">
@@ -405,7 +406,7 @@ require_once __DIR__ . '/../includes/header.php';
             <span>🕐 <?= date('d M Y H:i', strtotime($item['scheduled_date'])) ?></span>
             <?php endif; ?>
             <?php if ($item['published_date']): ?>
-            <span>✓ Published <?= date('d M Y', strtotime($item['published_date'])) ?></span>
+            <span>✓ <?= pt('Published') ?> <?= date('d M Y', strtotime($item['published_date'])) ?></span>
             <?php endif; ?>
             <span class="status-badge st-<?= $item['status'] ?>"><?= ucfirst($item['status']) ?></span>
         </div>
@@ -416,14 +417,14 @@ require_once __DIR__ . '/../includes/header.php';
         <div style="margin-top:6px;font-size:.8rem;color:#6b7280">🔗 <a href="<?= e($item['media_url']) ?>" target="_blank" style="color:#0891b2">Media link</a></div>
         <?php endif; ?>
         <div class="content-actions">
-            <a href="<?= SITE_URL ?>/partner/business?lid=<?= $item['listing_id'] ?>&tab=content" class="btn-xs">Edit</a>
+            <a href="<?= SITE_URL ?>/partner/business?lid=<?= $item['listing_id'] ?>&tab=content" class="btn-xs"><?= pt('Edit') ?></a>
             <?php if ($item['status'] !== 'published'): ?>
             <form method="post">
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="update_content_status">
                 <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
                 <input type="hidden" name="status" value="published">
-                <button type="submit" class="btn-xs green">✓ Mark Published</button>
+                <button type="submit" class="btn-xs green">✓ <?= pt('Mark Published') ?></button>
             </form>
             <?php endif; ?>
             <?php if ($item['status'] !== 'archived'): ?>
@@ -432,7 +433,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <input type="hidden" name="action" value="update_content_status">
                 <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
                 <input type="hidden" name="status" value="archived">
-                <button type="submit" class="btn-xs" style="color:#6b7280">Archive</button>
+                <button type="submit" class="btn-xs" style="color:#6b7280"><?= pt('Archive') ?></button>
             </form>
             <?php endif; ?>
         </div>

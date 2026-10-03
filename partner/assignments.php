@@ -8,6 +8,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $pdo = db();
 $partnerProfile = requireGrowthPartner();
@@ -91,7 +92,7 @@ $countQ->execute([$partnerId]);
 $counts = $countQ->fetchAll(\PDO::FETCH_KEY_PAIR);
 
 $flash = getFlash();
-$pageTitle = 'My Assignments';
+$pageTitle = pt('My Assignments');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <style>
@@ -136,10 +137,10 @@ require_once __DIR__ . '/../includes/header.php';
 <div style="max-width:820px;margin:0 auto;padding:1.5rem">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem">
         <div>
-            <h1 style="margin:0;font-size:1.3rem;color:#111827">My Assignments</h1>
-            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280">Businesses you're managing as a Growth Partner</p>
+            <h1 style="margin:0;font-size:1.3rem;color:#111827"><?= pt('My Assignments') ?></h1>
+            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280"><?= pt('Businesses you\'re managing as a Growth Partner') ?></p>
         </div>
-        <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← Dashboard</a>
+        <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← <?= pt('Dashboard') ?></a>
     </div>
 
     <?php if ($flash): ?>
@@ -147,7 +148,7 @@ require_once __DIR__ . '/../includes/header.php';
     <?php endif ?>
 
     <div class="tabs">
-        <?php foreach (['active'=>'Active','completed'=>'Completed','removed'=>'Removed','all'=>'All'] as $t => $lbl): ?>
+        <?php foreach (['active'=>pt('Active'),'completed'=>pt('Completed'),'removed'=>pt('Removed'),'all'=>pt('All')] as $t => $lbl): ?>
         <a href="?tab=<?= $t ?>" class="tab<?= $tab===$t ? ' active' : '' ?>">
             <?= $lbl ?>
             <?php if ($cnt = ($t === 'all' ? array_sum($counts) : ($counts[$t] ?? 0))): ?>
@@ -159,15 +160,15 @@ require_once __DIR__ . '/../includes/header.php';
 
     <form method="get" class="search-bar">
         <input type="hidden" name="tab" value="<?= e($tab) ?>">
-        <input type="text" name="q" value="<?= e($search) ?>" placeholder="Search by business name…">
-        <button type="submit" class="btn btn-detail">Search</button>
-        <?php if ($search): ?><a href="?tab=<?= e($tab) ?>" class="btn btn-detail">Clear</a><?php endif ?>
+        <input type="text" name="q" value="<?= e($search) ?>" placeholder="<?= pt('Search by business name…') ?>">
+        <button type="submit" class="btn btn-detail"><?= pt('Search') ?></button>
+        <?php if ($search): ?><a href="?tab=<?= e($tab) ?>" class="btn btn-detail"><?= pt('Clear') ?></a><?php endif ?>
     </form>
 
     <?php if (!$assignments): ?>
     <div class="empty">
         <div style="font-size:2.5rem;margin-bottom:.5rem">🏢</div>
-        <p>No <?= $tab !== 'all' ? $tab : '' ?> assignments found.</p>
+        <p><?= pt('No assignments found.') ?></p>
     </div>
     <?php else: ?>
     <?php foreach ($assignments as $a): ?>
@@ -175,15 +176,15 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="asg-header">
             <div class="asg-biz">
                 <a href="<?= SITE_URL ?>/listing/<?= e($a['listing_slug']) ?>" class="asg-name" target="_blank"><?= e($a['business_name']) ?></a>
-                <div class="asg-sub">Assigned <?= date('d M Y', strtotime($a['assigned_at'])) ?><?= $a['assigned_by_name'] ? ' by ' . e($a['assigned_by_name']) : '' ?></div>
+                <div class="asg-sub"><?= pt('Assigned') ?> <?= date('d M Y', strtotime($a['assigned_at'])) ?><?= $a['assigned_by_name'] ? ' ' . pt('by') . ' ' . e($a['assigned_by_name']) : '' ?></div>
                 <div class="badges">
                     <span class="badge role-<?= e($a['role']) ?>"><?= ucfirst($a['role']) ?></span>
                     <span class="badge status-<?= e($a['status']) ?>"><?= ucfirst($a['status']) ?></span>
                 </div>
             </div>
             <div class="asg-stats">
-                <div class="asg-stat"><div class="val"><?= (int)$a['lead_count'] ?></div><div class="lbl">Leads</div></div>
-                <div class="asg-stat"><div class="val"><?= (int)$a['enquiry_count'] ?></div><div class="lbl">Enquiries</div></div>
+                <div class="asg-stat"><div class="val"><?= (int)$a['lead_count'] ?></div><div class="lbl"><?= pt('Leads') ?></div></div>
+                <div class="asg-stat"><div class="val"><?= (int)$a['enquiry_count'] ?></div><div class="lbl"><?= pt('Enquiries') ?></div></div>
             </div>
         </div>
 
@@ -197,13 +198,13 @@ require_once __DIR__ . '/../includes/header.php';
 
             <?php if ($a['status'] === 'active'): ?>
             <details class="note-form">
-                <summary style="font-size:.8rem;color:#2563eb;cursor:pointer;user-select:none">Add / update note</summary>
+                <summary style="font-size:.8rem;color:#2563eb;cursor:pointer;user-select:none"><?= pt('Add / update note') ?></summary>
                 <form method="post" style="margin-top:.5rem">
                     <?= csrfField() ?>
                     <input type="hidden" name="action" value="add_note">
                     <input type="hidden" name="assignment_id" value="<?= $a['id'] ?>">
-                    <textarea name="notes" rows="3" placeholder="Notes about this business relationship…"><?= e($a['notes']) ?></textarea>
-                    <button type="submit" class="btn btn-primary" style="margin-top:.35rem">Save Note</button>
+                    <textarea name="notes" rows="3" placeholder="<?= pt('Notes about this business relationship…') ?>"><?= e($a['notes']) ?></textarea>
+                    <button type="submit" class="btn btn-primary" style="margin-top:.35rem"><?= pt('Save Note') ?></button>
                 </form>
             </details>
             <?php endif ?>
@@ -211,18 +212,18 @@ require_once __DIR__ . '/../includes/header.php';
         <?php endif ?>
 
         <div class="asg-actions">
-            <a href="<?= SITE_URL ?>/listing/<?= e($a['listing_slug']) ?>" class="btn btn-detail" target="_blank">View Listing</a>
-            <a href="<?= SITE_URL ?>/partner/leads?listing=<?= $a['listing_id'] ?>" class="btn btn-detail">Leads</a>
+            <a href="<?= SITE_URL ?>/listing/<?= e($a['listing_slug']) ?>" class="btn btn-detail" target="_blank"><?= pt('View Listing') ?></a>
+            <a href="<?= SITE_URL ?>/partner/leads?listing=<?= $a['listing_id'] ?>" class="btn btn-detail"><?= pt('Leads') ?></a>
             <?php if ($a['status'] === 'active'): ?>
             <form method="post" style="margin:0">
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="request_complete">
                 <input type="hidden" name="assignment_id" value="<?= $a['id'] ?>">
-                <button type="submit" class="btn btn-success" onclick="return confirm('Request completion of this assignment?')">✓ Request Completion</button>
+                <button type="submit" class="btn btn-success" onclick="return confirm('<?= pt('Request completion of this assignment?') ?>')">✓ <?= pt('Request Completion') ?></button>
             </form>
             <?php endif ?>
             <?php if ($a['removed_at']): ?>
-            <span style="font-size:.75rem;color:#9ca3af;margin-left:.5rem">Removed <?= date('d M Y', strtotime($a['removed_at'])) ?></span>
+            <span style="font-size:.75rem;color:#9ca3af;margin-left:.5rem"><?= pt('Removed') ?> <?= date('d M Y', strtotime($a['removed_at'])) ?></span>
             <?php endif ?>
         </div>
     </div>

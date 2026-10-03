@@ -8,6 +8,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $pdo = db();
 $partnerProfile = requireGrowthPartner();
@@ -104,7 +105,7 @@ $chartValues = array_values($chartCnts);
 $statusColors = ['pending'=>['#fef3c7','#92400e'],'converted'=>['#d1fae5','#065f46'],'paid'=>['#dbeafe','#1d4ed8'],'cancelled'=>['#fee2e2','#991b1b']];
 
 $flash     = getFlash();
-$pageTitle = 'My Referrals';
+$pageTitle = pt('My Referrals');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <style>
@@ -153,10 +154,10 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="page-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem">
         <div>
-            <h1 style="margin:0;font-size:1.3rem;color:#111827">My Referrals</h1>
-            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280">Track referrals generated through your unique link</p>
+            <h1 style="margin:0;font-size:1.3rem;color:#111827"><?= pt('My Referrals') ?></h1>
+            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280"><?= pt('Track referrals generated through your unique link') ?></p>
         </div>
-        <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← Dashboard</a>
+        <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← <?= pt('Dashboard') ?></a>
     </div>
 
     <?php if ($flash): ?>
@@ -167,12 +168,12 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if ($referralUrl): ?>
     <div class="ref-link-card">
         <div>
-            <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;margin-bottom:.3rem">Your Referral Link</div>
+            <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;margin-bottom:.3rem"><?= pt('Your Referral Link') ?></div>
             <div class="ref-url"><?= e($referralUrl) ?></div>
         </div>
         <div style="display:flex;gap:.4rem;flex-wrap:wrap">
-            <button onclick="navigator.clipboard.writeText('<?= e($referralUrl) ?>').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Link',1500)})" class="btn btn-primary btn-sm">Copy Link</button>
-            <a href="<?= SITE_URL ?>/partner/profile?code=<?= urlencode($referralCode) ?>" target="_blank" class="btn btn-detail btn-sm">My Profile →</a>
+            <button onclick="navigator.clipboard.writeText('<?= e($referralUrl) ?>').then(()=>{this.textContent='<?= pt('Copied!') ?>';setTimeout(()=>this.textContent='<?= pt('Copy Link') ?>',1500)})" class="btn btn-primary btn-sm"><?= pt('Copy Link') ?></button>
+            <a href="<?= SITE_URL ?>/partner/profile?code=<?= urlencode($referralCode) ?>" target="_blank" class="btn btn-detail btn-sm"><?= pt('My Profile →') ?></a>
         </div>
     </div>
     <?php endif ?>
@@ -181,34 +182,34 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="stats-row">
         <div class="stat-card">
             <div class="stat-val"><?= $totalClicks ?></div>
-            <div class="stat-lbl">Link Clicks (30d)</div>
+            <div class="stat-lbl"><?= pt('Link Clicks (30d)') ?></div>
         </div>
         <div class="stat-card">
             <div class="stat-val"><?= (int)($stats['total_referrals'] ?? 0) ?></div>
-            <div class="stat-lbl">Total Referrals</div>
+            <div class="stat-lbl"><?= pt('Total Referrals') ?></div>
         </div>
         <div class="stat-card">
             <div class="stat-val green"><?= (int)($stats['converted'] ?? 0) ?></div>
-            <div class="stat-lbl">Converted</div>
+            <div class="stat-lbl"><?= pt('Converted') ?></div>
         </div>
         <div class="stat-card">
             <div class="stat-val"><?= $convRate ?>%</div>
-            <div class="stat-lbl">Conversion Rate</div>
+            <div class="stat-lbl"><?= pt('Conversion Rate') ?></div>
         </div>
         <div class="stat-card">
             <div class="stat-val green">£<?= number_format((float)($stats['total_earned'] ?? 0), 2) ?></div>
-            <div class="stat-lbl">Total Earned</div>
+            <div class="stat-lbl"><?= pt('Total Earned') ?></div>
         </div>
         <div class="stat-card">
             <div class="stat-val blue">£<?= number_format((float)($stats['pending_payment'] ?? 0), 2) ?></div>
-            <div class="stat-lbl">Pending Payment</div>
+            <div class="stat-lbl"><?= pt('Pending Payment') ?></div>
         </div>
     </div>
 
     <!-- 30-day click chart -->
     <?php if (array_sum($chartValues) > 0): ?>
     <div class="chart-card">
-        <div class="chart-title">Referral Link Clicks — Last 30 Days</div>
+        <div class="chart-title"><?= pt('Referral Link Clicks — Last 30 Days') ?></div>
         <?php $maxVal = max(1, max($chartValues)); ?>
         <div class="bar-chart">
             <?php foreach ($chartValues as $i => $v): ?>
@@ -225,7 +226,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Tabs -->
     <div class="tabs">
-        <?php foreach (['all'=>'All','pending'=>'Pending','converted'=>'Converted','paid'=>'Paid'] as $s => $lbl): ?>
+        <?php foreach (['all'=>pt('All'),'pending'=>pt('Pending'),'converted'=>pt('Converted'),'paid'=>pt('Paid')] as $s => $lbl): ?>
         <a href="?status=<?= $s ?>" class="tab<?= $filterStatus===$s ? ' active' : '' ?>">
             <?= $lbl ?>
             <?php if ($cnt = ($counts[$s] ?? 0)): ?><span class="cnt"><?= $cnt ?></span><?php endif ?>
@@ -237,18 +238,18 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if (!$referrals): ?>
     <div class="empty">
         <div style="font-size:2rem;margin-bottom:.5rem">🔗</div>
-        <p>No <?= $filterStatus !== 'all' ? $filterStatus : '' ?> referrals yet. Share your link to get started!</p>
+        <p><?= $filterStatus !== 'all' ? pt($filterStatus) . ' ' : '' ?><?= pt('referrals yet. Share your link to get started!') ?></p>
     </div>
     <?php else: ?>
     <div style="overflow-x:auto">
     <table class="ref-table">
         <thead>
             <tr>
-                <th>Referred</th>
-                <th>Business</th>
-                <th>Status</th>
-                <th>Commission</th>
-                <th>Date</th>
+                <th><?= pt('Referred') ?></th>
+                <th><?= pt('Business') ?></th>
+                <th><?= pt('Status') ?></th>
+                <th><?= pt('Commission') ?></th>
+                <th><?= pt('Date') ?></th>
             </tr>
         </thead>
         <tbody>
@@ -276,11 +277,11 @@ require_once __DIR__ . '/../includes/header.php';
 
     <?php if ($pages > 1): ?>
     <div class="pager">
-        <?php if ($page > 1): ?><a href="?status=<?= $filterStatus ?>&page=<?= $page-1 ?>">‹ Prev</a><?php endif ?>
+        <?php if ($page > 1): ?><a href="?status=<?= $filterStatus ?>&page=<?= $page-1 ?>"><?= pt('‹ Prev') ?></a><?php endif ?>
         <?php for ($p = max(1,$page-2); $p <= min($pages,$page+2); $p++): ?>
         <a href="?status=<?= $filterStatus ?>&page=<?= $p ?>" class="<?= $p===$page?'active-page':'' ?>"><?= $p ?></a>
         <?php endfor ?>
-        <?php if ($page < $pages): ?><a href="?status=<?= $filterStatus ?>&page=<?= $page+1 ?>">Next ›</a><?php endif ?>
+        <?php if ($page < $pages): ?><a href="?status=<?= $filterStatus ?>&page=<?= $page+1 ?>"><?= pt('Next ›') ?></a><?php endif ?>
     </div>
     <?php endif ?>
     <?php endif ?>

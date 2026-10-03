@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $profile = requireGrowthPartner();
 $pid     = (int)$profile['id'];
@@ -124,7 +125,7 @@ $flash = getFlash();
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AI Recommendations — 237biz Partner</title>
+<title><?= pt('AI Recommendations') ?> — 237biz Partner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -213,13 +214,13 @@ body { font-family: 'Inter', sans-serif; background: #f0f2f5; color: #1a1d23; mi
 <header class="top-nav">
   <a href="<?= SITE_URL ?>/partner/dashboard" class="brand">237biz Partner</a>
   <nav>
-    <a href="<?= SITE_URL ?>/partner/dashboard">Dashboard</a>
-    <a href="<?= SITE_URL ?>/partner/portfolio">Portfolio</a>
-    <a href="<?= SITE_URL ?>/partner/tasks">Tasks</a>
-    <a href="<?= SITE_URL ?>/partner/leads">Leads</a>
-    <a href="<?= SITE_URL ?>/partner/campaigns">Campaigns</a>
-    <a href="<?= SITE_URL ?>/partner/content">Content</a>
-    <a href="<?= SITE_URL ?>/partner/reports">Reports</a>
+    <a href="<?= SITE_URL ?>/partner/dashboard"><?= pt('Dashboard') ?></a>
+    <a href="<?= SITE_URL ?>/partner/portfolio"><?= pt('Portfolio') ?></a>
+    <a href="<?= SITE_URL ?>/partner/tasks"><?= pt('Tasks') ?></a>
+    <a href="<?= SITE_URL ?>/partner/leads"><?= pt('Leads') ?></a>
+    <a href="<?= SITE_URL ?>/partner/campaigns"><?= pt('Campaigns') ?></a>
+    <a href="<?= SITE_URL ?>/partner/content"><?= pt('Content') ?></a>
+    <a href="<?= SITE_URL ?>/partner/reports"><?= pt('Reports') ?></a>
     <a href="<?= SITE_URL ?>/partner/recommendations" class="active">AI</a>
   </nav>
 </header>
@@ -236,57 +237,57 @@ body { font-family: 'Inter', sans-serif; background: #f0f2f5; color: #1a1d23; mi
   <div class="page-header">
     <div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-        <h1 class="page-title">Recommendations</h1>
+        <h1 class="page-title"><?= pt('Recommendations') ?></h1>
         <span class="ai-badge">✦ AI</span>
       </div>
-      <p class="page-subtitle">Action-ready insights generated from your portfolio activity</p>
+      <p class="page-subtitle"><?= pt('Action-ready insights generated from your portfolio activity') ?></p>
     </div>
     <form method="post">
       <?= csrfField() ?>
       <input type="hidden" name="action" value="generate">
-      <button type="submit" class="btn btn-generate">↻ Refresh Recommendations</button>
+      <button type="submit" class="btn btn-generate">↻ <?= pt('Refresh Recommendations') ?></button>
     </form>
   </div>
 
   <!-- SUMMARY STRIP -->
   <div class="summary-strip">
     <div class="stat-card">
-      <div class="label">Active</div>
+      <div class="label"><?= pt('Active') ?></div>
       <div class="value"><?= $activeCount ?></div>
-      <div class="sub">need attention</div>
+      <div class="sub"><?= pt('need attention') ?></div>
     </div>
     <div class="stat-card urgent">
-      <div class="label">Urgent</div>
+      <div class="label"><?= pt('Urgent') ?></div>
       <div class="value"><?= $counts['urgent'] ?? 0 ?></div>
-      <div class="sub">highest priority</div>
+      <div class="sub"><?= pt('highest priority') ?></div>
     </div>
     <div class="stat-card high">
-      <div class="label">High</div>
+      <div class="label"><?= pt('High') ?></div>
       <div class="value"><?= $counts['high'] ?? 0 ?></div>
     </div>
     <div class="stat-card">
-      <div class="label">Actioned</div>
+      <div class="label"><?= pt('Actioned') ?></div>
       <div class="value"><?= $counts['actioned'] ?? 0 ?></div>
-      <div class="sub">completed</div>
+      <div class="sub"><?= pt('completed') ?></div>
     </div>
     <div class="stat-card">
-      <div class="label">Businesses</div>
+      <div class="label"><?= pt('Businesses') ?></div>
       <div class="value"><?= count($portfolioListings) ?></div>
-      <div class="sub">in portfolio</div>
+      <div class="sub"><?= pt('in portfolio') ?></div>
     </div>
   </div>
 
   <!-- FILTER BAR -->
   <form method="get" class="filter-bar">
     <select name="priority" onchange="this.form.submit()">
-      <option value="">All priorities</option>
-      <option value="urgent" <?= $filterPriority==='urgent'?'selected':'' ?>>🔴 Urgent</option>
-      <option value="high"   <?= $filterPriority==='high'  ?'selected':'' ?>>🟠 High</option>
-      <option value="medium" <?= $filterPriority==='medium'?'selected':'' ?>>🔵 Medium</option>
-      <option value="low"    <?= $filterPriority==='low'   ?'selected':'' ?>>⚪ Low</option>
+      <option value=""><?= pt('All priorities') ?></option>
+      <option value="urgent" <?= $filterPriority==='urgent'?'selected':'' ?>>🔴 <?= pt('Urgent') ?></option>
+      <option value="high"   <?= $filterPriority==='high'  ?'selected':'' ?>>🟠 <?= pt('High') ?></option>
+      <option value="medium" <?= $filterPriority==='medium'?'selected':'' ?>>🔵 <?= pt('Medium') ?></option>
+      <option value="low"    <?= $filterPriority==='low'   ?'selected':'' ?>>⚪ <?= pt('Low') ?></option>
     </select>
     <select name="listing_id" onchange="this.form.submit()">
-      <option value="">All businesses</option>
+      <option value=""><?= pt('All businesses') ?></option>
       <?php foreach ($portfolioListings as $l): ?>
         <option value="<?= $l['id'] ?>" <?= $filterListing===$l['id']?'selected':'' ?>>
           <?= htmlspecialchars($l['name']) ?>
@@ -296,13 +297,13 @@ body { font-family: 'Inter', sans-serif; background: #f0f2f5; color: #1a1d23; mi
     <input type="hidden" name="status" value="<?= htmlspecialchars($filterStatus) ?>">
     <div class="tab-strip">
       <a href="?status=active<?= $filterPriority?"&priority=$filterPriority":'' ?><?= $filterListing?"&listing_id=$filterListing":'' ?>"
-         class="<?= $filterStatus==='active'?'active':'' ?>">Active (<?= $activeCount ?>)</a>
+         class="<?= $filterStatus==='active'?'active':'' ?>"><?= pt('Active') ?> (<?= $activeCount ?>)</a>
       <a href="?status=actioned<?= $filterPriority?"&priority=$filterPriority":'' ?>"
-         class="<?= $filterStatus==='actioned'?'active':'' ?>">Actioned</a>
+         class="<?= $filterStatus==='actioned'?'active':'' ?>"><?= pt('Actioned') ?></a>
       <a href="?status=dismissed<?= $filterPriority?"&priority=$filterPriority":'' ?>"
-         class="<?= $filterStatus==='dismissed'?'active':'' ?>">Dismissed</a>
+         class="<?= $filterStatus==='dismissed'?'active':'' ?>"><?= pt('Dismissed') ?></a>
       <a href="?status=all<?= $filterPriority?"&priority=$filterPriority":'' ?>"
-         class="<?= $filterStatus==='all'?'active':'' ?>">All</a>
+         class="<?= $filterStatus==='all'?'active':'' ?>"><?= pt('All') ?></a>
     </div>
   </form>
 
@@ -310,18 +311,18 @@ body { font-family: 'Inter', sans-serif; background: #f0f2f5; color: #1a1d23; mi
   <?php if (empty($recommendations)): ?>
     <div class="empty-state">
       <div class="empty-icon">✦</div>
-      <h3>No recommendations</h3>
+      <h3><?= pt('No recommendations') ?></h3>
       <p>
         <?php if ($filterStatus === 'active'): ?>
-          Your portfolio looks healthy — no active recommendations right now. Click Refresh to re-analyse.
+          <?= pt('Your portfolio looks healthy — no active recommendations right now. Click Refresh to re-analyse.') ?>
         <?php else: ?>
-          No recommendations found for the selected filters.
+          <?= pt('No recommendations found for the selected filters.') ?>
         <?php endif; ?>
       </p>
       <form method="post">
         <?= csrfField() ?>
         <input type="hidden" name="action" value="generate">
-        <button type="submit" class="btn btn-generate">↻ Generate Recommendations</button>
+        <button type="submit" class="btn btn-generate">↻ <?= pt('Generate Recommendations') ?></button>
       </form>
     </div>
   <?php else: ?>
@@ -353,31 +354,31 @@ body { font-family: 'Inter', sans-serif; background: #f0f2f5; color: #1a1d23; mi
           <div class="rec-footer">
             <div class="rec-objective">
               <?php if ($rec['objective']): ?>
-                <span>Objective:</span> <?= htmlspecialchars($rec['objective']) ?>
+                <span><?= pt('Objective:') ?></span> <?= htmlspecialchars($rec['objective']) ?>
               <?php endif; ?>
             </div>
             <div class="rec-actions">
               <?php if ($isActive): ?>
                 <?php if ($rec['action_url']): ?>
                   <a href="<?= htmlspecialchars($rec['action_url']) ?>" class="btn btn-action">
-                    <?= htmlspecialchars($rec['recommended_action'] ?? 'Take Action') ?> →
+                    <?= htmlspecialchars($rec['recommended_action'] ?? pt('Take Action')) ?> →
                   </a>
                 <?php endif; ?>
                 <form method="post" style="display:inline">
                   <?= csrfField() ?>
                   <input type="hidden" name="action" value="mark_actioned">
                   <input type="hidden" name="rec_id" value="<?= $rec['id'] ?>">
-                  <button type="submit" class="btn btn-outline">✓ Done</button>
+                  <button type="submit" class="btn btn-outline">✓ <?= pt('Done') ?></button>
                 </form>
                 <form method="post" style="display:inline">
                   <?= csrfField() ?>
                   <input type="hidden" name="action" value="dismiss">
                   <input type="hidden" name="rec_id" value="<?= $rec['id'] ?>">
-                  <button type="submit" class="btn btn-outline" onclick="return confirm('Dismiss this recommendation?')">✕</button>
+                  <button type="submit" class="btn btn-outline" onclick="return confirm('<?= pt('Dismiss this recommendation?') ?>')">✕</button>
                 </form>
               <?php else: ?>
                 <span style="font-size:.8rem;color:#adb5bd;">
-                  <?= $rec['status'] === 'actioned' ? '✓ Actioned ' . date('j M', strtotime($rec['actioned_at'] ?? $rec['updated_at'])) : 'Dismissed' ?>
+                  <?= $rec['status'] === 'actioned' ? '✓ ' . pt('Actioned') . ' ' . date('j M', strtotime($rec['actioned_at'] ?? $rec['updated_at'])) : pt('Dismissed') ?>
                 </span>
               <?php endif; ?>
             </div>
@@ -389,9 +390,8 @@ body { font-family: 'Inter', sans-serif; background: #f0f2f5; color: #1a1d23; mi
 
     <!-- INFO NOTE -->
     <div class="alert-box alert-info" style="margin-top:20px;">
-      <strong>✦ About these recommendations</strong><br>
-      Recommendations are generated automatically by analysing activity across your portfolio.
-      They highlight opportunities and issues — you decide which to action, dismiss, or ignore.
+      <strong>✦ <?= pt('About these recommendations') ?></strong><br>
+      <?= pt('Recommendations are generated automatically by analysing activity across your portfolio. They highlight opportunities and issues — you decide which to action, dismiss, or ignore.') ?>
     </div>
 
   <?php endif; ?>

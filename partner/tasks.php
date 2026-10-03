@@ -4,6 +4,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $partnerProfile = requireGrowthPartner();
 $partnerId      = (int)$partnerProfile['id'];
@@ -94,7 +95,7 @@ $tasks = $st->fetchAll();
 // Portfolio listings for filter dropdown
 $myListings = fetchPartnerListings($partnerId);
 
-$pageTitle = 'Tasks — Partner Centre';
+$pageTitle = pt('Tasks') . ' — ' . pt('Partner Centre');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -133,22 +134,22 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="partner-wrap">
   <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
-    <h1 style="font-family:'Fraunces',serif; font-size:2rem; font-weight:900; margin:0;">✅ Tasks</h1>
-    <span style="color:var(--muted);"><?= count($tasks) ?> task<?= count($tasks) !== 1 ? 's' : '' ?></span>
+    <h1 style="font-family:'Fraunces',serif; font-size:2rem; font-weight:900; margin:0;">✅ <?= pt('Tasks') ?></h1>
+    <span style="color:var(--muted);"><?= count($tasks) ?> <?= pt('task(s)') ?></span>
   </div>
 
   <nav class="partner-nav">
-    <a href="<?= SITE_URL ?>/partner/dashboard">🏠 Dashboard</a>
-    <a href="<?= SITE_URL ?>/partner/portfolio">📋 Portfolio</a>
-    <a href="<?= SITE_URL ?>/partner/tasks" class="active">✅ Tasks</a>
-    <a href="<?= SITE_URL ?>/partner/leads">💬 Leads</a>
-    <a href="<?= SITE_URL ?>/partner/commissions">💰 Commissions</a>
+    <a href="<?= SITE_URL ?>/partner/dashboard">🏠 <?= pt('Dashboard') ?></a>
+    <a href="<?= SITE_URL ?>/partner/portfolio">📋 <?= pt('Portfolio') ?></a>
+    <a href="<?= SITE_URL ?>/partner/tasks" class="active">✅ <?= pt('Tasks') ?></a>
+    <a href="<?= SITE_URL ?>/partner/leads">💬 <?= pt('Leads') ?></a>
+    <a href="<?= SITE_URL ?>/partner/commissions">💰 <?= pt('Commissions') ?></a>
   </nav>
 
   <!-- Status tabs -->
   <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1rem;">
     <?php
-    $tabs = ['open'=>'Open','overdue'=>'⚠ Overdue','in_progress'=>'In Progress','todo'=>'To Do','completed'=>'Completed','cancelled'=>'Cancelled'];
+    $tabs = ['open'=>pt('Open'),'overdue'=>'⚠ '.pt('Overdue'),'in_progress'=>pt('In Progress'),'todo'=>pt('To Do'),'completed'=>pt('Completed'),'cancelled'=>pt('Cancelled')];
     foreach ($tabs as $tk => $tl): ?>
     <a href="?status=<?= $tk ?><?= $priorityFilter ? '&priority='.$priorityFilter : '' ?><?= $listingFilter ? '&listing='.$listingFilter : '' ?>"
        class="status-tab <?= $statusFilter===$tk?'active':'' ?>"><?= $tl ?></a>
@@ -158,27 +159,27 @@ require_once __DIR__ . '/../includes/header.php';
   <!-- Filters -->
   <form method="GET" class="filter-bar">
     <input type="hidden" name="status" value="<?= e($statusFilter) ?>">
-    <input type="text" name="q" value="<?= e($search) ?>" placeholder="Search tasks…" style="flex:1; min-width:180px;">
+    <input type="text" name="q" value="<?= e($search) ?>" placeholder="<?= pt('Search tasks…') ?>" style="flex:1; min-width:180px;">
     <select name="priority">
-      <option value="">All Priorities</option>
+      <option value=""><?= pt('All Priorities') ?></option>
       <?php foreach (['urgent','high','medium','low'] as $p): ?>
       <option value="<?= $p ?>" <?= $priorityFilter===$p?'selected':'' ?>><?= ucfirst($p) ?></option>
       <?php endforeach; ?>
     </select>
     <select name="listing">
-      <option value="">All Businesses</option>
+      <option value=""><?= pt('All Businesses') ?></option>
       <?php foreach ($myListings as $ml): ?>
       <option value="<?= $ml['id'] ?>" <?= $listingFilter===$ml['id']?'selected':'' ?>><?= e($ml['title']) ?></option>
       <?php endforeach; ?>
     </select>
-    <button type="submit" class="btn btn-primary" style="white-space:nowrap;">Filter</button>
+    <button type="submit" class="btn btn-primary" style="white-space:nowrap;"><?= pt('Filter') ?></button>
   </form>
 
   <?php if (!$tasks): ?>
     <div style="text-align:center; padding:4rem; background:var(--card); border:1px solid var(--border); border-radius:14px;">
       <div style="font-size:3rem; margin-bottom:1rem;">🎉</div>
-      <h3 style="font-family:'Fraunces',serif;">No tasks found</h3>
-      <p style="color:var(--muted);">Try a different filter or visit a business to add tasks.</p>
+      <h3 style="font-family:'Fraunces',serif;"><?= pt('No tasks found') ?></h3>
+      <p style="color:var(--muted);"><?= pt('Try a different filter or visit a business to add tasks.') ?></p>
     </div>
   <?php else: ?>
     <?php foreach ($tasks as $task):
@@ -192,7 +193,7 @@ require_once __DIR__ . '/../includes/header.php';
           <span>📍 <a href="<?= SITE_URL ?>/partner/business?id=<?= $task['listing_id'] ?>" style="color:var(--primary); text-decoration:none;"><?= e($task['listing_title']) ?></a></span>
           <span><?= e($task['cat_en']) ?> · <?= e($task['city']) ?></span>
           <?php if ($task['due_date']): ?>
-          <span><?= $isOverdue ? '<span style="color:#e63946; font-weight:700;">⚠ Overdue:</span> ' : '' ?><?= date('j M Y', strtotime($task['due_date'])) ?></span>
+          <span><?= $isOverdue ? '<span style="color:#e63946; font-weight:700;">⚠ ' . pt('Overdue') . ':</span> ' : '' ?><?= date('j M Y', strtotime($task['due_date'])) ?></span>
           <?php endif; ?>
         </div>
         <?php if ($task['description']): ?>
@@ -207,12 +208,12 @@ require_once __DIR__ . '/../includes/header.php';
           <input type="hidden" name="action" value="update_status">
           <input type="hidden" name="task_id" value="<?= $task['id'] ?>">
           <select name="new_status" style="font-size:0.75rem; padding:2px 4px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);">
-            <option value="todo" <?= $task['status']==='todo'?'selected':'' ?>>To Do</option>
-            <option value="in_progress" <?= $task['status']==='in_progress'?'selected':'' ?>>In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="todo" <?= $task['status']==='todo'?'selected':'' ?>><?= pt('To Do') ?></option>
+            <option value="in_progress" <?= $task['status']==='in_progress'?'selected':'' ?>><?= pt('In Progress') ?></option>
+            <option value="completed"><?= pt('Completed') ?></option>
+            <option value="cancelled"><?= pt('Cancelled') ?></option>
           </select>
-          <button type="submit" style="font-size:0.75rem; padding:2px 8px; background:var(--primary); color:#fff; border:none; border-radius:6px; cursor:pointer;">Save</button>
+          <button type="submit" style="font-size:0.75rem; padding:2px 8px; background:var(--primary); color:#fff; border:none; border-radius:6px; cursor:pointer;"><?= pt('Save') ?></button>
         </form>
         <?php endif; ?>
       </div>

@@ -6,6 +6,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 if (!isLoggedIn()) {
     redirect(SITE_URL . '/login?next=' . urlencode(SITE_URL . '/partner/onboarding'));
@@ -183,7 +184,7 @@ $cameroonRegions = [
     'North','North West','South','South West','West'
 ];
 
-$pageTitle = 'Become a Growth Partner — 237Biz';
+$pageTitle = pt('Become a Growth Partner') . ' — 237Biz';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 

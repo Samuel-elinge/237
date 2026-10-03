@@ -4,6 +4,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $partner   = requireGrowthPartner();
 $pid       = (int)$partner['id'];
@@ -235,79 +236,79 @@ require_once __DIR__ . '/../includes/header.php';
 <!-- ── Header ── -->
 <div class="dash-header">
     <div>
-        <h1>👔 Partner Centre</h1>
-        <div class="sub">Good <?= date('G') < 12 ? 'morning' : (date('G') < 17 ? 'afternoon' : 'evening') ?>, <?= e(explode(' ', $user['name'])[0]) ?> — <?= date('l, j F Y') ?></div>
+        <h1>👔 <?= pt('Partner Centre') ?></h1>
+        <div class="sub"><?= pt('Good') ?> <?= date('G') < 12 ? pt('morning') : (date('G') < 17 ? pt('afternoon') : pt('evening')) ?>, <?= e(explode(' ', $user['name'])[0]) ?> — <?= date('l, j F Y') ?></div>
     </div>
     <div class="header-actions">
         <?php if ($unreadNotifs > 0): ?>
         <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:6px 14px;font-size:.85rem;color:var(--pred);font-weight:600">
-            🔔 <?= $unreadNotifs ?> new notification<?= $unreadNotifs > 1 ? 's' : '' ?>
+            🔔 <?= $unreadNotifs ?> <?= pt('new notification(s)') ?>
         </div>
         <?php endif; ?>
-        <a href="<?= SITE_URL ?>/partner/portfolio" class="btn-sm primary">📋 Portfolio</a>
+        <a href="<?= SITE_URL ?>/partner/portfolio" class="btn-sm primary">📋 <?= pt('Portfolio') ?></a>
     </div>
 </div>
 
 <!-- ── Nav ── -->
 <nav class="dash-nav">
-    <a href="<?= SITE_URL ?>/partner/dashboard" class="active">🏠 Dashboard</a>
-    <a href="<?= SITE_URL ?>/partner/portfolio">📋 Portfolio</a>
-    <a href="<?= SITE_URL ?>/partner/tasks">✅ Tasks <?php if ($overdueCount): ?><span class="notif-dot"><?= $overdueCount ?></span><?php endif; ?></a>
-    <a href="<?= SITE_URL ?>/partner/leads">💬 Leads <?php if ($overdueLeadsCount): ?><span class="notif-dot"><?= $overdueLeadsCount ?></span><?php endif; ?></a>
-    <a href="<?= SITE_URL ?>/partner/campaigns">📣 Campaigns</a>
-    <a href="<?= SITE_URL ?>/partner/content">📅 Content</a>
-    <a href="<?= SITE_URL ?>/partner/reports">📊 Reports</a>
-    <a href="<?= SITE_URL ?>/partner/recommendations">✦ Recommendations <?php if (!empty($dashRecs)): ?><span class="notif-dot"><?= count($dashRecs) ?></span><?php endif; ?></a>
-    <a href="<?= SITE_URL ?>/partner/alerts">🔔 Alerts <?php if ($activeAlertsCount): ?><span class="notif-dot <?= $urgentAlertsCount ? '' : '' ?>" style="<?= $urgentAlertsCount ? 'background:#f59e0b' : '' ?>"><?= $activeAlertsCount ?></span><?php endif; ?></a>
-    <a href="<?= SITE_URL ?>/partner/commissions">💰 Commissions</a>
+    <a href="<?= SITE_URL ?>/partner/dashboard" class="active">🏠 <?= pt('Dashboard') ?></a>
+    <a href="<?= SITE_URL ?>/partner/portfolio">📋 <?= pt('Portfolio') ?></a>
+    <a href="<?= SITE_URL ?>/partner/tasks">✅ <?= pt('Tasks') ?> <?php if ($overdueCount): ?><span class="notif-dot"><?= $overdueCount ?></span><?php endif; ?></a>
+    <a href="<?= SITE_URL ?>/partner/leads">💬 <?= pt('Leads') ?> <?php if ($overdueLeadsCount): ?><span class="notif-dot"><?= $overdueLeadsCount ?></span><?php endif; ?></a>
+    <a href="<?= SITE_URL ?>/partner/campaigns">📣 <?= pt('Campaigns') ?></a>
+    <a href="<?= SITE_URL ?>/partner/content">📅 <?= pt('Content') ?></a>
+    <a href="<?= SITE_URL ?>/partner/reports">📊 <?= pt('Reports') ?></a>
+    <a href="<?= SITE_URL ?>/partner/recommendations">✦ <?= pt('Recommendations') ?> <?php if (!empty($dashRecs)): ?><span class="notif-dot"><?= count($dashRecs) ?></span><?php endif; ?></a>
+    <a href="<?= SITE_URL ?>/partner/alerts">🔔 <?= pt('Alerts') ?> <?php if ($activeAlertsCount): ?><span class="notif-dot <?= $urgentAlertsCount ? '' : '' ?>" style="<?= $urgentAlertsCount ? 'background:#f59e0b' : '' ?>"><?= $activeAlertsCount ?></span><?php endif; ?></a>
+    <a href="<?= SITE_URL ?>/partner/commissions">💰 <?= pt('Commissions') ?></a>
 </nav>
 
 <!-- ── Summary strip ── -->
 <div class="sum-strip">
     <div class="sum-card blue-border">
         <div class="val"><?= (int)$portfolio['total'] ?></div>
-        <div class="lbl">Businesses</div>
-        <div class="sub" style="color:#16a34a"><?= (int)$portfolio['active'] ?> active · <?= (int)$portfolio['onboarding'] ?> onboarding</div>
+        <div class="lbl"><?= pt('Businesses') ?></div>
+        <div class="sub" style="color:#16a34a"><?= (int)$portfolio['active'] ?> <?= pt('active') ?> · <?= (int)$portfolio['onboarding'] ?> <?= pt('onboarding') ?></div>
     </div>
     <div class="sum-card <?= $overdueCount > 0 ? 'red-border' : '' ?>">
         <div class="val"><?= $openTaskCount ?></div>
-        <div class="lbl">Open Tasks</div>
+        <div class="lbl"><?= pt('Open Tasks') ?></div>
         <?php if ($overdueCount): ?>
-        <div class="sub" style="color:var(--pred)">⚠ <?= $overdueCount ?> overdue</div>
+        <div class="sub" style="color:var(--pred)">⚠ <?= $overdueCount ?> <?= pt('overdue') ?></div>
         <?php else: ?>
-        <div class="sub" style="color:#16a34a">✓ None overdue</div>
+        <div class="sub" style="color:#16a34a">✓ <?= pt('None overdue') ?></div>
         <?php endif; ?>
     </div>
     <div class="sum-card <?= $overdueLeadsCount > 0 ? 'yellow-border' : '' ?>">
         <div class="val"><?= $activeLeadCount ?></div>
-        <div class="lbl">Active Leads</div>
+        <div class="lbl"><?= pt('Active Leads') ?></div>
         <?php if ($overdueLeadsCount): ?>
-        <div class="sub" style="color:var(--pyellow)">⚠ <?= $overdueLeadsCount ?> overdue follow-up</div>
+        <div class="sub" style="color:var(--pyellow)">⚠ <?= $overdueLeadsCount ?> <?= pt('overdue follow-up') ?></div>
         <?php else: ?>
-        <div class="sub" style="color:#6b7280">Need follow-up</div>
+        <div class="sub" style="color:#6b7280"><?= pt('Need follow-up') ?></div>
         <?php endif; ?>
     </div>
     <div class="sum-card green-border">
         <div class="val"><?= $activeCampaigns ?></div>
-        <div class="lbl">Active Campaigns</div>
-        <div class="sub" style="color:#6b7280"><?= $scheduledCampaigns ?> scheduled</div>
+        <div class="lbl"><?= pt('Active Campaigns') ?></div>
+        <div class="sub" style="color:#6b7280"><?= $scheduledCampaigns ?> <?= pt('scheduled') ?></div>
     </div>
     <div class="sum-card yellow-border">
         <div class="val" style="font-size:1.35rem"><?= number_format($monthComm) ?></div>
-        <div class="lbl">Commission (Month)</div>
-        <div class="sub" style="color:#6b7280">XAF · <?= number_format($pendingComm) ?> pending</div>
+        <div class="lbl"><?= pt('Commission (Month)') ?></div>
+        <div class="sub" style="color:#6b7280">XAF · <?= number_format($pendingComm) ?> <?= pt('pending') ?></div>
     </div>
     <div class="sum-card purple-border">
         <div class="val"><?= $activePlanCount ?></div>
-        <div class="lbl">Active Plans</div>
-        <div class="sub" style="color:#6b7280">Growth plans running</div>
+        <div class="lbl"><?= pt('Active Plans') ?></div>
+        <div class="sub" style="color:#6b7280"><?= pt('Growth plans running') ?></div>
     </div>
 </div>
 
 <!-- ── Attention queue (only shown if items exist) ── -->
 <?php if (!empty($attentionQueue)): ?>
 <div class="attn-section">
-    <h2>⚠️ Attention Needed <span style="background:#dc2626;color:#fff;border-radius:12px;padding:1px 8px;font-size:.72rem;font-weight:700"><?= count($attentionQueue) ?></span></h2>
+    <h2>⚠️ <?= pt('Attention Needed') ?> <span style="background:#dc2626;color:#fff;border-radius:12px;padding:1px 8px;font-size:.72rem;font-weight:700"><?= count($attentionQueue) ?></span></h2>
     <div class="attn-grid">
     <?php foreach (array_slice($attentionQueue, 0, 8) as $a): ?>
     <div class="attn-item <?= $a['severity'] ?>">
@@ -316,12 +317,12 @@ require_once __DIR__ . '/../includes/header.php';
             <span class="attn-msg"><?= e($a['reason']) ?></span>
         </a>
         <span class="sev-badge sev-<?= $a['severity'] ?>"><?= ucfirst($a['severity']) ?></span>
-        <a href="<?= SITE_URL ?>/partner/business?lid=<?= $a['listing_id'] ?>" style="font-size:.8rem;color:var(--pblue);white-space:nowrap;text-decoration:none">Take action →</a>
+        <a href="<?= SITE_URL ?>/partner/business?lid=<?= $a['listing_id'] ?>" style="font-size:.8rem;color:var(--pblue);white-space:nowrap;text-decoration:none"><?= pt('Take action') ?> →</a>
     </div>
     <?php endforeach; ?>
     <?php if (count($attentionQueue) > 8): ?>
     <div style="text-align:center;padding:8px 0">
-        <a href="<?= SITE_URL ?>/partner/portfolio" style="font-size:.85rem;color:var(--pblue);text-decoration:none">+ <?= count($attentionQueue)-8 ?> more → View Portfolio</a>
+        <a href="<?= SITE_URL ?>/partner/portfolio" style="font-size:.85rem;color:var(--pblue);text-decoration:none">+ <?= count($attentionQueue)-8 ?> <?= pt('more') ?> → <?= pt('View Portfolio') ?></a>
     </div>
     <?php endif; ?>
     </div>
@@ -330,23 +331,23 @@ require_once __DIR__ . '/../includes/header.php';
 
 <!-- ── Phase 3A: AI Priorities Panel ── -->
 <div class="ai-priorities">
-    <h2>✦ AI Priorities <span class="ai-badge-sm">SMART</span></h2>
+    <h2>✦ <?= pt('AI Priorities') ?> <span class="ai-badge-sm">SMART</span></h2>
     <div class="ai-stat-row">
         <div class="ai-stat">
             <div class="n"><?= (int)$portfolio['total'] ?></div>
-            <div class="l">Businesses Managed</div>
+            <div class="l"><?= pt('Businesses Managed') ?></div>
         </div>
         <div class="ai-stat">
             <div class="n" style="color:<?= $urgentAlertsCount ? '#ef4444' : ($activeAlertsCount ? '#f59e0b' : '#10b981') ?>"><?= $activeAlertsCount ?></div>
-            <div class="l">Active Alerts</div>
+            <div class="l"><?= pt('Active Alerts') ?></div>
         </div>
         <div class="ai-stat">
             <div class="n" style="color:<?= $overdueLeadsCount ? '#f59e0b' : '#10b981' ?>"><?= $overdueLeadsCount ?></div>
-            <div class="l">Leads Need Follow-Up</div>
+            <div class="l"><?= pt('Leads Need Follow-Up') ?></div>
         </div>
         <div class="ai-stat">
             <div class="n" style="color:<?= !empty($dashRecs) ? '#6366f1' : '#10b981' ?>"><?= count($dashRecs) ?></div>
-            <div class="l">AI Recommendations</div>
+            <div class="l"><?= pt('AI Recommendations') ?></div>
         </div>
     </div>
 
@@ -366,13 +367,13 @@ require_once __DIR__ . '/../includes/header.php';
         <?php endforeach; ?>
     </div>
     <div style="margin-top:10px;display:flex;gap:8px">
-        <a href="<?= SITE_URL ?>/partner/recommendations" class="btn-sm outline">View all recommendations →</a>
-        <a href="<?= SITE_URL ?>/partner/alerts" class="btn-sm outline">View alerts →</a>
+        <a href="<?= SITE_URL ?>/partner/recommendations" class="btn-sm outline"><?= pt('View all recommendations') ?> →</a>
+        <a href="<?= SITE_URL ?>/partner/alerts" class="btn-sm outline"><?= pt('View alerts') ?> →</a>
     </div>
     <?php else: ?>
     <div style="text-align:center;padding:12px 0;color:#6b7280;font-size:.875rem">
-        ✓ No active recommendations — your portfolio is in good shape.
-        <div style="margin-top:8px"><a href="<?= SITE_URL ?>/partner/recommendations" class="btn-sm outline">Check recommendations →</a></div>
+        ✓ <?= pt('No active recommendations — your portfolio is in good shape.') ?>
+        <div style="margin-top:8px"><a href="<?= SITE_URL ?>/partner/recommendations" class="btn-sm outline"><?= pt('Check recommendations') ?> →</a></div>
     </div>
     <?php endif; ?>
 </div>
@@ -383,7 +384,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Upcoming tasks -->
     <div class="panel">
-        <h2>✅ Upcoming Tasks <span class="badge"><?= count($upcomingTasks) ?></span></h2>
+        <h2>✅ <?= pt('Upcoming Tasks') ?> <span class="badge"><?= count($upcomingTasks) ?></span></h2>
         <?php if ($upcomingTasks): ?>
         <?php foreach ($upcomingTasks as $task):
             $isOverdue = $task['due_date'] && $task['due_date'] < date('Y-m-d');
@@ -395,7 +396,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <div style="font-size:.78rem;color:#6b7280">
                     🏢 <?= e($task['biz_name']) ?>
                     <?php if ($task['due_date']): ?> ·
-                    <?php if ($isOverdue): ?><span class="overdue-tag">⚠ Overdue:</span><?php endif; ?>
+                    <?php if ($isOverdue): ?><span class="overdue-tag">⚠ <?= pt('Overdue') ?>:</span><?php endif; ?>
                     <?= date('j M', strtotime($task['due_date'])) ?>
                     <?php endif; ?>
                 </div>
@@ -404,16 +405,16 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
         <?php endforeach; ?>
         <div style="margin-top:12px">
-            <a href="<?= SITE_URL ?>/partner/tasks" class="btn-sm outline">View all tasks →</a>
+            <a href="<?= SITE_URL ?>/partner/tasks" class="btn-sm outline"><?= pt('View all tasks') ?> →</a>
         </div>
         <?php else: ?>
-        <div class="empty-small">🎉 No upcoming tasks this week. Great work!</div>
+        <div class="empty-small">🎉 <?= pt('No upcoming tasks this week. Great work!') ?></div>
         <?php endif; ?>
     </div>
 
     <!-- Active leads -->
     <div class="panel">
-        <h2>💬 Active Leads <span class="badge"><?= $activeLeadCount ?></span></h2>
+        <h2>💬 <?= pt('Active Leads') ?> <span class="badge"><?= $activeLeadCount ?></span></h2>
         <?php
         $leadSt = $pdo->prepare("SELECT pl.*, l.title AS biz_name FROM partner_leads pl JOIN listings l ON l.id=pl.listing_id WHERE pl.partner_id=? AND pl.status IN ('new','contacted','follow_up') ORDER BY pl.follow_up_date ASC, pl.created_at DESC LIMIT 6");
         $leadSt->execute([$pid]); $activeLeadList = $leadSt->fetchAll();
@@ -428,7 +429,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <div style="font-size:.78rem;color:#6b7280">
                     🏢 <?= e($lead['biz_name']) ?> · <?= ucfirst($lead['status']) ?>
                     <?php if ($lead['follow_up_date']): ?> ·
-                    <?php if ($overdueL): ?><span class="overdue-tag">⚠ Overdue follow-up</span>
+                    <?php if ($overdueL): ?><span class="overdue-tag">⚠ <?= pt('Overdue follow-up') ?></span>
                     <?php else: ?>📅 <?= date('j M', strtotime($lead['follow_up_date'])) ?><?php endif; ?>
                     <?php endif; ?>
                 </div>
@@ -437,17 +438,17 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
         <?php endforeach; ?>
         <div style="margin-top:12px">
-            <a href="<?= SITE_URL ?>/partner/leads" class="btn-sm outline">View all leads →</a>
+            <a href="<?= SITE_URL ?>/partner/leads" class="btn-sm outline"><?= pt('View all leads') ?> →</a>
         </div>
         <?php else: ?>
-        <div class="empty-small">No active leads.</div>
+        <div class="empty-small"><?= pt('No active leads.') ?></div>
         <?php endif; ?>
     </div>
 
     <!-- Campaigns ending soon -->
     <?php if (!empty($endingSoonCampaigns)): ?>
     <div class="panel">
-        <h2>⏰ Campaigns Ending Soon</h2>
+        <h2>⏰ <?= pt('Campaigns Ending Soon') ?></h2>
         <?php foreach ($endingSoonCampaigns as $camp):
             $daysLeft = (int)ceil((strtotime($camp['end_date']) - time()) / 86400);
             $dClass   = $daysLeft <= 2 ? 'days-1-2' : ($daysLeft <= 5 ? 'days-3-5' : 'days-6-7');
@@ -458,7 +459,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <div style="font-size:.78rem;color:#6b7280">🏢 <?= e($camp['biz_name']) ?></div>
             </div>
             <span class="days-left <?= $dClass ?>"><?= $daysLeft ?> day<?= $daysLeft !== 1?'s':'' ?></span>
-            <a href="<?= SITE_URL ?>/partner/campaigns?view=metrics&cid=<?= $camp['id'] ?>" style="font-size:.8rem;color:var(--pblue);text-decoration:none">Metrics →</a>
+            <a href="<?= SITE_URL ?>/partner/campaigns?view=metrics&cid=<?= $camp['id'] ?>" style="font-size:.8rem;color:var(--pblue);text-decoration:none"><?= pt('Metrics') ?> →</a>
         </div>
         <?php endforeach; ?>
     </div>
@@ -467,7 +468,7 @@ require_once __DIR__ . '/../includes/header.php';
     <!-- Today's scheduled content -->
     <?php if (!empty($todayContent)): ?>
     <div class="panel">
-        <h2>📅 Publishing Today <span class="badge"><?= count($todayContent) ?></span></h2>
+        <h2>📅 <?= pt('Publishing Today') ?> <span class="badge"><?= count($todayContent) ?></span></h2>
         <?php foreach ($todayContent as $ci): ?>
         <div class="today-item">
             <div style="flex:1;min-width:0">
@@ -484,7 +485,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Recent activity -->
     <div class="panel">
-        <h2>📋 Recent Activity</h2>
+        <h2>📋 <?= pt('Recent Activity') ?></h2>
         <?php if ($activityLog): ?>
         <?php foreach ($activityLog as $entry): ?>
         <div class="act-row">
@@ -498,7 +499,7 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
         <?php endforeach; ?>
         <?php else: ?>
-        <div class="empty-small">No activity recorded yet.</div>
+        <div class="empty-small"><?= pt('No activity recorded yet.') ?></div>
         <?php endif; ?>
     </div>
 
@@ -522,41 +523,41 @@ require_once __DIR__ . '/../includes/header.php';
     $scoreColor = $avgScore === null ? '#9ca3af' : ($avgScore >= 70 ? '#10b981' : ($avgScore >= 40 ? '#f59e0b' : '#ef4444'));
     ?>
     <div class="panel">
-        <h2>📈 Portfolio Growth Score <span style="font-size:.7rem;font-weight:400;color:#6b7280;margin-left:2px">237biz indicator</span></h2>
+        <h2>📈 <?= pt('Portfolio Growth Score') ?> <span style="font-size:.7rem;font-weight:400;color:#6b7280;margin-left:2px">237biz indicator</span></h2>
         <?php if ($avgScore !== null): ?>
         <div class="score-ring" style="border-color:<?= $scoreColor ?>">
             <div class="score-num" style="color:<?= $scoreColor ?>"><?= $avgScore ?></div>
             <div class="score-sub">/ 100</div>
         </div>
         <div style="text-align:center;font-size:.75rem;color:#6b7280;margin-top:6px">
-            Avg. across <?= (int)$scoreRow['scored_count'] ?> business<?= $scoreRow['scored_count']!=1?'es':'' ?>
+            <?= pt('Avg. across') ?> <?= (int)$scoreRow['scored_count'] ?> <?= pt('business(es)') ?>
         </div>
         <div style="margin-top:10px;font-size:.72rem;color:#9ca3af;text-align:center;line-height:1.4">
-            237biz activity indicator — reflects platform engagement,<br>not overall business performance.
+            <?= pt('237biz activity indicator — reflects platform engagement, not overall business performance.') ?>
         </div>
         <?php else: ?>
         <div style="text-align:center;padding:14px 0;color:#6b7280;font-size:.87rem">
-            Visit a business workspace to compute its score.
+            <?= pt('Visit a business workspace to compute its score.') ?>
         </div>
         <?php endif; ?>
     </div>
 
     <!-- Commission summary -->
     <div class="panel">
-        <h2>💰 Commission</h2>
+        <h2>💰 <?= pt('Commission') ?></h2>
         <div class="comm-summary">
-            <div class="comm-row"><span class="label">This Month</span><span class="value" style="color:var(--pgreen)"><?= number_format($monthComm,0) ?> XAF</span></div>
-            <div class="comm-row"><span class="label">Pending</span><span class="value" style="color:var(--pyellow)"><?= number_format($pendingComm,0) ?> XAF</span></div>
-            <div class="comm-row"><span class="label">Total Earned</span><span class="value"><?= number_format($totalComm,0) ?> XAF</span></div>
+            <div class="comm-row"><span class="label"><?= pt('This Month') ?></span><span class="value" style="color:var(--pgreen)"><?= number_format($monthComm,0) ?> XAF</span></div>
+            <div class="comm-row"><span class="label"><?= pt('Pending') ?></span><span class="value" style="color:var(--pyellow)"><?= number_format($pendingComm,0) ?> XAF</span></div>
+            <div class="comm-row"><span class="label"><?= pt('Total Earned') ?></span><span class="value"><?= number_format($totalComm,0) ?> XAF</span></div>
         </div>
         <div style="margin-top:12px">
-            <a href="<?= SITE_URL ?>/partner/commissions" class="btn-sm outline" style="width:100%;text-align:center;display:block">View details →</a>
+            <a href="<?= SITE_URL ?>/partner/commissions" class="btn-sm outline" style="width:100%;text-align:center;display:block"><?= pt('View details') ?> →</a>
         </div>
     </div>
 
     <!-- Portfolio quick stats -->
     <div class="panel">
-        <h2>📊 Portfolio Pulse</h2>
+        <h2>📊 <?= pt('Portfolio Pulse') ?></h2>
         <?php
         $totalLeadsAll = $pdo->prepare("SELECT COUNT(*) FROM partner_leads WHERE partner_id=?");
         $totalLeadsAll->execute([$pid]); $totalLeadsCount = (int)$totalLeadsAll->fetchColumn();
@@ -566,27 +567,27 @@ require_once __DIR__ . '/../includes/header.php';
         $totalCamps = $pdo->prepare("SELECT COUNT(*) FROM partner_campaigns WHERE partner_id=?");
         $totalCamps->execute([$pid]); $totalCampsCount = (int)$totalCamps->fetchColumn();
         ?>
-        <div class="comm-row"><span class="label">Total Leads</span><span class="value"><?= $totalLeadsCount ?></span></div>
-        <div class="comm-row"><span class="label">Conversion Rate</span><span class="value" style="color:var(--pgreen)"><?= $convRate ?>%</span></div>
-        <div class="comm-row"><span class="label">Total Campaigns</span><span class="value"><?= $totalCampsCount ?></span></div>
-        <div class="comm-row"><span class="label">Active Campaigns</span><span class="value" style="color:var(--pblue)"><?= $activeCampaigns ?></span></div>
+        <div class="comm-row"><span class="label"><?= pt('Total Leads') ?></span><span class="value"><?= $totalLeadsCount ?></span></div>
+        <div class="comm-row"><span class="label"><?= pt('Conversion Rate') ?></span><span class="value" style="color:var(--pgreen)"><?= $convRate ?>%</span></div>
+        <div class="comm-row"><span class="label"><?= pt('Total Campaigns') ?></span><span class="value"><?= $totalCampsCount ?></span></div>
+        <div class="comm-row"><span class="label"><?= pt('Active Campaigns') ?></span><span class="value" style="color:var(--pblue)"><?= $activeCampaigns ?></span></div>
     </div>
 
     <!-- Quick links -->
     <div class="panel">
-        <h2>⚡ Quick Actions</h2>
+        <h2>⚡ <?= pt('Quick Actions') ?></h2>
         <div class="quick-links">
-            <a href="<?= SITE_URL ?>/partner/recommendations" class="quick-link"><span class="icon">✦</span>AI Recommendations<span class="arrow">→</span></a>
-            <a href="<?= SITE_URL ?>/partner/ai-plan" class="quick-link"><span class="icon">🧠</span>AI Growth Plan<span class="arrow">→</span></a>
-            <a href="<?= SITE_URL ?>/partner/automation" class="quick-link"><span class="icon">⚡</span>Automations<span class="arrow">→</span></a>
-            <a href="<?= SITE_URL ?>/partner/alerts" class="quick-link"><span class="icon">🔔</span>Growth Alerts<span class="arrow">→</span></a>
-            <a href="<?= SITE_URL ?>/partner/portfolio" class="quick-link"><span class="icon">📋</span>View Portfolio<span class="arrow">→</span></a>
-            <a href="<?= SITE_URL ?>/partner/campaigns" class="quick-link"><span class="icon">📣</span>Manage Campaigns<span class="arrow">→</span></a>
-            <a href="<?= SITE_URL ?>/partner/content" class="quick-link"><span class="icon">📅</span>Content Calendar<span class="arrow">→</span></a>
-            <a href="<?= SITE_URL ?>/partner/templates" class="quick-link"><span class="icon">📨</span>Message Templates<span class="arrow">→</span></a>
-            <a href="<?= SITE_URL ?>/partner/reports" class="quick-link"><span class="icon">📊</span>Generate Report<span class="arrow">→</span></a>
-            <a href="<?= SITE_URL ?>/partner/tasks" class="quick-link"><span class="icon">✅</span>All Tasks<span class="arrow">→</span></a>
-            <a href="<?= SITE_URL ?>/partner/leads" class="quick-link"><span class="icon">💬</span>All Leads<span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/recommendations" class="quick-link"><span class="icon">✦</span><?= pt('AI Recommendations') ?><span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/ai-plan" class="quick-link"><span class="icon">🧠</span><?= pt('AI Growth Plan') ?><span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/automation" class="quick-link"><span class="icon">⚡</span><?= pt('Automations') ?><span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/alerts" class="quick-link"><span class="icon">🔔</span><?= pt('Growth Alerts') ?><span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/portfolio" class="quick-link"><span class="icon">📋</span><?= pt('View Portfolio') ?><span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/campaigns" class="quick-link"><span class="icon">📣</span><?= pt('Manage Campaigns') ?><span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/content" class="quick-link"><span class="icon">📅</span><?= pt('Content Calendar') ?><span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/templates" class="quick-link"><span class="icon">📨</span><?= pt('Message Templates') ?><span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/reports" class="quick-link"><span class="icon">📊</span><?= pt('Generate Report') ?><span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/tasks" class="quick-link"><span class="icon">✅</span><?= pt('All Tasks') ?><span class="arrow">→</span></a>
+            <a href="<?= SITE_URL ?>/partner/leads" class="quick-link"><span class="icon">💬</span><?= pt('All Leads') ?><span class="arrow">→</span></a>
         </div>
     </div>
 

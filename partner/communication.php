@@ -8,6 +8,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $pdo = db();
 $partnerProfile = requireGrowthPartner();
@@ -227,7 +228,7 @@ $admins->execute();
 $admins = $admins->fetchAll();
 
 $flash     = getFlash();
-$pageTitle = 'Communication Hub';
+$pageTitle = pt('Communication Hub');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <style>
@@ -279,10 +280,10 @@ require_once __DIR__ . '/../includes/header.php';
 <div style="max-width:1100px;margin:0 auto;padding:1rem 1.5rem .5rem">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
         <div>
-            <h1 style="margin:0;font-size:1.2rem;color:#111827">Communication Hub</h1>
-            <p style="margin:.15rem 0 0;font-size:.8rem;color:#6b7280">Messages, announcements and partner comms</p>
+            <h1 style="margin:0;font-size:1.2rem;color:#111827"><?= pt('Communication Hub') ?></h1>
+            <p style="margin:.15rem 0 0;font-size:.8rem;color:#6b7280"><?= pt('Messages, announcements and partner comms') ?></p>
         </div>
-        <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-ghost btn-sm">← Dashboard</a>
+        <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-ghost btn-sm">← <?= pt('Dashboard') ?></a>
     </div>
 </div>
 
@@ -299,18 +300,18 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="comm-sidebar">
         <div class="sidebar-header">
             <h2>
-                Messages
+                <?= pt('Messages') ?>
                 <?php if ($unreadCount > 0): ?><span class="t-badge"><?= $unreadCount ?></span><?php endif ?>
             </h2>
             <div class="sidebar-nav">
-                <a href="?view=inbox" class="snav<?= $view==='inbox'?' active':'' ?>">Inbox</a>
-                <a href="?view=sent" class="snav<?= $view==='sent'?' active':'' ?>">Sent</a>
-                <a href="?view=announcements" class="snav<?= $view==='announcements'?' active':'' ?>">Announcements</a>
+                <a href="?view=inbox" class="snav<?= $view==='inbox'?' active':'' ?>"><?= pt('Inbox') ?></a>
+                <a href="?view=sent" class="snav<?= $view==='sent'?' active':'' ?>"><?= pt('Sent') ?></a>
+                <a href="?view=announcements" class="snav<?= $view==='announcements'?' active':'' ?>"><?= pt('Announcements') ?></a>
             </div>
             <div style="margin-top:.5rem">
                 <form method="get" action="">
                     <input type="hidden" name="view" value="<?= e($view) ?>">
-                    <input class="search-box" type="search" name="q" placeholder="Search messages…" value="<?= e($searchQ) ?>">
+                    <input class="search-box" type="search" name="q" placeholder="<?= pt('Search messages…') ?>" value="<?= e($searchQ) ?>">
                 </form>
             </div>
         </div>
@@ -318,13 +319,13 @@ require_once __DIR__ . '/../includes/header.php';
         <?php if ($view === 'announcements'): ?>
         <div class="thread-list" style="padding:.75rem">
             <?php if (!$announcements): ?>
-            <p style="text-align:center;color:#9ca3af;font-size:.8rem;padding:1rem">No announcements yet.</p>
+            <p style="text-align:center;color:#9ca3af;font-size:.8rem;padding:1rem"><?= pt('No announcements yet.') ?></p>
             <?php else: ?>
             <?php foreach ($announcements as $ann): ?>
             <div class="ann-card">
                 <div class="ann-title"><?= e($ann['subject'] ?? $ann['title'] ?? 'Announcement') ?></div>
                 <div class="ann-body"><?= nl2br(e(mb_strimwidth($ann['body'] ?? $ann['content'] ?? '', 0, 100, '…'))) ?></div>
-                <div class="ann-meta">From 237biz · <?= date('d M Y', strtotime($ann['created_at'])) ?></div>
+                <div class="ann-meta"><?= pt('From 237biz') ?> · <?= date('d M Y', strtotime($ann['created_at'])) ?></div>
             </div>
             <?php endforeach ?>
             <?php endif ?>
@@ -333,11 +334,11 @@ require_once __DIR__ . '/../includes/header.php';
         <?php else: ?>
         <!-- Compose button -->
         <div style="padding:.5rem .75rem;border-bottom:1px solid #f3f4f6">
-            <a href="?view=inbox&compose=1" class="btn btn-primary btn-sm" style="width:100%;justify-content:center">✏️ New Message</a>
+            <a href="?view=inbox&compose=1" class="btn btn-primary btn-sm" style="width:100%;justify-content:center">✏️ <?= pt('New Message') ?></a>
         </div>
         <div class="thread-list">
             <?php if (!$threads): ?>
-            <div style="text-align:center;padding:2rem;color:#9ca3af;font-size:.8rem">No messages yet.</div>
+            <div style="text-align:center;padding:2rem;color:#9ca3af;font-size:.8rem"><?= pt('No messages yet.') ?></div>
             <?php else: ?>
             <?php foreach ($threads as $t): ?>
             <a href="?view=<?= $view ?>&thread=<?= $t['id'] ?>" class="thread-item<?= $threadId==$t['id']?' active':'' ?><?= $t['unread_count']>0?' unread':'' ?>">
@@ -361,17 +362,17 @@ require_once __DIR__ . '/../includes/header.php';
         <?php if (isset($_GET['compose'])): ?>
         <!-- Compose new message -->
         <div class="main-header">
-            <div class="main-title">New Message</div>
-            <a href="?view=inbox" class="btn btn-ghost btn-sm">Cancel</a>
+            <div class="main-title"><?= pt('New Message') ?></div>
+            <a href="?view=inbox" class="btn btn-ghost btn-sm"><?= pt('Cancel') ?></a>
         </div>
         <div class="compose-panel">
             <form method="post" action="">
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="send">
                 <div class="form-group">
-                    <label>To</label>
+                    <label><?= pt('To') ?></label>
                     <select name="to_user_id" required>
-                        <option value="">— Select recipient —</option>
+                        <option value="">— <?= pt('Select recipient') ?> —</option>
                         <optgroup label="237biz Admin">
                         <?php foreach ($admins as $adm): ?>
                         <option value="<?= $adm['id'] ?>"><?= e($adm['name']) ?></option>
@@ -380,22 +381,22 @@ require_once __DIR__ . '/../includes/header.php';
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Subject</label>
-                    <input type="text" name="subject" maxlength="200" required placeholder="Message subject">
+                    <label><?= pt('Subject') ?></label>
+                    <input type="text" name="subject" maxlength="200" required placeholder="<?= pt('Message subject') ?>">
                 </div>
                 <div class="form-group">
-                    <label>Context (optional)</label>
+                    <label><?= pt('Context (optional)') ?></label>
                     <select name="context_type">
-                        <option value="general">General</option>
-                        <option value="lead">Lead</option>
-                        <option value="assignment">Assignment</option>
+                        <option value="general"><?= pt('General') ?></option>
+                        <option value="lead"><?= pt('Lead') ?></option>
+                        <option value="assignment"><?= pt('Assignment') ?></option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Message</label>
-                    <textarea name="body" rows="6" required placeholder="Type your message…"></textarea>
+                    <label><?= pt('Message') ?></label>
+                    <textarea name="body" rows="6" required placeholder="<?= pt('Type your message…') ?>"></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary">Send Message</button>
+                <button type="submit" class="btn btn-primary"><?= pt('Send Message') ?></button>
             </form>
         </div>
 
@@ -407,7 +408,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="archive">
                 <input type="hidden" name="thread_id" value="<?= $activeThread['id'] ?>">
-                <button class="btn btn-ghost btn-sm" type="submit">Archive</button>
+                <button class="btn btn-ghost btn-sm" type="submit"><?= pt('Archive') ?></button>
             </form>
         </div>
         <div class="messages-area">
@@ -418,7 +419,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <?= nl2br(e($msg['body'])) ?>
                     <div class="msg-meta">
                         <?= e($msg['sender_name'] ?? 'Unknown') ?> · <?= date('d M Y H:i', strtotime($msg['created_at'])) ?>
-                        <?php if ($isMine && $msg['read_at']): ?> · Read<?php endif ?>
+                        <?php if ($isMine && $msg['read_at']): ?> · <?= pt('Read') ?><?php endif ?>
                     </div>
                 </div>
             </div>
@@ -429,9 +430,9 @@ require_once __DIR__ . '/../includes/header.php';
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="send">
                 <input type="hidden" name="thread_id" value="<?= $activeThread['id'] ?>">
-                <textarea name="body" placeholder="Type your reply…" required></textarea>
+                <textarea name="body" placeholder="<?= pt('Type your reply…') ?>" required></textarea>
                 <div style="margin-top:.4rem;display:flex;justify-content:flex-end">
-                    <button type="submit" class="btn btn-primary btn-sm">Send Reply</button>
+                    <button type="submit" class="btn btn-primary btn-sm"><?= pt('Send Reply') ?></button>
                 </div>
             </form>
         </div>
@@ -439,8 +440,8 @@ require_once __DIR__ . '/../includes/header.php';
         <?php elseif ($view !== 'announcements'): ?>
         <div class="empty-state">
             <div style="font-size:2.5rem;margin-bottom:.75rem">💬</div>
-            <p style="margin:0;font-size:.9rem">Select a conversation or start a new one</p>
-            <a href="?view=inbox&compose=1" class="btn btn-primary btn-sm" style="margin-top:.75rem">✏️ New Message</a>
+            <p style="margin:0;font-size:.9rem"><?= pt('Select a conversation or start a new one') ?></p>
+            <a href="?view=inbox&compose=1" class="btn btn-primary btn-sm" style="margin-top:.75rem">✏️ <?= pt('New Message') ?></a>
         </div>
         <?php endif ?>
     </div>

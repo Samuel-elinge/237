@@ -7,6 +7,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $pdo = db();
 requireGrowthPartner();
@@ -119,7 +120,7 @@ $statusMeta = [
     'paused'    => ['label'=>'Paused',     'color'=>'#6b7280','bg'=>'#f3f4f6','desc'=>'Temporarily unavailable'],
 ];
 
-$pageTitle = 'Capacity & Availability';
+$pageTitle = pt('Capacity & Availability');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <style>
@@ -168,10 +169,10 @@ label.status-pill{display:inline-flex;align-items:center;gap:.3rem}
 <div style="max-width:860px;margin:0 auto;padding:1.5rem">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem">
         <div>
-            <h1 style="margin:0;font-size:1.3rem;color:#111827">Capacity & Availability</h1>
-            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280">Manage how many businesses you can take on and your availability status</p>
+            <h1 style="margin:0;font-size:1.3rem;color:#111827"><?= pt('Capacity & Availability') ?></h1>
+            <p style="margin:.2rem 0 0;font-size:.83rem;color:#6b7280"><?= pt('Manage how many businesses you can take on and your availability status') ?></p>
         </div>
-        <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← Dashboard</a>
+        <a href="<?= SITE_URL ?>/partner/dashboard" class="btn btn-detail">← <?= pt('Dashboard') ?></a>
     </div>
 
     <?php if ($flash): ?>
@@ -182,7 +183,7 @@ label.status-pill{display:inline-flex;align-items:center;gap:.3rem}
         <!-- Left: Settings form -->
         <div>
             <div class="card">
-                <p class="card-title">Availability Status</p>
+                <p class="card-title"><?= pt('Availability Status') ?></p>
 
                 <?php
                 $sm = $statusMeta[$curStatus] ?? $statusMeta['accepting'];
@@ -195,7 +196,7 @@ label.status-pill{display:inline-flex;align-items:center;gap:.3rem}
                 <form method="post" id="capacity-form">
                     <?= csrfField() ?>
 
-                    <p style="font-size:.82rem;font-weight:600;color:#374151;margin:0 0 .5rem">Change Status</p>
+                    <p style="font-size:.82rem;font-weight:600;color:#374151;margin:0 0 .5rem"><?= pt('Change Status') ?></p>
                     <div class="status-pills">
                         <?php foreach ($statusMeta as $s => $meta): ?>
                         <label class="status-pill<?= $curStatus === $s ? ' selected' : '' ?>"
@@ -211,7 +212,7 @@ label.status-pill{display:inline-flex;align-items:center;gap:.3rem}
                     <!-- Capacity meter -->
                     <div class="meter-wrap">
                         <div class="meter-label">
-                            <span>Businesses managed</span>
+                            <span><?= pt('Businesses managed') ?></span>
                             <span><?= $activeCount ?> / <?= $maxBiz ?></span>
                         </div>
                         <div class="meter-bar">
@@ -221,23 +222,23 @@ label.status-pill{display:inline-flex;align-items:center;gap:.3rem}
                     </div>
 
                     <!-- Max businesses slider -->
-                    <p style="font-size:.82rem;font-weight:600;color:#374151;margin:1rem 0 .25rem">Maximum Businesses</p>
+                    <p style="font-size:.82rem;font-weight:600;color:#374151;margin:1rem 0 .25rem"><?= pt('Maximum Businesses') ?></p>
                     <div class="range-wrap">
                         <input type="range" name="max_businesses" id="max-slider"
                                min="1" max="50" value="<?= $maxBiz ?>"
                                oninput="document.getElementById('max-display').textContent=this.value">
                         <div class="range-display" id="max-display"><?= $maxBiz ?></div>
-                        <div class="range-sub">businesses maximum<?= $activeCount ? " (currently managing $activeCount)" : '' ?></div>
+                        <div class="range-sub"><?= pt('businesses maximum') ?><?= $activeCount ? ' (' . pt('currently managing') . ' ' . $activeCount . ')' : '' ?></div>
                     </div>
 
                     <label style="font-size:.82rem;font-weight:600;color:#374151;display:block;margin:.75rem 0 .25rem">
-                        Note (optional)
+                        <?= pt('Note (optional)') ?>
                     </label>
-                    <textarea name="capacity_notes" rows="2" placeholder="e.g. On leave in August, reduced capacity…"
+                    <textarea name="capacity_notes" rows="2" placeholder="<?= pt('e.g. On leave in August, reduced capacity…') ?>"
                               style="width:100%;border:1px solid #d1d5db;border-radius:.5rem;padding:.5rem .75rem;font-size:.875rem;box-sizing:border-box;resize:vertical"></textarea>
 
                     <button type="submit" class="btn btn-primary" style="margin-top:1rem;width:100%;justify-content:center">
-                        Save Capacity Settings
+                        <?= pt('Save Capacity Settings') ?>
                     </button>
                 </form>
             </div>
@@ -247,13 +248,13 @@ label.status-pill{display:inline-flex;align-items:center;gap:.3rem}
         <div>
             <!-- Quick stats -->
             <div class="card">
-                <p class="card-title">Snapshot</p>
+                <p class="card-title"><?= pt('Snapshot') ?></p>
                 <?php
                 $stats = [
-                    ['Active businesses', $activeCount, '🏢'],
-                    ['Max capacity', $maxBiz, '🎯'],
-                    ['Slots available', max(0, $maxBiz - $activeCount), '✅'],
-                    ['Fill rate', $fillPct . '%', '📊'],
+                    [pt('Active businesses'), $activeCount, '🏢'],
+                    [pt('Max capacity'), $maxBiz, '🎯'],
+                    [pt('Slots available'), max(0, $maxBiz - $activeCount), '✅'],
+                    [pt('Fill rate'), $fillPct . '%', '📊'],
                 ];
                 foreach ($stats as [$lbl, $val, $icon]): ?>
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid #f3f4f6;font-size:.85rem">
@@ -266,7 +267,7 @@ label.status-pill{display:inline-flex;align-items:center;gap:.3rem}
             <!-- Managed businesses -->
             <?php if ($businesses): ?>
             <div class="card">
-                <p class="card-title">Managed Businesses</p>
+                <p class="card-title"><?= pt('Managed Businesses') ?></p>
                 <?php foreach ($businesses as $b): ?>
                 <div class="biz-row">
                     <span class="biz-name"><?= e($b['business_name']) ?></span>
@@ -281,7 +282,7 @@ label.status-pill{display:inline-flex;align-items:center;gap:.3rem}
     <!-- Capacity Log -->
     <?php if ($log): ?>
     <div class="card">
-        <p class="card-title">Capacity Change History</p>
+        <p class="card-title"><?= pt('Capacity Change History') ?></p>
         <?php foreach ($log as $l):
             $dot = $l['new_status'] === 'accepting' ? 'up' : ($l['new_status'] === 'full' || $l['new_status'] === 'paused' ? 'down' : 'same');
         ?>
@@ -289,9 +290,9 @@ label.status-pill{display:inline-flex;align-items:center;gap:.3rem}
             <div class="log-dot <?= $dot ?>"></div>
             <div>
                 <div>
-                    Status <strong><?= e($l['previous_status']) ?></strong> → <strong><?= e($l['new_status']) ?></strong>
+                    <?= pt('Status') ?> <strong><?= e($l['previous_status']) ?></strong> → <strong><?= e($l['new_status']) ?></strong>
                     <?php if ($l['previous_max'] !== $l['new_max']): ?>
-                    · Max <?= (int)$l['previous_max'] ?> → <?= (int)$l['new_max'] ?>
+                    · <?= pt('Max') ?> <?= (int)$l['previous_max'] ?> → <?= (int)$l['new_max'] ?>
                     <?php endif ?>
                 </div>
                 <?php if ($l['notes']): ?><div style="color:#6b7280"><?= e($l['notes']) ?></div><?php endif ?>

@@ -4,6 +4,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
+require_once __DIR__ . '/../includes/partner-lang.php';
 
 $partnerProfile = requireGrowthPartner();
 $partnerId      = (int)$partnerProfile['id'];
@@ -41,7 +42,7 @@ $listings->execute($params);
 $businesses = $listings->fetchAll();
 
 // Client-side filter (by status flags computed per business)
-$pageTitle = 'My Portfolio — Partner Centre';
+$pageTitle = pt('My Portfolio') . ' — ' . pt('Partner Centre');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -83,26 +84,26 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="partner-wrap">
   <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
-    <h1 style="font-family:'Fraunces',serif; font-size:2rem; font-weight:900; margin:0;">📋 My Portfolio</h1>
-    <span style="color:var(--muted);"><?= count($businesses) ?> business<?= count($businesses) !== 1 ? 'es' : '' ?></span>
+    <h1 style="font-family:'Fraunces',serif; font-size:2rem; font-weight:900; margin:0;">📋 <?= pt('My Portfolio') ?></h1>
+    <span style="color:var(--muted);"><?= count($businesses) ?> <?= pt('business(es)') ?></span>
   </div>
 
   <nav class="partner-nav">
-    <a href="<?= SITE_URL ?>/partner/dashboard">🏠 Dashboard</a>
-    <a href="<?= SITE_URL ?>/partner/portfolio" class="active">📋 Portfolio</a>
-    <a href="<?= SITE_URL ?>/partner/tasks">✅ Tasks</a>
-    <a href="<?= SITE_URL ?>/partner/leads">💬 Leads</a>
-    <a href="<?= SITE_URL ?>/partner/commissions">💰 Commissions</a>
+    <a href="<?= SITE_URL ?>/partner/dashboard">🏠 <?= pt('Dashboard') ?></a>
+    <a href="<?= SITE_URL ?>/partner/portfolio" class="active">📋 <?= pt('Portfolio') ?></a>
+    <a href="<?= SITE_URL ?>/partner/tasks">✅ <?= pt('Tasks') ?></a>
+    <a href="<?= SITE_URL ?>/partner/leads">💬 <?= pt('Leads') ?></a>
+    <a href="<?= SITE_URL ?>/partner/commissions">💰 <?= pt('Commissions') ?></a>
   </nav>
 
   <div class="portfolio-controls">
     <form method="GET" style="display:contents;">
-      <input type="text" name="q" value="<?= e($search) ?>" placeholder="Search by name, category, city or ID…">
-      <button type="submit" class="btn btn-primary" style="white-space:nowrap;">🔍 Search</button>
+      <input type="text" name="q" value="<?= e($search) ?>" placeholder="<?= pt('Search by name, category, city or ID…') ?>">
+      <button type="submit" class="btn btn-primary" style="white-space:nowrap;">🔍 <?= pt('Search') ?></button>
     </form>
     <div class="filter-tabs">
       <?php
-      $filters = ['all'=>'All','active'=>'Active','needs_attention'=>'Needs Attention','no_plan'=>'No Growth Plan'];
+      $filters = ['all'=>pt('All'),'active'=>pt('Active'),'needs_attention'=>pt('Needs Attention'),'no_plan'=>pt('No Growth Plan')];
       foreach ($filters as $fk => $fl):
       ?>
       <a href="?filter=<?= $fk ?><?= $search ? '&q='.urlencode($search) : '' ?>" class="filter-tab <?= $filter===$fk?'active':'' ?>"><?= $fl ?></a>
@@ -113,8 +114,8 @@ require_once __DIR__ . '/../includes/header.php';
   <?php if (!$businesses): ?>
     <div style="text-align:center;padding:4rem;background:var(--card);border:1px solid var(--border);border-radius:14px;">
       <div style="font-size:3rem;margin-bottom:1rem;">📭</div>
-      <h3 style="font-family:'Fraunces',serif;">No businesses assigned yet</h3>
-      <p style="color:var(--muted);">Your portfolio is empty. An admin will assign businesses to you.</p>
+      <h3 style="font-family:'Fraunces',serif;"><?= pt('No businesses assigned yet') ?></h3>
+      <p style="color:var(--muted);"><?= pt('Your portfolio is empty. An admin will assign businesses to you.') ?></p>
     </div>
   <?php else: ?>
     <div class="biz-grid">
@@ -137,12 +138,12 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="biz-name"><?= e($biz['title']) ?></div>
             <div class="biz-meta">
               <?= e($biz['cat_en']) ?> · <?= e($biz['city']) ?>
-              <?php if ($biz['verified']): ?> · ✓ Verified<?php endif; ?>
+              <?php if ($biz['verified']): ?> · ✓ <?= pt('Verified') ?><?php endif; ?>
             </div>
             <div style="margin-top:0.35rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
-              <?php if ($isOnboarding): ?><span class="tag-onboarding">🆕 Onboarding</span><?php endif; ?>
-              <?php if ($needsAttention): ?><span class="tag-needs-attention">⚠ Attention</span><?php endif; ?>
-              <?php if ($biz['active_plans'] > 0): ?><span class="tag-primary">📈 Plan Active</span><?php endif; ?>
+              <?php if ($isOnboarding): ?><span class="tag-onboarding">🆕 <?= pt('Onboarding') ?></span><?php endif; ?>
+              <?php if ($needsAttention): ?><span class="tag-needs-attention">⚠ <?= pt('Attention') ?></span><?php endif; ?>
+              <?php if ($biz['active_plans'] > 0): ?><span class="tag-primary">📈 <?= pt('Plan Active') ?></span><?php endif; ?>
             </div>
           </div>
         </div>
@@ -152,25 +153,25 @@ require_once __DIR__ . '/../includes/header.php';
           <div class="health-bar-fill" style="width:<?= $healthScore ?>%;background:<?= $healthColor ?>;"></div>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--muted); margin-bottom:0.5rem;">
-          <span>Health Score</span><span style="color:<?= $healthColor ?>; font-weight:700;"><?= $healthScore ?>%</span>
+          <span><?= pt('Health Score') ?></span><span style="color:<?= $healthColor ?>; font-weight:700;"><?= $healthScore ?>%</span>
         </div>
 
         <div class="biz-stats">
           <div class="biz-stat">
             <div class="n"><?= (int)$biz['open_tasks'] ?></div>
-            <div class="l">Open Tasks</div>
+            <div class="l"><?= pt('Open Tasks') ?></div>
           </div>
           <div class="biz-stat">
             <div class="n"><?= (int)$biz['active_leads'] ?></div>
-            <div class="l">Leads</div>
+            <div class="l"><?= pt('Leads') ?></div>
           </div>
           <div class="biz-stat">
             <div class="n"><?= (int)$biz['review_count'] ?></div>
-            <div class="l">Reviews</div>
+            <div class="l"><?= pt('Reviews') ?></div>
           </div>
           <div class="biz-stat">
             <div class="n"><?= $biz['avg_rating'] ? number_format($biz['avg_rating'],1) : '—' ?></div>
-            <div class="l">Rating</div>
+            <div class="l"><?= pt('Rating') ?></div>
           </div>
         </div>
       </a>
