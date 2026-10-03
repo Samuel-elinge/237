@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($newStatus === 'actioned')   $extraSql = ", actioned_at=NOW()";
             $pdo->prepare("UPDATE ai_recommendations SET status=? $extraSql WHERE id=? AND partner_id=?")
                 ->execute([$newStatus, $rid, $pid]);
-            partnerAuditLog($pid, $userId, "recommendation_$action", 'recommendation', $rid, $pdo);
+            partnerAuditLog($pid, $userId, null, "recommendation_$action", "rec_id:$rid");
         }
     } elseif ($action === 'generate') {
         // Manually trigger recommendation generation

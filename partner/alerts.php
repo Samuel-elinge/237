@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($newStatus === 'actioned')  $extraSql = ", actioned_at=NOW()";
             $pdo->prepare("UPDATE growth_alerts SET status=? $extraSql WHERE id=? AND partner_id=?")
                 ->execute([$newStatus, $alertId, $pid]);
-            partnerAuditLog($pid, $userId, "alert_$action", 'growth_alert', $alertId, $pdo);
+            partnerAuditLog($pid, $userId, null, "alert_$action", "alert_id:$alertId");
         }
     } elseif ($action === 'generate') {
         generateGrowthAlerts($pid, $pdo);
@@ -66,7 +66,7 @@ $statusCondition = match($statusTab) {
 $priorityCondition = $filterPriority ? "AND a.priority=:priority" : '';
 $listingCondition  = $filterListing  ? "AND a.listing_id=:listing_id" : '';
 
-$sql = "SELECT a.*, l.business_name
+$sql = "SELECT a.*, l.title AS business_name
         FROM growth_alerts a
         LEFT JOIN listings l ON l.id = a.listing_id
         WHERE a.partner_id=:pid
@@ -97,11 +97,11 @@ $counts = $countSt->fetch(\PDO::FETCH_ASSOC);
 
 // ── BUSINESS LIST for filter dropdown ─────────────────────────
 $bizSt = $pdo->prepare("
-    SELECT DISTINCT l.id, l.business_name
+    SELECT DISTINCT l.id, l.title AS business_name
     FROM growth_alerts a
     JOIN listings l ON l.id=a.listing_id
     WHERE a.partner_id=?
-    ORDER BY l.business_name
+    ORDER BY l.title
 ");
 $bizSt->execute([$pid]);
 $businesses = $bizSt->fetchAll(\PDO::FETCH_ASSOC);
