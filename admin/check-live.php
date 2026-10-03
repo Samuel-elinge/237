@@ -13,27 +13,48 @@ $_SESSION['user_id'] = $row['user_id'];
 
 echo "<pre>";
 
-$pages = ['content','campaigns','reports','automation','recommendations','alerts'];
+$pages = [
+    'dashboard','portfolio','tasks','leads','campaigns','content','reports',
+    'recommendations','alerts','automation','opportunities','assignments',
+    'commissions','resources','templates','agreements','academy','ai-plan',
+    'business','onboarding','profile','feedback','communication','referrals',
+    'capacity','certifications','pending'
+];
+
+$passCount = 0; $failCount = 0;
+
 foreach ($pages as $page) {
     $path = __DIR__ . "/../partner/{$page}.php";
     echo "\n=== $page.php ===\n";
-    if (!file_exists($path)) { echo "FILE NOT FOUND\n"; continue; }
+    if (!file_exists($path)) { echo "FILE NOT FOUND\n"; $failCount++; continue; }
 
     $src = file_get_contents($path);
-    echo "auth.php require: "    . (strpos($src, 'auth.php') !== false ? "❌ PRESENT" : "✅ gone") . "\n";
-    echo "helpers.php require: " . (strpos($src, 'includes/helpers.php') !== false ? "❌ PRESENT" : "✅ gone") . "\n";
-    echo "l.name AS biz_name: "  . (strpos($src, 'l.name AS biz_name') !== false ? "❌ PRESENT" : "✅ gone") . "\n";
-    echo "FROM campaigns: "      . (preg_match('/FROM campaigns[^_]/', $src) ? "❌ PRESENT" : "✅ gone") . "\n";
+    $checks = [
+        'auth.php require'    => strpos($src, "require_once __DIR__ . '/../includes/auth.php'") === false,
+        'helpers.php require' => strpos($src, "require_once __DIR__ . '/../includes/helpers.php'") === false,
+        'l.name AS biz_name'  => strpos($src, 'l.name AS biz_name') === false,
+        'FROM campaigns bare' => !preg_match('/FROM campaigns[^_]/', $src),
+        'partner-lang loaded' => strpos($src, 'partner-lang.php') !== false,
+    ];
+    foreach ($checks as $label => $ok) {
+        echo ($ok ? "✅" : "❌") . " $label\n";
+    }
 
     // Try including it and catch error
     ob_start();
     try {
         include $path;
         $out = ob_get_clean();
-        echo "Include result: ✅ loaded (" . strlen($out) . " bytes)\n";
+        echo "✅ Loaded (" . number_format(strlen($out)) . " bytes)\n";
+        $passCount++;
     } catch (Throwable $e) {
         ob_end_clean();
-        echo "Include result: ❌ " . $e->getMessage() . " (line " . $e->getLine() . " of " . basename($e->getFile()) . ")\n";
+        echo "❌ " . $e->getMessage() . " (line " . $e->getLine() . " of " . basename($e->getFile()) . ")\n";
+        $failCount++;
     }
 }
+
+echo "\n\n========================================\n";
+echo "SUMMARY: $passCount passed, $failCount failed\n";
+echo "========================================\n";
 echo "</pre>";
