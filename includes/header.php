@@ -150,12 +150,18 @@ $cuRole = $cu['role'] ?? 'guest';
 }
 .nav-user-btn:hover { background:rgba(255,255,255,0.1); }
 .nav-user-dropdown {
-  display:none; position:absolute; top:calc(100% + 6px); right:0;
+  display:none; position:absolute; top:calc(100% + 2px); right:0;
   background:#0a1f10; border:1px solid rgba(255,255,255,0.1);
   border-radius:12px; min-width:210px; padding:6px;
   box-shadow:0 12px 40px rgba(0,0,0,0.4); z-index:902;
 }
-.nav-user-menu:hover .nav-user-dropdown { display:block; }
+/* Bridge the gap so mouse can travel from button into dropdown */
+.nav-user-menu::after {
+  content:''; position:absolute; top:100%; right:0;
+  width:100%; height:10px;
+}
+.nav-user-menu:hover .nav-user-dropdown,
+.nav-user-menu.open  .nav-user-dropdown { display:block; }
 .nav-dd-item {
   display:flex; align-items:center; gap:9px;
   padding:9px 12px; border-radius:8px; font-size:13px;
@@ -364,9 +370,9 @@ $cuRole = $cu['role'] ?? 'guest';
 
     <?php if ($cu): ?>
     <div class="nav-user-menu">
-      <a href="<?= SITE_URL ?>/dashboard" class="nav-user-btn">
+      <button type="button" class="nav-user-btn" onclick="this.closest('.nav-user-menu').classList.toggle('open')" aria-expanded="false">
         👤 <?= e(explode(' ',$cu['name'])[0]) ?> ▾
-      </a>
+      </button>
       <div class="nav-user-dropdown">
         <?php if ($cuRole === 'admin'): ?>
         <a href="<?= SITE_URL ?>/admin/" class="nav-dd-item">🔧 <?= t('Admin Panel','Panneau Admin') ?></a>
@@ -406,6 +412,16 @@ $cuRole = $cu['role'] ?? 'guest';
   </div>
 
 </nav>
+<script>
+// Close user dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.nav-user-menu')) {
+    document.querySelectorAll('.nav-user-menu.open').forEach(function(m) {
+      m.classList.remove('open');
+    });
+  }
+});
+</script>
 
 <!-- Navbar spacer -->
 <div style="height:64px;"></div>
