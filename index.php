@@ -672,4 +672,5 @@ require_once __DIR__ . '/includes/header.php';
   </div>
 </section>
 
+<?php if (file_exists(__DIR__ . '/includes/event-popup.php')) { require __DIR__ . '/includes/event-popup.php'; } ?>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
