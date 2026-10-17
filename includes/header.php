@@ -376,6 +376,7 @@ $cuRole = $cu['role'] ?? 'guest';
       <div class="nav-user-dropdown">
         <?php if ($cuRole === 'admin'): ?>
         <a href="<?= SITE_URL ?>/admin/" class="nav-dd-item">🔧 <?= t('Admin Panel','Panneau Admin') ?></a>
+        <a href="<?= SITE_URL ?>/admin/blog.php" class="nav-dd-item">📝 <?= t('Blog','Blog') ?></a>
         <div class="nav-dd-sep"></div>
         <?php elseif ($cuRole === 'sales_staff'): ?>
         <a href="<?= SITE_URL ?>/agent/dashboard" class="nav-dd-item" style="color:#8ab4f8;">👔 <?= t('Agent Dashboard','Tableau Agent') ?></a>
