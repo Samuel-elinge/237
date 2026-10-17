@@ -396,46 +396,43 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.3/tinymce.min.js" referrerpolicy="origin"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.3/tinymce.min.js"></script>
 <script>
-function initTinyMCE(selector) {
-  tinymce.init({
-    selector: selector,
-    plugins: 'lists link image table code autoresize',
-    toolbar: 'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright | bullist numlist | link image | table | blockquote | code',
-    menubar: false,
-    autoresize_bottom_margin: 10,
-    min_height: 300,
-    skin: 'oxide-dark',
-    content_css: 'dark',
-    content_style: 'body { font-family: DM Sans, sans-serif; font-size: 15px; line-height: 1.7; color: #d4e8d8; background: #0e1e14; padding: 12px; }',
-    branding: false,
-    promotion: false,
-    setup: function(editor) {
-      editor.on('Change', function() { editor.save(); });
-    }
-  });
+var tinyMCEConfig = {
+  plugins: 'lists link image table code autoresize',
+  toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link image | table | blockquote | code',
+  menubar: false,
+  autoresize_bottom_margin: 10,
+  min_height: 300,
+  skin: 'oxide-dark',
+  content_css: 'dark',
+  content_style: 'body { font-family: "DM Sans", sans-serif; font-size: 15px; line-height: 1.7; color: #d4e8d8; background: #0e1e14; padding: 12px; }',
+  branding: false,
+  promotion: false,
+  setup: function(editor) {
+    editor.on('Change KeyUp', function() { editor.save(); });
+  }
+};
+
+function initTinyMCE(id) {
+  if (tinymce.get(id)) return; // already inited
+  tinymce.init(Object.assign({ selector: '#' + id }, tinyMCEConfig));
 }
 
-// Init on page load if editor card is visible
 document.addEventListener('DOMContentLoaded', function() {
   if (document.getElementById('body_en')) {
-    initTinyMCE('#body_en, #body_fr');
+    // Only init the visible (EN) tab on load; FR inits when tab is clicked
+    initTinyMCE('body_en');
   }
 });
 
 function showTab(lang, btn) {
   document.getElementById('tab-en').hidden = lang !== 'en';
   document.getElementById('tab-fr').hidden = lang !== 'fr';
-  document.querySelectorAll('.ab-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.ab-tab').forEach(function(t) { t.classList.remove('active'); });
   btn.classList.add('active');
-  // Re-init TinyMCE for newly visible tab
-  const id = 'body_' + lang;
-  if (!tinymce.get(id)) {
-    initTinyMCE('#' + id);
-  } else {
-    tinymce.get(id).show();
-  }
+  // Init TinyMCE for this tab if not already done
+  initTinyMCE('body_' + lang);
 }
 </script>
 
