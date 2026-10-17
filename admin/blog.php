@@ -193,6 +193,7 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .ab-tab.active { color: #00A878; border-bottom-color: #00A878; }
 
 .ab-rte { min-height: 280px; }
+.tox-tinymce { border-radius: 8px !important; border-color: rgba(255,255,255,0.15) !important; }
 .ab-editor-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
 
 @media (max-width: 680px) {
@@ -395,12 +396,46 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.3/tinymce.min.js" referrerpolicy="origin"></script>
 <script>
+function initTinyMCE(selector) {
+  tinymce.init({
+    selector: selector,
+    plugins: 'lists link image table code autoresize',
+    toolbar: 'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright | bullist numlist | link image | table | blockquote | code',
+    menubar: false,
+    autoresize_bottom_margin: 10,
+    min_height: 300,
+    skin: 'oxide-dark',
+    content_css: 'dark',
+    content_style: 'body { font-family: DM Sans, sans-serif; font-size: 15px; line-height: 1.7; color: #d4e8d8; background: #0e1e14; padding: 12px; }',
+    branding: false,
+    promotion: false,
+    setup: function(editor) {
+      editor.on('Change', function() { editor.save(); });
+    }
+  });
+}
+
+// Init on page load if editor card is visible
+document.addEventListener('DOMContentLoaded', function() {
+  if (document.getElementById('body_en')) {
+    initTinyMCE('#body_en, #body_fr');
+  }
+});
+
 function showTab(lang, btn) {
   document.getElementById('tab-en').hidden = lang !== 'en';
   document.getElementById('tab-fr').hidden = lang !== 'fr';
   document.querySelectorAll('.ab-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
+  // Re-init TinyMCE for newly visible tab
+  const id = 'body_' + lang;
+  if (!tinymce.get(id)) {
+    initTinyMCE('#' + id);
+  } else {
+    tinymce.get(id).show();
+  }
 }
 </script>
 
