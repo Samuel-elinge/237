@@ -192,8 +192,21 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .ab-tab { padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; background: none; color: var(--muted-fg, #7a8f80); border-bottom: 2px solid transparent; margin-bottom: -2px; }
 .ab-tab.active { color: #00A878; border-bottom-color: #00A878; }
 
-.ab-rte { min-height: 280px; }
-.tox-tinymce { border-radius: 8px !important; border-color: rgba(255,255,255,0.15) !important; }
+.ab-rte { display: none; }
+.ql-toolbar { background: #071409 !important; border: 1px solid rgba(255,255,255,0.15) !important; border-bottom: none !important; border-radius: 8px 8px 0 0 !important; }
+.ql-toolbar .ql-stroke { stroke: #8aab92 !important; }
+.ql-toolbar .ql-fill { fill: #8aab92 !important; }
+.ql-toolbar .ql-picker { color: #8aab92 !important; }
+.ql-toolbar button:hover .ql-stroke, .ql-toolbar button.ql-active .ql-stroke { stroke: #00A878 !important; }
+.ql-toolbar button:hover .ql-fill, .ql-toolbar button.ql-active .ql-fill { fill: #00A878 !important; }
+.ql-toolbar .ql-picker-label:hover, .ql-toolbar .ql-picker-item:hover { color: #00A878 !important; }
+.ql-container { background: #0e1e14 !important; border: 1px solid rgba(255,255,255,0.15) !important; border-radius: 0 0 8px 8px !important; font-family: "DM Sans", sans-serif; font-size: 15px; min-height: 280px; }
+.ql-editor { color: #d4e8d8; line-height: 1.7; min-height: 260px; }
+.ql-editor.ql-blank::before { color: rgba(212,232,216,0.35) !important; font-style: normal; }
+.ql-editor a { color: #00A878; }
+.ql-snow .ql-tooltip { background: #071409; border-color: #1e3525; color: #d4e8d8; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+.ql-snow .ql-tooltip input[type=text] { background: #0e1e14; border-color: #1e3525; color: #d4e8d8; }
+.ql-snow .ql-tooltip a.ql-action, .ql-snow .ql-tooltip a.ql-remove { color: #00A878; }
 .ab-editor-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
 
 @media (max-width: 680px) {
@@ -314,15 +327,14 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
           </div>
           <div id="tab-en">
             <div class="ab-field">
-              <label style="display:none">Body EN</label>
-              <textarea name="body_en" class="ab-rte" rows="14" id="body_en"><?= e($ep['body_en'] ?? '') ?></textarea>
-              <p style="font-size:11px;color:var(--muted-fg,#7a8f80);margin-top:4px"><?= t('HTML is allowed (h2, h3, p, ul, ol, blockquote, a, img, strong, em)','Le HTML est autorisé (h2, h3, p, ul, ol, blockquote, a, img, strong, em)') ?></p>
+              <div id="quill-en"></div>
+              <textarea name="body_en" id="body_en" class="ab-rte"><?= e($ep['body_en'] ?? '') ?></textarea>
             </div>
           </div>
           <div id="tab-fr" hidden>
             <div class="ab-field">
-              <label style="display:none">Body FR</label>
-              <textarea name="body_fr" class="ab-rte" rows="14" id="body_fr"><?= e($ep['body_fr'] ?? '') ?></textarea>
+              <div id="quill-fr"></div>
+              <textarea name="body_fr" id="body_fr" class="ab-rte"><?= e($ep['body_fr'] ?? '') ?></textarea>
             </div>
           </div>
         </div>
@@ -396,33 +408,43 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.3/tinymce.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
 <script>
-var tinyMCEConfig = {
-  plugins: 'lists link image table code autoresize',
-  toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link image | table | blockquote | code',
-  menubar: false,
-  autoresize_bottom_margin: 10,
-  min_height: 300,
-  skin: 'oxide-dark',
-  content_css: 'dark',
-  content_style: 'body { font-family: "DM Sans", sans-serif; font-size: 15px; line-height: 1.7; color: #d4e8d8; background: #0e1e14; padding: 12px; }',
-  branding: false,
-  promotion: false,
-  setup: function(editor) {
-    editor.on('Change KeyUp', function() { editor.save(); });
-  }
-};
+var quillEN = null, quillFR = null;
 
-function initTinyMCE(id) {
-  if (tinymce.get(id)) return; // already inited
-  tinymce.init(Object.assign({ selector: '#' + id }, tinyMCEConfig));
+var toolbarOptions = [
+  ['bold', 'italic', 'underline', 'strike'],
+  ['blockquote', 'code-block'],
+  [{ 'header': [2, 3, 4, false] }],
+  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+  ['link', 'image'],
+  ['clean']
+];
+
+function initQuill(containerId, textareaId) {
+  var textarea = document.getElementById(textareaId);
+  if (!textarea) return null;
+  var q = new Quill('#' + containerId, {
+    modules: { toolbar: toolbarOptions },
+    theme: 'snow',
+    placeholder: textareaId === 'body_en' ? 'Write your post content here…' : 'Rédigez votre article ici…'
+  });
+  // Load existing HTML content
+  var existing = textarea.value;
+  if (existing) {
+    q.clipboard.dangerouslyPasteHTML(existing);
+  }
+  // Sync to textarea on every change
+  q.on('text-change', function() {
+    textarea.value = q.root.innerHTML === '<p><br></p>' ? '' : q.root.innerHTML;
+  });
+  return q;
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  if (document.getElementById('body_en')) {
-    // Only init the visible (EN) tab on load; FR inits when tab is clicked
-    initTinyMCE('body_en');
+  if (document.getElementById('quill-en')) {
+    quillEN = initQuill('quill-en', 'body_en');
   }
 });
 
@@ -431,8 +453,10 @@ function showTab(lang, btn) {
   document.getElementById('tab-fr').hidden = lang !== 'fr';
   document.querySelectorAll('.ab-tab').forEach(function(t) { t.classList.remove('active'); });
   btn.classList.add('active');
-  // Init TinyMCE for this tab if not already done
-  initTinyMCE('body_' + lang);
+  if (lang === 'fr' && !quillFR) {
+    // Tab is now visible — safe to init
+    quillFR = initQuill('quill-fr', 'body_fr');
+  }
 }
 </script>
 
