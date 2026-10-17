@@ -43,6 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cover    = trim($_POST['cover_url'] ?? '');
         $author   = trim($_POST['author_name'] ?? '') ?: '237Biz Team';
         $status   = in_array($_POST['status'] ?? '', ['draft','published']) ? $_POST['status'] : 'draft';
+        $metaKw   = trim($_POST['meta_keywords'] ?? '');
+        $metaEn   = trim($_POST['meta_desc_en'] ?? '');
+        $metaFr   = trim($_POST['meta_desc_fr'] ?? '');
         $pubAt    = $status === 'published' ? date('Y-m-d H:i:s') : null;
 
         if (!$titleEn) { flash('error', 'English title is required.'); redirect('/admin/blog.php'); }
@@ -59,14 +62,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             elseif ($status === 'published' && (!$row || $row['status'] !== 'published')) $pubAt = date('Y-m-d H:i:s');
 
             $slug = uniqueSlug($db, $baseSlug, $id);
-            $db->prepare("UPDATE blog_posts SET title_en=?,title_fr=?,excerpt_en=?,excerpt_fr=?,body_en=?,body_fr=?,category=?,cover_url=?,author_name=?,status=?,slug=?,published_at=? WHERE id=?")
-               ->execute([$titleEn,$titleFr,$excEn,$excFr,$bodyEn,$bodyFr,$cat,$cover,$author,$status,$slug,$pubAt,$id]);
+            $db->prepare("UPDATE blog_posts SET title_en=?,title_fr=?,excerpt_en=?,excerpt_fr=?,body_en=?,body_fr=?,category=?,cover_url=?,author_name=?,status=?,slug=?,published_at=?,meta_keywords=?,meta_desc_en=?,meta_desc_fr=? WHERE id=?")
+               ->execute([$titleEn,$titleFr,$excEn,$excFr,$bodyEn,$bodyFr,$cat,$cover,$author,$status,$slug,$pubAt,$metaKw,$metaEn,$metaFr,$id]);
             flash('success', 'Post updated.');
         } else {
             $slug = uniqueSlug($db, $baseSlug);
             if ($status === 'published') $pubAt = date('Y-m-d H:i:s');
-            $db->prepare("INSERT INTO blog_posts (slug,title_en,title_fr,excerpt_en,excerpt_fr,body_en,body_fr,category,cover_url,author_name,status,published_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
-               ->execute([$slug,$titleEn,$titleFr,$excEn,$excFr,$bodyEn,$bodyFr,$cat,$cover,$author,$status,$pubAt]);
+            $db->prepare("INSERT INTO blog_posts (slug,title_en,title_fr,excerpt_en,excerpt_fr,body_en,body_fr,category,cover_url,author_name,status,published_at,meta_keywords,meta_desc_en,meta_desc_fr) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+               ->execute([$slug,$titleEn,$titleFr,$excEn,$excFr,$bodyEn,$bodyFr,$cat,$cover,$author,$status,$pubAt,$metaKw,$metaEn,$metaFr]);
             flash('success', 'Post created.');
         }
         redirect('/admin/blog.php');
@@ -173,10 +176,12 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .ab-field select {
   width: 100%; box-sizing: border-box;
   padding: 9px 12px; border-radius: 8px; font-size: 14px;
-  border: 1.5px solid var(--border-color, #d0dfd5);
-  background: var(--input-bg, #fff); color: inherit;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06); color: #fff;
   transition: border-color .15s;
 }
+.ab-field input::placeholder,
+.ab-field textarea::placeholder { color: rgba(255,255,255,0.35); }
 .ab-field input:focus,
 .ab-field textarea:focus,
 .ab-field select:focus { outline: none; border-color: #00A878; }
@@ -272,9 +277,26 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
           </div>
         </div>
 
-        <div class="ab-field" style="margin-bottom:18px">
-          <label>🖼 <?= t('Cover Image URL','URL Image de Couverture') ?></label>
-          <input type="url" name="cover_url" value="<?= e($ep['cover_url'] ?? '') ?>" placeholder="https://…">
+        <div class="ab-grid-2" style="margin-bottom:18px">
+          <div class="ab-field">
+            <label>🖼 <?= t('Cover Image URL','URL Image de Couverture') ?></label>
+            <input type="url" name="cover_url" value="<?= e($ep['cover_url'] ?? '') ?>" placeholder="https://…">
+          </div>
+          <div class="ab-field">
+            <label>🔑 <?= t('SEO Keywords','Mots-clés SEO') ?></label>
+            <input type="text" name="meta_keywords" value="<?= e($ep['meta_keywords'] ?? '') ?>" placeholder="business tips, cameroon, 237biz">
+          </div>
+        </div>
+
+        <div class="ab-grid-2" style="margin-bottom:18px">
+          <div class="ab-field">
+            <label>🇬🇧 <?= t('Meta Description (EN)','Méta Description (EN)') ?> <span style="font-weight:400;opacity:.6"><?= t('max 160 chars','max 160 car.') ?></span></label>
+            <textarea name="meta_desc_en" rows="2" maxlength="320" placeholder="Short description for Google search results…"><?= e($ep['meta_desc_en'] ?? '') ?></textarea>
+          </div>
+          <div class="ab-field">
+            <label>🇫🇷 <?= t('Meta Description (FR)','Méta Description (FR)') ?> <span style="font-weight:400;opacity:.6"><?= t('max 160 chars','max 160 car.') ?></span></label>
+            <textarea name="meta_desc_fr" rows="2" maxlength="320" placeholder="Courte description pour les résultats Google…"><?= e($ep['meta_desc_fr'] ?? '') ?></textarea>
+          </div>
         </div>
 
         <!-- Body tabs -->

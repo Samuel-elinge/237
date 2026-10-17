@@ -57,7 +57,12 @@ $catLabels = [
 $catColors = ['tips'=>'#00A878','news'=>'#fcd116','spotlight'=>'#8ab4f8','event'=>'#f5b800'];
 
 $pageTitle = e($title) . ' — 237Biz Blog';
-$pageDesc  = $excerpt ? e(strip_tags($excerpt)) : '';
+$metaDesc  = $isFr && $post['meta_desc_fr'] ? $post['meta_desc_fr'] : ($post['meta_desc_en'] ?: ($excerpt ? strip_tags($excerpt) : ''));
+$pageDesc  = e(mb_strimwidth($metaDesc, 0, 160, '…'));
+$extraHead = ($post['meta_keywords'] ? '<meta name="keywords" content="' . e($post['meta_keywords']) . '">' . "\n" : '')
+           . '<meta property="og:title" content="' . e($title) . '">' . "\n"
+           . '<meta property="og:description" content="' . $pageDesc . '">' . "\n"
+           . ($post['cover_url'] ? '<meta property="og:image" content="' . e($post['cover_url']) . '">' . "\n" : '');
 
 require_once __DIR__ . '/includes/header.php';
 ?>
