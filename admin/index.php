@@ -166,6 +166,7 @@ require_once __DIR__ . '/../includes/header.php';
     <a href="<?= SITE_URL ?>/admin/manage-creators.php"     class="filter-tab">🎬 Creators</a>
     <a href="<?= SITE_URL ?>/admin/manage-campaigns.php"    class="filter-tab">📣 Campaigns</a>
     <a href="<?= SITE_URL ?>/admin/manage-referrals.php"    class="filter-tab">💰 Referrals</a>
+    <a href="<?= SITE_URL ?>/admin/blog.php"                class="filter-tab">📝 Blog</a>
     <a href="<?= SITE_URL ?>/dashboard"                     class="filter-tab">← Dashboard</a>
   </div>
 
