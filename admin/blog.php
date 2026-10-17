@@ -197,13 +197,18 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 @media (max-width: 680px) {
   .ab-grid-2, .ab-grid-3 { grid-template-columns: 1fr; }
 }
-@media (prefers-color-scheme: dark) {
-  .ab-editor-card { --card-bg: #141f18; --border-color: #2a4030; }
-  .ab-field input, .ab-field textarea, .ab-field select { --input-bg: #0e1e14; --border-color: #2a4030; }
-  .ab-table { --th-bg: #0e1e14; --border-color: #2a4030; --row-hover: #111d15; --muted-fg: #8aab92; }
-  .ab-flash.success { background: #0a2e1c; color: #34d399; border-color: #065f46; }
-  .ab-flash.error   { background: #2e0a0a; color: #f87171; border-color: #5f1111; }
-}
+/* Dark theme — always applied since admin uses dark green */
+.ab-editor-card { background: #0e1e14; border-color: #00A878; }
+.ab-table-wrap  { background: #0e1e14; border-color: #1e3525; }
+.ab-table th    { background: #071409; color: #8aab92; border-color: #1e3525; }
+.ab-table td    { border-color: #1a2f20; color: #d4e8d8; }
+.ab-table tr:hover td { background: #111d15; }
+.ab-btn-ghost   { border-color: rgba(255,255,255,.25); color: #d4e8d8; }
+.ab-flash.success { background: #0a2e1c; color: #34d399; border-color: #065f46; }
+.ab-flash.error   { background: #2e0a0a; color: #f87171; border-color: #5f1111; }
+.ab-tab { color: rgba(255,255,255,.5); }
+.ab-tab.active { color: #00A878; }
+.ab-tabs { border-color: #1e3525; }
 </style>
 
 <div class="ab-wrap">
