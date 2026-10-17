@@ -193,20 +193,24 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .ab-tab.active { color: #00A878; border-bottom-color: #00A878; }
 
 .ab-rte { display: none; }
-.ql-toolbar { background: #071409 !important; border: 1px solid rgba(255,255,255,0.15) !important; border-bottom: none !important; border-radius: 8px 8px 0 0 !important; }
-.ql-toolbar .ql-stroke { stroke: #8aab92 !important; }
-.ql-toolbar .ql-fill { fill: #8aab92 !important; }
-.ql-toolbar .ql-picker { color: #8aab92 !important; }
-.ql-toolbar button:hover .ql-stroke, .ql-toolbar button.ql-active .ql-stroke { stroke: #00A878 !important; }
-.ql-toolbar button:hover .ql-fill, .ql-toolbar button.ql-active .ql-fill { fill: #00A878 !important; }
-.ql-toolbar .ql-picker-label:hover, .ql-toolbar .ql-picker-item:hover { color: #00A878 !important; }
-.ql-container { background: #0e1e14 !important; border: 1px solid rgba(255,255,255,0.15) !important; border-radius: 0 0 8px 8px !important; font-family: "DM Sans", sans-serif; font-size: 15px; min-height: 280px; }
-.ql-editor { color: #d4e8d8; line-height: 1.7; min-height: 260px; }
-.ql-editor.ql-blank::before { color: rgba(212,232,216,0.35) !important; font-style: normal; }
-.ql-editor a { color: #00A878; }
-.ql-snow .ql-tooltip { background: #071409; border-color: #1e3525; color: #d4e8d8; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
-.ql-snow .ql-tooltip input[type=text] { background: #0e1e14; border-color: #1e3525; color: #d4e8d8; }
-.ql-snow .ql-tooltip a.ql-action, .ql-snow .ql-tooltip a.ql-remove { color: #00A878; }
+.rte-wrap { border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; overflow: hidden; }
+.rte-bar { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px; background: #071409; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.rte-bar button { background: none; border: 1px solid transparent; color: #8aab92; border-radius: 4px; padding: 3px 7px; font-size: 13px; cursor: pointer; line-height: 1.4; }
+.rte-bar button:hover { background: rgba(0,168,120,0.15); border-color: rgba(0,168,120,0.3); color: #00A878; }
+.rte-bar select { background: #071409; border: 1px solid transparent; color: #8aab92; border-radius: 4px; padding: 3px 6px; font-size: 13px; cursor: pointer; }
+.rte-bar select:hover { border-color: rgba(0,168,120,0.3); color: #00A878; }
+.rte-bar .rte-sep { width: 1px; background: rgba(255,255,255,0.1); margin: 2px 4px; }
+.rte-body { min-height: 280px; padding: 14px 16px; background: #0e1e14; color: #d4e8d8; font-size: 15px; line-height: 1.7; outline: none; font-family: "DM Sans", sans-serif; }
+.rte-body:empty::before { content: attr(data-placeholder); color: rgba(212,232,216,0.35); pointer-events: none; }
+.rte-body h2 { font-size: 1.4em; margin: 1em 0 .4em; color: #fff; }
+.rte-body h3 { font-size: 1.2em; margin: .9em 0 .3em; color: #e0f0e4; }
+.rte-body a { color: #00A878; }
+.rte-body blockquote { border-left: 3px solid #00A878; margin: .8em 0; padding-left: 14px; color: #9ab8a2; font-style: italic; }
+.rte-body ul, .rte-body ol { padding-left: 24px; margin: .5em 0; }
+.rte-link-bar { display: none; align-items: center; gap: 6px; padding: 6px 10px; background: #071409; border-top: 1px solid rgba(255,255,255,0.1); }
+.rte-link-bar.open { display: flex; }
+.rte-link-bar input { flex: 1; background: #0e1e14; border: 1px solid #1e3525; color: #d4e8d8; border-radius: 4px; padding: 4px 8px; font-size: 13px; }
+.rte-link-bar button { background: #00A878; color: #fff; border: none; border-radius: 4px; padding: 4px 10px; font-size: 13px; cursor: pointer; }
 .ab-editor-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
 
 @media (max-width: 680px) {
@@ -327,13 +331,13 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
           </div>
           <div id="tab-en">
             <div class="ab-field">
-              <div id="quill-en"></div>
+              <div class="rte-wrap" id="rte-wrap-en"></div>
               <textarea name="body_en" id="body_en" class="ab-rte"><?= e($ep['body_en'] ?? '') ?></textarea>
             </div>
           </div>
           <div id="tab-fr" hidden>
             <div class="ab-field">
-              <div id="quill-fr"></div>
+              <div class="rte-wrap" id="rte-wrap-fr"></div>
               <textarea name="body_fr" id="body_fr" class="ab-rte"><?= e($ep['body_fr'] ?? '') ?></textarea>
             </div>
           </div>
@@ -408,56 +412,123 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 
 </div>
 
-<link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
 <script>
-var quillEN = null, quillFR = null;
+(function() {
+  var savedRange = null;
 
-var toolbarOptions = [
-  ['bold', 'italic', 'underline', 'strike'],
-  ['blockquote', 'code-block'],
-  [{ 'header': [2, 3, 4, false] }],
-  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-  ['link', 'image'],
-  ['clean']
-];
+  function buildRTE(wrapId, textareaId, placeholder) {
+    var wrap = document.getElementById(wrapId);
+    var textarea = document.getElementById(textareaId);
+    if (!wrap || !textarea) return;
 
-function initQuill(containerId, textareaId) {
-  var textarea = document.getElementById(textareaId);
-  if (!textarea) return null;
-  var q = new Quill('#' + containerId, {
-    modules: { toolbar: toolbarOptions },
-    theme: 'snow',
-    placeholder: textareaId === 'body_en' ? 'Write your post content here…' : 'Rédigez votre article ici…'
+    // Toolbar HTML
+    wrap.innerHTML =
+      '<div class="rte-bar">' +
+        '<select onchange="rteBlock(this,\''+textareaId+'\')">' +
+          '<option value="p">Paragraph</option>' +
+          '<option value="h2">Heading 2</option>' +
+          '<option value="h3">Heading 3</option>' +
+        '</select>' +
+        '<span class="rte-sep"></span>' +
+        '<button type="button" title="Bold" onclick="rteCmd(\'bold\',\''+textareaId+'\')"><b>B</b></button>' +
+        '<button type="button" title="Italic" onclick="rteCmd(\'italic\',\''+textareaId+'\')"><i>I</i></button>' +
+        '<button type="button" title="Underline" onclick="rteCmd(\'underline\',\''+textareaId+'\')"><u>U</u></button>' +
+        '<button type="button" title="Strikethrough" onclick="rteCmd(\'strikeThrough\',\''+textareaId+'\')" style="text-decoration:line-through">S</button>' +
+        '<span class="rte-sep"></span>' +
+        '<button type="button" title="Bullet list" onclick="rteCmd(\'insertUnorderedList\',\''+textareaId+'\')">• List</button>' +
+        '<button type="button" title="Numbered list" onclick="rteCmd(\'insertOrderedList\',\''+textareaId+'\')">1. List</button>' +
+        '<span class="rte-sep"></span>' +
+        '<button type="button" title="Blockquote" onclick="rteBlockquote(\''+textareaId+'\')">" Quote</button>' +
+        '<span class="rte-sep"></span>' +
+        '<button type="button" title="Insert link" onclick="rteShowLink(\''+textareaId+'\')">🔗 Link</button>' +
+        '<button type="button" title="Remove formatting" onclick="rteCmd(\'removeFormat\',\''+textareaId+'\')">✕ Clear</button>' +
+      '</div>' +
+      '<div class="rte-link-bar" id="rte-link-'+textareaId+'">' +
+        '<input type="text" id="rte-url-'+textareaId+'" placeholder="https://" />' +
+        '<button type="button" onclick="rteInsertLink(\''+textareaId+'\')">Insert</button>' +
+        '<button type="button" onclick="rteCancelLink(\''+textareaId+'\')" style="background:#333">Cancel</button>' +
+      '</div>' +
+      '<div class="rte-body" contenteditable="true" id="rte-'+textareaId+'" data-placeholder="'+placeholder+'"></div>';
+
+    var editor = document.getElementById('rte-' + textareaId);
+
+    // Load existing content
+    if (textarea.value) {
+      editor.innerHTML = textarea.value;
+    }
+
+    // Sync to textarea on input
+    editor.addEventListener('input', function() {
+      textarea.value = editor.innerHTML;
+    });
+    editor.addEventListener('blur', function() {
+      textarea.value = editor.innerHTML;
+    });
+  }
+
+  window.rteCmd = function(cmd, textareaId) {
+    document.getElementById('rte-' + textareaId).focus();
+    document.execCommand(cmd, false, null);
+    document.getElementById(textareaId).value = document.getElementById('rte-' + textareaId).innerHTML;
+  };
+
+  window.rteBlock = function(sel, textareaId) {
+    document.getElementById('rte-' + textareaId).focus();
+    document.execCommand('formatBlock', false, '<' + sel.value + '>');
+    document.getElementById(textareaId).value = document.getElementById('rte-' + textareaId).innerHTML;
+    sel.value = 'p';
+  };
+
+  window.rteBlockquote = function(textareaId) {
+    document.getElementById('rte-' + textareaId).focus();
+    document.execCommand('formatBlock', false, '<blockquote>');
+    document.getElementById(textareaId).value = document.getElementById('rte-' + textareaId).innerHTML;
+  };
+
+  window.rteShowLink = function(textareaId) {
+    savedRange = window.getSelection().rangeCount ? window.getSelection().getRangeAt(0).cloneRange() : null;
+    var bar = document.getElementById('rte-link-' + textareaId);
+    bar.classList.toggle('open');
+    if (bar.classList.contains('open')) document.getElementById('rte-url-' + textareaId).focus();
+  };
+
+  window.rteInsertLink = function(textareaId) {
+    var url = document.getElementById('rte-url-' + textareaId).value.trim();
+    if (!url) return;
+    var editor = document.getElementById('rte-' + textareaId);
+    editor.focus();
+    if (savedRange) {
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedRange);
+    }
+    document.execCommand('createLink', false, url);
+    document.getElementById(textareaId).value = editor.innerHTML;
+    rteCancelLink(textareaId);
+  };
+
+  window.rteCancelLink = function(textareaId) {
+    var bar = document.getElementById('rte-link-' + textareaId);
+    bar.classList.remove('open');
+    document.getElementById('rte-url-' + textareaId).value = '';
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('rte-wrap-en')) {
+      buildRTE('rte-wrap-en', 'body_en', 'Write your post content here…');
+    }
   });
-  // Load existing HTML content
-  var existing = textarea.value;
-  if (existing) {
-    q.clipboard.dangerouslyPasteHTML(existing);
-  }
-  // Sync to textarea on every change
-  q.on('text-change', function() {
-    textarea.value = q.root.innerHTML === '<p><br></p>' ? '' : q.root.innerHTML;
-  });
-  return q;
-}
 
-document.addEventListener('DOMContentLoaded', function() {
-  if (document.getElementById('quill-en')) {
-    quillEN = initQuill('quill-en', 'body_en');
-  }
-});
-
-function showTab(lang, btn) {
-  document.getElementById('tab-en').hidden = lang !== 'en';
-  document.getElementById('tab-fr').hidden = lang !== 'fr';
-  document.querySelectorAll('.ab-tab').forEach(function(t) { t.classList.remove('active'); });
-  btn.classList.add('active');
-  if (lang === 'fr' && !quillFR) {
-    // Tab is now visible — safe to init
-    quillFR = initQuill('quill-fr', 'body_fr');
-  }
-}
+  window.showTab = function(lang, btn) {
+    document.getElementById('tab-en').hidden = lang !== 'en';
+    document.getElementById('tab-fr').hidden = lang !== 'fr';
+    document.querySelectorAll('.ab-tab').forEach(function(t) { t.classList.remove('active'); });
+    btn.classList.add('active');
+    if (lang === 'fr' && !document.getElementById('rte-body_fr')) {
+      buildRTE('rte-wrap-fr', 'body_fr', 'Rédigez votre article ici…');
+    }
+  };
+})();
 </script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
