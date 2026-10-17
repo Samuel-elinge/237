@@ -166,7 +166,7 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   display: flex; align-items: center; justify-content: space-between;
 }
 .ab-editor-head h2 { font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 800; }
-.ab-editor-body { padding: 24px; }
+.ab-editor-body { padding: 24px; background: #0e1e14; }
 
 .ab-grid-2  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .ab-grid-3  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
