@@ -36,6 +36,7 @@
           [SITE_URL.'/locations',                   t('Browse by City','Parcourir par Ville')],
           [SITE_URL.'/listings',                    t('Browse by Category','Parcourir par Catégorie')],
           [SITE_URL.'/reviews',                     t('Customer Reviews','Avis Clients')],
+          [SITE_URL.'/blog',                         t('Blog','Blog')],
         ] as [$url,$label]): ?>
         <a href="<?= $url ?>" style="display:block;font-size:13px;color:rgba(255,255,255,0.55);text-decoration:none;padding:4px 0;transition:color .15s;line-height:1.5;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.55)'"><?= $label ?></a>
         <?php endforeach; ?>
