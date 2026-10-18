@@ -255,7 +255,7 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
     </div>
     <div class="ab-editor-body">
       <form method="POST" action="/admin/blog.php">
-        <?= csrfField() ?>
+        <input type="hidden" name="csrf" value="<?= csrf() ?>">
         <input type="hidden" name="action" value="save">
         <?php if ($editPost): ?><input type="hidden" name="id" value="<?= $editPost['id'] ?>"><?php endif; ?>
 
@@ -396,7 +396,7 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
             <a href="<?= SITE_URL ?>/blog/<?= e($p['slug']) ?>" target="_blank" class="ab-btn ab-btn-ghost ab-btn-sm" title="<?= t('Preview','Aperçu') ?>">👁</a>
             <a href="/admin/blog.php?edit=<?= $p['id'] ?>" class="ab-btn ab-btn-yellow ab-btn-sm">✏️</a>
             <form method="POST" style="display:inline">
-              <?= csrfField() ?>
+              <input type="hidden" name="csrf" value="<?= csrf() ?>">
               <input type="hidden" name="action" value="toggle">
               <input type="hidden" name="id" value="<?= $p['id'] ?>">
               <button type="submit" class="ab-btn ab-btn-ghost ab-btn-sm" title="<?= $p['status'] === 'published' ? 'Unpublish' : 'Publish' ?>">
@@ -404,7 +404,7 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
               </button>
             </form>
             <form method="POST" style="display:inline" data-confirm="<?= t('Delete this post?','Supprimer cet article ?') ?>">
-              <?= csrfField() ?>
+              <input type="hidden" name="csrf" value="<?= csrf() ?>">
               <input type="hidden" name="action" value="delete">
               <input type="hidden" name="id" value="<?= $p['id'] ?>">
               <button type="submit" class="ab-btn ab-btn-red ab-btn-sm">🗑</button>
