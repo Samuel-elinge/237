@@ -29,9 +29,17 @@ try {
     $countSt->execute($params);
     $total = (int)$countSt->fetchColumn();
 
-    $st = db()->prepare("SELECT id,slug,title_en,title_fr,excerpt_en,excerpt_fr,category,cover_url,author_name,views,published_at
-                         FROM blog_posts WHERE $whereSQL ORDER BY published_at DESC LIMIT $perPage OFFSET $offset");
-    $st->execute($params);
+    $baseCols = "id,slug,title_en,title_fr,excerpt_en,excerpt_fr,category,cover_url,author_name,views,published_at";
+    try {
+        // includes image alt text (columns are added automatically from the blog admin)
+        $st = db()->prepare("SELECT $baseCols,cover_alt_en,cover_alt_fr
+                             FROM blog_posts WHERE $whereSQL ORDER BY published_at DESC LIMIT $perPage OFFSET $offset");
+        $st->execute($params);
+    } catch (Exception $e2) {
+        $st = db()->prepare("SELECT $baseCols
+                             FROM blog_posts WHERE $whereSQL ORDER BY published_at DESC LIMIT $perPage OFFSET $offset");
+        $st->execute($params);
+    }
     $posts = $st->fetchAll();
 } catch (Exception $e) {
     $posts = [];
@@ -205,7 +213,8 @@ require_once __DIR__ . '/includes/header.php';
     <a href="/blog/<?= e($p['slug']) ?>" class="blog-card">
       <div class="blog-card-img">
         <?php if ($p['cover_url']): ?>
-          <img src="<?= e($p['cover_url']) ?>" alt="<?= e($title) ?>" loading="lazy">
+          <?php $coverAlt = trim(($isFr ? ($p['cover_alt_fr'] ?? '') : '') ?: ($p['cover_alt_en'] ?? '')); ?>
+          <img src="<?= e($p['cover_url']) ?>" alt="<?= e($coverAlt !== '' ? $coverAlt : $title) ?>" loading="lazy">
         <?php else: ?>
           <?= $p['category'] === 'tips' ? '💡' : ($p['category'] === 'spotlight' ? '⭐' : ($p['category'] === 'event' ? '📅' : '📢')) ?>
         <?php endif; ?>

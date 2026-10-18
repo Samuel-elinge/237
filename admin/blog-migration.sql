@@ -32,3 +32,8 @@ ALTER TABLE blog_posts
   ADD COLUMN IF NOT EXISTS meta_keywords VARCHAR(512) DEFAULT NULL,
   ADD COLUMN IF NOT EXISTS meta_desc_en  VARCHAR(320) DEFAULT NULL,
   ADD COLUMN IF NOT EXISTS meta_desc_fr  VARCHAR(320) DEFAULT NULL;
+
+-- Image alt text (added v3; the blog admin also adds these automatically)
+ALTER TABLE blog_posts
+  ADD COLUMN IF NOT EXISTS cover_alt_en VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS cover_alt_fr VARCHAR(255) DEFAULT NULL;

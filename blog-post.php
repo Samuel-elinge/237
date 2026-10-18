@@ -56,13 +56,16 @@ $catLabels = [
 ];
 $catColors = ['tips'=>'#00A878','news'=>'#fcd116','spotlight'=>'#8ab4f8','event'=>'#f5b800'];
 
+$coverAlt = trim(($isFr ? ($post['cover_alt_fr'] ?? '') : '') ?: ($post['cover_alt_en'] ?? ''));
+if ($coverAlt === '') $coverAlt = $title;
+
 $pageTitle = e($title) . ' — 237Biz Blog';
 $metaDesc  = $isFr && $post['meta_desc_fr'] ? $post['meta_desc_fr'] : ($post['meta_desc_en'] ?: ($excerpt ? strip_tags($excerpt) : ''));
 $pageDesc  = e(mb_strimwidth($metaDesc, 0, 160, '…'));
 $extraHead = ($post['meta_keywords'] ? '<meta name="keywords" content="' . e($post['meta_keywords']) . '">' . "\n" : '')
            . '<meta property="og:title" content="' . e($title) . '">' . "\n"
            . '<meta property="og:description" content="' . $pageDesc . '">' . "\n"
-           . ($post['cover_url'] ? '<meta property="og:image" content="' . e($post['cover_url']) . '">' . "\n" : '');
+           . ($post['cover_url'] ? '<meta property="og:image" content="' . e(preg_match('#^https?://#i', $post['cover_url']) ? $post['cover_url'] : rtrim(SITE_URL, '/') . '/' . ltrim($post['cover_url'], '/')) . '">' . "\n" . '<meta property="og:image:alt" content="' . e($coverAlt) . '">' . "\n" : '');
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -113,7 +116,7 @@ require_once __DIR__ . '/includes/header.php';
   background: rgba(0,168,120,.05); border-radius: 0 8px 8px 0;
   font-style: italic; color: var(--muted-fg, #4a6050);
 }
-.bp-body img { border-radius: 10px; margin: 1.5em 0; max-width: 100%; }
+.bp-body img { border-radius: 10px; margin: 1.5em 0; max-width: 100%; height: auto; }
 .bp-body a { color: #00A878; }
 
 .bp-divider { border: none; border-top: 1.5px solid var(--border-color, #e0ece4); margin: 48px 0 36px; }
@@ -176,7 +179,7 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Cover image -->
 <?php if ($post['cover_url']): ?>
 <div class="bp-cover">
-  <img src="<?= e($post['cover_url']) ?>" alt="<?= e($title) ?>">
+  <img src="<?= e($post['cover_url']) ?>" alt="<?= e($coverAlt) ?>">
 </div>
 <?php endif; ?>
 
