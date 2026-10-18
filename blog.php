@@ -156,10 +156,12 @@ require_once __DIR__ . '/includes/header.php';
 .blog-pagination a:hover { background: #f0faf5; border-color: #00A878; }
 .blog-pagination span.current { background: #00A878; border-color: #00A878; color: #fff; }
 
-@media (prefers-color-scheme: dark) {
-  .blog-card { --card-bg: #162a1e; --border-color: #2a4030; }
-  .blog-card-meta { --border-color: #2a4030; --muted-fg: #8aab92; }
-}
+/* Site is dark-themed: always use dark card colours */
+.blog-card { --card-bg: #162a1e; --border-color: #2a4030; color: #d4e8d8; }
+.blog-card-meta { --border-color: #2a4030; --muted-fg: #8aab92; }
+.blog-card-excerpt { --muted-fg: #a9c7b0; }
+.blog-pagination a, .blog-pagination span { --border-color: #2a4030; --body-fg: #d4e8d8; }
+.blog-pagination a:hover { background: #162a1e; }
 </style>
 
 <!-- Hero -->

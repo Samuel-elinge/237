@@ -141,11 +141,18 @@ require_once __DIR__ . '/includes/header.php';
 .bp-back a { color: #00A878; text-decoration: none; font-weight: 600; font-size: 14px; }
 .bp-back a:hover { text-decoration: underline; }
 
-@media (prefers-color-scheme: dark) {
-  .bp-body { --body-fg: #d4e8d8; }
-  .bp-rel-card { --border-color: #2a4030; }
-  .bp-divider { border-color: #2a4030; }
+/* Site is dark-themed: always use light text (don't depend on OS colour scheme) */
+.bp-body { --body-fg: #d4e8d8; --muted-fg: #8aab92; }
+.bp-rel-card { --border-color: #2a4030; --muted-fg: #8aab92; }
+.bp-divider { border-color: #2a4030; }
+/* Override colours/backgrounds pasted in from Word/Docs/other sites */
+.bp-body, .bp-body p, .bp-body li, .bp-body span, .bp-body div, .bp-body td, .bp-body th, .bp-body strong, .bp-body em {
+  color: #d4e8d8 !important; background: transparent !important;
 }
+.bp-body h1, .bp-body h2, .bp-body h3, .bp-body h4 { color: #fff !important; background: transparent !important; }
+.bp-body a { color: #00A878 !important; }
+.bp-body blockquote, .bp-body blockquote * { color: #a9c7b0 !important; }
+.bp-body p, .bp-body li { line-height: 1.8 !important; }
 </style>
 
 <!-- Hero -->
