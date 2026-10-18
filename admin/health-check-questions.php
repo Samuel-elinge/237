@@ -17,6 +17,8 @@ ksort($byStep);
 
 $pageTitle = 'Manage Questions — Admin';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/nav.php';
+adminNav('health-check-questions'); adminNavAssets();
 ?>
 <style>
   :root{--brand:#0f8a5f;--bg:#f6f8f7;--card:#fff;--text:#1c2b26;--muted:#6b7b75;--border:#e2e8e5;}

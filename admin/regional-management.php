@@ -319,7 +319,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <input type="hidden" name="action" value="remove_assignment">
                             <input type="hidden" name="region_id" value="<?= $selectedRegion['id'] ?>">
                             <input type="hidden" name="partner_id" value="<?= $ra['partner_id'] ?>">
-                            <button class="btn btn-danger btn-sm" onclick="return confirm('Remove this assignment?')">Remove</button>
+                            <button class="btn btn-danger btn-sm" onclick="adminConfirm('Remove this assignment?', this.closest('form')); return false;" >Remove</button>
                         </form>
                     </div>
                     <?php endforeach ?>

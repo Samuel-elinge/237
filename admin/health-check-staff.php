@@ -47,6 +47,8 @@ $staff = $staffStmt->fetchAll();
 
 $pageTitle = 'Sales Staff — Admin';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/nav.php';
+adminNav('health-check-staff'); adminNavAssets();
 ?>
 
 <div class="page-header"><div class="container">
@@ -103,7 +105,7 @@ require_once __DIR__ . '/../includes/header.php';
           <td style="padding:0.7rem;"><?= date('d M Y', strtotime($s['created_at'])) ?></td>
           <td style="padding:0.7rem;">
             <?php if ($s['role'] === 'sales_staff'): ?>
-            <form method="post" onsubmit="return confirm('Revoke staff access for <?= htmlspecialchars($s['name']) ?>? Their past assessments stay on record.');">
+            <form method="post" data-confirm="Revoke staff access for <?= htmlspecialchars($s['name']) ?>? Their past assessments stay on record.">
               <input type="hidden" name="csrf" value="<?= csrf() ?>">
               <input type="hidden" name="action" value="revoke_staff">
               <input type="hidden" name="user_id" value="<?= $s['id'] ?>">

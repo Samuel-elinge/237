@@ -152,6 +152,8 @@ try {
 
 $pageTitle = 'Manage Referrals & Commissions — Admin — 237Biz';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/nav.php';
+adminNav('manage-referrals'); adminNavAssets();
 ?>
 
 <style>
@@ -277,7 +279,7 @@ require_once __DIR__ . '/../includes/header.php';
       <input type="hidden" name="csrf" value="<?= csrf() ?>">
       <input type="hidden" name="action" value="bulk_approve">
       <input type="hidden" name="user_id" value="<?= $s['id'] ?>">
-      <button type="submit" class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="return confirm('Approve all pending commissions for <?= e($s['name']) ?>?')">
+      <button type="submit" class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="adminConfirm('Approve all pending commissions for <?= e($s["name"]) ?>?', this.closest('form')); return false;">
         ✅ Approve all
       </button>
     </form>

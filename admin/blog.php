@@ -119,6 +119,8 @@ try {
 
 $pageTitle = 'Blog Manager — Admin';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/nav.php';
+adminNav('blog'); adminNavAssets();
 ?>
 
 <style>
@@ -345,6 +347,9 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 
         <div class="ab-editor-actions">
           <button type="submit" class="ab-btn ab-btn-green">💾 <?= t('Save','Enregistrer') ?></button>
+          <?php if (!empty($ep['slug'])): ?>
+            <a href="<?= SITE_URL ?>/blog/<?= e($ep['slug']) ?>" target="_blank" class="ab-btn ab-btn-ghost">👁 <?= t('Preview','Aperçu') ?></a>
+          <?php endif; ?>
           <a href="/admin/blog.php" class="ab-btn ab-btn-ghost"><?= t('Cancel','Annuler') ?></a>
         </div>
       </form>
@@ -388,6 +393,7 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
             <?= $p['published_at'] ? date('j M Y', strtotime($p['published_at'])) : date('j M Y', strtotime($p['created_at'])) ?>
           </td>
           <td style="white-space:nowrap">
+            <a href="<?= SITE_URL ?>/blog/<?= e($p['slug']) ?>" target="_blank" class="ab-btn ab-btn-ghost ab-btn-sm" title="<?= t('Preview','Aperçu') ?>">👁</a>
             <a href="/admin/blog.php?edit=<?= $p['id'] ?>" class="ab-btn ab-btn-yellow ab-btn-sm">✏️</a>
             <form method="POST" style="display:inline">
               <?= csrfField() ?>
@@ -397,7 +403,7 @@ table.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
                 <?= $p['status'] === 'published' ? '🔒' : '🚀' ?>
               </button>
             </form>
-            <form method="POST" style="display:inline" onsubmit="return confirm('<?= t('Delete this post?','Supprimer cet article ?') ?>')">
+            <form method="POST" style="display:inline" data-confirm="<?= t('Delete this post?','Supprimer cet article ?') ?>">
               <?= csrfField() ?>
               <input type="hidden" name="action" value="delete">
               <input type="hidden" name="id" value="<?= $p['id'] ?>">

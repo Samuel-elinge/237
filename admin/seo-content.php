@@ -76,6 +76,8 @@ $entries = db()->query("
 
 $pageTitle = 'SEO Content Editor — Admin 237Biz';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/nav.php';
+adminNav('seo-content'); adminNavAssets();
 ?>
 
 <div class="page-header"><div class="container">
@@ -84,25 +86,8 @@ require_once __DIR__ . '/../includes/header.php';
 
 <section class="page-section"><div class="container">
 
-  <div class="filter-tabs" style="margin-bottom:2rem;flex-wrap:wrap;">
-    <a href="<?= SITE_URL ?>/admin/" class="filter-tab">📋 Listings</a>
-    <a href="<?= SITE_URL ?>/agent-health-checks.php" class="filter-tab">🩺 Health Check</a>
-    <a href="<?= SITE_URL ?>/admin/users.php" class="filter-tab">👤 Users</a>
-    <a href="<?= SITE_URL ?>/admin/orders.php" class="filter-tab">📦 Orders</a>
-    <a href="<?= SITE_URL ?>/admin/leads.php" class="filter-tab">🌐 Website Leads</a>
-    <a href="<?= SITE_URL ?>/admin/enquiries.php" class="filter-tab">📬 Enquiries</a>
-    <a href="<?= SITE_URL ?>/admin/claims.php" class="filter-tab">🏢 Claims</a>
-    <a href="<?= SITE_URL ?>/admin/reviews.php" class="filter-tab">⭐ Reviews</a>
-    <a href="<?= SITE_URL ?>/admin/categories.php" class="filter-tab">📂 Categories</a>
-    <a href="<?= SITE_URL ?>/admin/locations.php" class="filter-tab">📍 Locations</a>
-    <a href="<?= SITE_URL ?>/admin/subscribers.php" class="filter-tab">📬 Newsletter</a>
-    <a href="<?= SITE_URL ?>/admin/promos.php" class="filter-tab">🎁 Promo Codes</a>
-    <a href="<?= SITE_URL ?>/admin/packages.php" class="filter-tab">💳 Packages</a>
-    <a href="<?= SITE_URL ?>/admin/seo-content.php" class="filter-tab active">📝 SEO Content</a>
-    <a href="<?= SITE_URL ?>/dashboard" class="filter-tab">← Dashboard</a>
-  </div>
 
-  <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.5rem;max-width:680px;">
+<p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.5rem;max-width:680px;">
     <?= t('Write a short intro paragraph and custom page title/description for any category, location, or specific combination (e.g. "Restaurants in Limbe"). This text appears at the top of the matching search page and helps it rank in Google. Leave location blank for a category-wide intro, leave category blank for a city-wide intro, or set both for a specific combo page.',
           'Rédigez un court paragraphe d\'introduction et un titre/description de page personnalisés pour toute catégorie, ville, ou combinaison spécifique (ex. "Restaurants à Limbe"). Ce texte apparaît en haut de la page de recherche correspondante et aide au référencement Google. Laissez la ville vide pour une intro générale à la catégorie, laissez la catégorie vide pour une intro générale à la ville, ou définissez les deux pour une page de combo spécifique.') ?>
   </p>
@@ -207,7 +192,7 @@ require_once __DIR__ . '/../includes/header.php';
           <div style="display:flex;gap:0.5rem;flex-shrink:0;">
             <a href="?edit=<?= $entry['id'] ?>" class="btn btn-outline btn-sm"><?= t('Edit','Modifier') ?></a>
             <a href="?delete=<?= $entry['id'] ?>" class="btn btn-sm" style="background:rgba(230,50,50,0.1);color:#ff6b6b;border:1px solid rgba(230,50,50,0.3);"
-               onclick="return confirm('<?= t('Delete this entry?','Supprimer cette entrée ?') ?>')">✗</a>
+               onclick="adminConfirmHref(this, '<?= t('Delete this entry?','Supprimer cette entrée ?') ?>'); return false;">✗</a>
           </div>
         </div>
       <?php endforeach; ?>

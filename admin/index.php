@@ -17,8 +17,34 @@ $userCount = db()->query("SELECT COUNT(*) FROM users")->fetchColumn();
 // ── Handle approve / reject / delete ─────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
-    $lid    = (int)($_POST['listing_id'] ?? 0);
     $action = $_POST['action'] ?? '';
+
+    // ── Bulk actions ──────────────────────────────────────
+    if (in_array($action, ['bulk_approve','bulk_reject','bulk_delete']) && !empty($_POST['listing_ids'])) {
+        $ids = array_map('intval', (array)$_POST['listing_ids']);
+        $ids = array_filter($ids); // remove zeros
+        if ($ids) {
+            $ph = implode(',', array_fill(0, count($ids), '?'));
+            if ($action === 'bulk_approve') {
+                db()->prepare("UPDATE listings SET status='approved' WHERE id IN ($ph)")->execute($ids);
+                flash('success', count($ids) . ' listing(s) approved.');
+            } elseif ($action === 'bulk_reject') {
+                db()->prepare("UPDATE listings SET status='rejected' WHERE id IN ($ph)")->execute($ids);
+                flash('success', count($ids) . ' listing(s) rejected.');
+            } elseif ($action === 'bulk_delete') {
+                db()->prepare("DELETE FROM listings WHERE id IN ($ph)")->execute($ids);
+                flash('success', count($ids) . ' listing(s) deleted.');
+            }
+        }
+        redirect(SITE_URL . '/admin/?' . http_build_query(array_filter([
+            'status'   => $_GET['status'] ?? '',
+            'q'        => $_GET['q'] ?? '',
+            'featured' => $_GET['featured'] ?? '',
+            'page'     => $_GET['page'] ?? '',
+        ])));
+    }
+    // ── Single-item actions ───────────────────────────────
+    $lid = (int)($_POST['listing_id'] ?? 0);
 
     if ($lid) {
         if ($action === 'approve') {
@@ -125,6 +151,8 @@ function adminUrl(array $overrides = []): string {
 
 $pageTitle = 'All Listings — Admin 237Biz';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/nav.php';
+adminNav('index'); adminNavAssets();
 ?>
 
 <div class="page-header"><div class="container">
@@ -143,34 +171,8 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="dash-stat"><strong><?= $userCount ?></strong><span>Users</span></div>
   </div>
 
-  <!-- Admin nav -->
-  <div class="filter-tabs" style="margin-bottom:2rem;flex-wrap:wrap;">
-    <a href="<?= SITE_URL ?>/admin/"                        class="filter-tab active">📋 Listings</a>
-    <a href="<?= SITE_URL ?>/admin/users.php"               class="filter-tab">👤 Users</a>
-    <a href="<?= SITE_URL ?>/admin/orders.php"              class="filter-tab">📦 Orders</a>
-    <a href="<?= SITE_URL ?>/admin/leads.php"               class="filter-tab">🌐 Website Leads</a>
-    <a href="<?= SITE_URL ?>/admin/enquiries.php"           class="filter-tab">📬 Enquiries</a>
-    <a href="<?= SITE_URL ?>/admin/claims.php"              class="filter-tab">🏢 Claims</a>
-    <a href="<?= SITE_URL ?>/admin/reviews.php"             class="filter-tab">⭐ Reviews</a>
-    <a href="<?= SITE_URL ?>/admin/categories.php"          class="filter-tab">📂 Categories</a>
-    <a href="<?= SITE_URL ?>/admin/locations.php"           class="filter-tab">📍 Locations</a>
-    <a href="<?= SITE_URL ?>/admin/subscribers.php"         class="filter-tab">📬 Newsletter</a>
-    <a href="<?= SITE_URL ?>/admin/promos.php"              class="filter-tab">🎁 Promo Codes</a>
-    <a href="<?= SITE_URL ?>/admin/packages.php"            class="filter-tab">💳 Packages</a>
-    <a href="<?= SITE_URL ?>/admin/seo-content.php"         class="filter-tab">📝 SEO Content</a>
-    <a href="<?= SITE_URL ?>/admin/emails.php"              class="filter-tab">✉️ Emails</a>
-    <a href="<?= SITE_URL ?>/admin/automation/"             class="filter-tab">🤖 Automation</a>
-    <a href="<?= SITE_URL ?>/admin/dashboard.php"           class="filter-tab">📊 Admin Dashboard</a>
-    <a href="<?= SITE_URL ?>/admin/health-check-overview.php" class="filter-tab">🩺 Health Check</a>
-    <a href="<?= SITE_URL ?>/admin/manage-agents.php"       class="filter-tab">👔 Agents</a>
-    <a href="<?= SITE_URL ?>/admin/manage-creators.php"     class="filter-tab">🎬 Creators</a>
-    <a href="<?= SITE_URL ?>/admin/manage-campaigns.php"    class="filter-tab">📣 Campaigns</a>
-    <a href="<?= SITE_URL ?>/admin/manage-referrals.php"    class="filter-tab">💰 Referrals</a>
-    <a href="<?= SITE_URL ?>/admin/blog.php"                class="filter-tab">📝 Blog</a>
-    <a href="<?= SITE_URL ?>/dashboard"                     class="filter-tab">← Dashboard</a>
-  </div>
 
-  <!-- Search + filter bar -->
+<!-- Search + filter bar -->
   <form method="GET" style="margin-bottom:1.25rem;display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
     <div style="position:relative;flex:1;min-width:200px;">
       <input type="text" name="q" value="<?= e($search) ?>"
@@ -212,13 +214,36 @@ require_once __DIR__ . '/../includes/header.php';
     <?= $search ? ' matching "' . e($search) . '"' : '' ?>
   </p>
 
+  <!-- Bulk action bar -->
+  <form method="POST" id="bulk-form">
+    <input type="hidden" name="csrf" value="<?= csrf() ?>">
+    <div id="bulk-bar" style="display:none;align-items:center;gap:0.75rem;background:#0a1a10;border:1px solid rgba(0,168,120,0.25);border-radius:10px;padding:0.65rem 1rem;margin-bottom:0.75rem;flex-wrap:wrap;">
+      <span id="bulk-count" style="font-size:0.82rem;color:#8db8a8;white-space:nowrap;">0 selected</span>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <button type="submit" name="action" value="bulk_approve"
+                class="btn btn-sm" style="background:rgba(0,168,120,0.15);color:#00A878;border:1px solid rgba(0,168,120,0.3);"
+                onclick="return bulkConfirm('approve')">✓ Approve</button>
+        <button type="submit" name="action" value="bulk_reject"
+                class="btn btn-sm" style="background:rgba(245,180,0,0.12);color:#f5b400;border:1px solid rgba(245,180,0,0.3);"
+                onclick="return bulkConfirm('reject')">✗ Reject</button>
+        <button type="submit" name="action" value="bulk_delete"
+                class="btn btn-sm" style="background:rgba(230,50,50,0.1);color:#ff6b6b;border:1px solid rgba(230,50,50,0.3);"
+                onclick="return bulkConfirm('delete')">🗑 Delete</button>
+      </div>
+      <button type="button" onclick="clearBulk()" style="margin-left:auto;background:none;border:none;color:#5a8878;cursor:pointer;font-size:0.8rem;">✕ Clear</button>
+    </div>
+
   <!-- Listings table -->
   <div class="listing-widget" style="padding:0;overflow:hidden;">
     <div style="overflow-x:auto;">
       <table class="data-table" style="min-width:900px;">
         <thead>
           <tr>
-            <th style="width:32%;">Business</th>
+            <th style="width:36px;text-align:center;padding-left:1rem;">
+              <input type="checkbox" id="select-all" title="Select all on this page"
+                     style="width:15px;height:15px;cursor:pointer;accent-color:#00A878;">
+            </th>
+            <th style="width:30%;">Business</th>
             <th>Owner</th>
             <th>Category</th>
             <th>City</th>
@@ -232,6 +257,11 @@ require_once __DIR__ . '/../includes/header.php';
         <tbody>
           <?php foreach ($listings as $l): ?>
             <tr>
+              <td style="text-align:center;padding-left:1rem;vertical-align:middle;">
+                <input type="checkbox" name="listing_ids[]" value="<?= $l['id'] ?>"
+                       class="row-check"
+                       style="width:15px;height:15px;cursor:pointer;accent-color:#00A878;">
+              </td>
               <!-- Business name + badges -->
               <td>
                 <div style="font-weight:500;color:var(--white);font-size:0.875rem;">
@@ -329,7 +359,7 @@ require_once __DIR__ . '/../includes/header.php';
                   </form>
 
                   <!-- Delete -->
-                  <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this listing permanently?')">
+                  <form method="POST" style="display:inline;" data-confirm="Delete this listing permanently?">
                     <input type="hidden" name="csrf" value="<?= csrf() ?>">
                     <input type="hidden" name="listing_id" value="<?= $l['id'] ?>">
                     <button name="action" value="delete" class="btn btn-sm"
@@ -343,6 +373,7 @@ require_once __DIR__ . '/../includes/header.php';
       </table>
     </div>
   </div>
+  </form><!-- /bulk-form -->
 
   <?php if (!$listings): ?>
     <div style="text-align:center;padding:3rem;background:var(--card);border:1px solid var(--border);border-radius:14px;margin-top:1rem;">
@@ -362,5 +393,68 @@ require_once __DIR__ . '/../includes/header.php';
   <?php endif; ?>
 
 </div></section>
+
+<script>
+(function() {
+  var form    = document.getElementById('bulk-form');
+  var bar     = document.getElementById('bulk-bar');
+  var countEl = document.getElementById('bulk-count');
+  var selAll  = document.getElementById('select-all');
+
+  function updateBar() {
+    var checked = form.querySelectorAll('.row-check:checked');
+    var n = checked.length;
+    if (n > 0) {
+      bar.style.display = 'flex';
+      countEl.textContent = n + ' listing' + (n === 1 ? '' : 's') + ' selected';
+    } else {
+      bar.style.display = 'none';
+    }
+    var total = form.querySelectorAll('.row-check').length;
+    selAll.indeterminate = n > 0 && n < total;
+    selAll.checked = n === total && total > 0;
+  }
+
+  // Select-all toggle
+  selAll.addEventListener('change', function() {
+    form.querySelectorAll('.row-check').forEach(function(cb) {
+      cb.checked = selAll.checked;
+    });
+    updateBar();
+  });
+
+  // Individual checkbox change
+  form.addEventListener('change', function(e) {
+    if (e.target.classList.contains('row-check')) updateBar();
+  });
+
+  // Highlight selected rows
+  form.addEventListener('change', function(e) {
+    if (e.target.classList.contains('row-check')) {
+      var row = e.target.closest('tr');
+      if (row) row.style.background = e.target.checked ? 'rgba(0,168,120,0.07)' : '';
+    }
+  });
+
+  window.clearBulk = function() {
+    form.querySelectorAll('.row-check').forEach(function(cb) { cb.checked = false; });
+    selAll.checked = false;
+    selAll.indeterminate = false;
+    form.querySelectorAll('tr').forEach(function(r) { r.style.background = ''; });
+    bar.style.display = 'none';
+  };
+
+  window.bulkConfirm = function(type) {
+    var n = form.querySelectorAll('.row-check:checked').length;
+    if (n === 0) { alert('Select at least one listing first.'); return false; }
+    var msgs = {
+      approve: 'Approve ' + n + ' listing(s)?',
+      reject:  'Reject '  + n + ' listing(s)?',
+      delete:  'Permanently delete ' + n + ' listing(s)? This cannot be undone.'
+    };
+    return window.confirm(msgs[type] || 'Are you sure?');
+  };
+})();
+</script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
