@@ -81,6 +81,10 @@ RewriteRule ^manage-announcements/?$    manage-announcements.php     [L,QSA]
 RewriteRule ^help/?$                    help.php                     [L,QSA]
 RewriteRule ^help/([a-z0-9-]+)/?$       help-article.php?slug=$1    [L,QSA]
 
+# Blog
+RewriteRule ^blog/?$                    blog.php                     [L,QSA]
+RewriteRule ^blog/([a-z0-9-]+)/?$       blog-post.php?slug=$1       [L,QSA]
+
 # Account
 RewriteRule ^login/?$                   login.php                    [L,QSA]
 RewriteRule ^register/?$                login.php?mode=register      [L,QSA]
