@@ -239,21 +239,21 @@ require_once __DIR__ . '/../includes/header.php';
               <?= csrfField() ?>
               <input type="hidden" name="action" value="approve_partner">
               <input type="hidden" name="partner_id" value="<?= $viewPartner['id'] ?>">
-              <button class="btn btn-primary" style="font-size:0.85rem;" onclick="adminConfirm('Approve this partner?', this.closest('form')); return false;" >✓ Approve</button>
+              <button class="btn btn-primary" style="font-size:0.85rem;" onclick="return confirm('Approve this partner?')">✓ Approve</button>
             </form>
           <?php elseif (in_array($viewPartner['status'], ['approved','active'])): ?>
             <form method="POST" style="display:inline;">
               <?= csrfField() ?>
               <input type="hidden" name="action" value="suspend_partner">
               <input type="hidden" name="partner_id" value="<?= $viewPartner['id'] ?>">
-              <button class="btn btn-outline" style="font-size:0.85rem; color:#e63946; border-color:#e63946;" onclick="adminConfirm('Suspend this partner?', this.closest('form')); return false;" >⊘ Suspend</button>
+              <button class="btn btn-outline" style="font-size:0.85rem; color:#e63946; border-color:#e63946;" onclick="return confirm('Suspend this partner?')">⊘ Suspend</button>
             </form>
           <?php elseif ($viewPartner['status'] === 'suspended'): ?>
             <form method="POST" style="display:inline;">
               <?= csrfField() ?>
               <input type="hidden" name="action" value="reactivate_partner">
               <input type="hidden" name="partner_id" value="<?= $viewPartner['id'] ?>">
-              <button class="btn btn-primary" style="font-size:0.85rem;" onclick="adminConfirm('Reactivate this partner?', this.closest('form')); return false;" >↺ Reactivate</button>
+              <button class="btn btn-primary" style="font-size:0.85rem;" onclick="return confirm('Reactivate this partner?')">↺ Reactivate</button>
             </form>
           <?php endif; ?>
           <form method="POST" action="<?= SITE_URL ?>/admin/login-as.php" style="display:inline;" target="_blank">
@@ -320,7 +320,7 @@ require_once __DIR__ . '/../includes/header.php';
               <input type="hidden" name="assignment_id" value="<?= $asg['id'] ?>">
               <input type="hidden" name="partner_id" value="<?= $viewPartner['id'] ?>">
               <button type="submit" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:0.8rem;padding:0;"
-                onclick="adminConfirm('Remove this assignment?', this.closest('form')); return false;" >✕ Unassign</button>
+                onclick="return confirm('Remove this assignment?')">✕ Unassign</button>
             </form>
           </div>
           <?php endforeach; ?>
@@ -414,7 +414,7 @@ require_once __DIR__ . '/../includes/header.php';
                       <input type="hidden" name="action" value="approve_partner">
                       <input type="hidden" name="partner_id" value="<?= $p['id'] ?>">
                       <button style="background:none;border:none;color:#00A878;cursor:pointer;font-size:0.8rem;font-weight:700;"
-                        onclick="adminConfirm('Approve this partner?', this.closest('form')); return false;">✓ Approve</button>
+                        onclick="return confirm('Approve <?= e(addslashes($p['user_name'])) ?>?')">✓ Approve</button>
                     </form>
                   <?php endif; ?>
                 </td>

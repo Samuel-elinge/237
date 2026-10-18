@@ -335,7 +335,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="unflag_partner">
                 <input type="hidden" name="partner_id" value="<?= $fp['id'] ?>">
-                <button type="submit" class="btn btn-ghost btn-sm" onclick="adminConfirm('Remove flag from this partner?', this.closest('form')); return false;" >Unflag</button>
+                <button type="submit" class="btn btn-ghost btn-sm" onclick="return confirm('Remove flag from this partner?')">Unflag</button>
             </form>
             <a href="<?= SITE_URL ?>/admin/partner-performance?id=<?= $fp['id'] ?>" class="btn btn-ghost btn-sm">View</a>
         </div>

@@ -627,7 +627,7 @@ require_once __DIR__ . '/../includes/header.php';
                 To <strong>remove</strong> strategic status, use the demote action below.
             </div>
             <div style="display:flex;gap:.5rem;justify-content:space-between;margin-top:1rem">
-                <form method="post" style="display:inline" data-confirm="Remove strategic status from this partner?">
+                <form method="post" style="display:inline" onsubmit="return confirm('Remove strategic status from this partner?')">
                     <?= csrfField() ?>
                     <input type="hidden" name="action" value="set_strategic">
                     <input type="hidden" name="partner_id" value="<?= $selectedId ?>">

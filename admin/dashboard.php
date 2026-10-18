@@ -63,8 +63,6 @@ $myOrders = $myOrders->fetchAll();
 
 $pageTitle = t('My Dashboard — 237Biz', 'Mon Tableau de Bord — 237Biz');
 require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/nav.php';
-adminNav('dashboard'); adminNavAssets();
 ?>
 
 <div class="page-header">
@@ -420,7 +418,7 @@ adminNav('dashboard'); adminNavAssets();
                     <div style="font-size:0.82rem;color:var(--muted);margin-top:0.25rem;"><?= e(mb_substr($ann['content'],0,120)) ?><?= mb_strlen($ann['content'])>120?'…':'' ?></div>
                   </div>
                   <div style="display:flex;gap:0.35rem;flex-shrink:0;">
-                    <a href="?page=announcements&delete_ann=<?= $ann['id'] ?>" onclick="if(!window.confirm('<?= t('Delete this announcement?','Supprimer cette annonce ?') ?>'))return false;"
+                    <a href="?page=announcements&delete_ann=<?= $ann['id'] ?>" onclick="return confirm('<?= t('Delete this announcement?','Supprimer cette annonce ?') ?>')"
                        class="btn btn-sm" style="background:rgba(230,50,50,0.1);color:#ff6b6b;border:1px solid rgba(230,50,50,0.3);">✗ <?= t('Delete','Supprimer') ?></a>
                   </div>
                 </div>

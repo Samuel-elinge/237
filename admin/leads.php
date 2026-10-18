@@ -24,8 +24,6 @@ $hasWebsiteLabels = [
 
 $pageTitle = 'Website Leads — Admin';
 require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/nav.php';
-adminNav('leads'); adminNavAssets();
 ?>
 
 <div class="page-header"><div class="container">
@@ -35,8 +33,33 @@ adminNav('leads'); adminNavAssets();
 </div></div>
 
 <section class="page-section"><div class="container">
-
-<div style="display:flex;flex-direction:column;gap:1rem;">
+    <div class="filter-tabs" style="margin-bottom:2rem;flex-wrap:wrap;">
+      <a href="<?= SITE_URL ?>/admin/" class="filter-tab">📋 Listings</a>
+      <a href="<?= SITE_URL ?>/agent-health-checks.php" class="filter-tab">🩺 Health Check</a>
+      <a href="<?= SITE_URL ?>/admin/users.php" class="filter-tab">👤 Users</a>
+      <a href="<?= SITE_URL ?>/admin/orders.php" class="filter-tab">📦 Orders</a>
+      <a href="<?= SITE_URL ?>/admin/leads.php" class="filter-tab active">🌐 Website Leads</a>
+      <a href="<?= SITE_URL ?>/admin/enquiries.php" class="filter-tab">📬 Enquiries</a>
+      <a href="<?= SITE_URL ?>/admin/claims.php" class="filter-tab">🏢 Claims</a>
+      <a href="<?= SITE_URL ?>/admin/reviews.php" class="filter-tab">⭐ Reviews</a>
+      <a href="<?= SITE_URL ?>/admin/categories.php" class="filter-tab">📂 Categories</a>
+      <a href="<?= SITE_URL ?>/admin/locations.php" class="filter-tab">📍 Locations</a>
+      <a href="<?= SITE_URL ?>/admin/subscribers.php" class="filter-tab">📬 Newsletter</a>
+      <a href="<?= SITE_URL ?>/admin/promos.php" class="filter-tab">🎁 Promo Codes</a>
+      <a href="<?= SITE_URL ?>/admin/packages.php" class="filter-tab">💳 Packages</a>
+      <a href="<?= SITE_URL ?>/admin/seo-content.php" class="filter-tab">📝 SEO Content</a>
+      <a href="<?= SITE_URL ?>/admin/emails.php"                class="filter-tab">✉️ Emails</a>
+      <a href="<?= SITE_URL ?>/admin/automation/"              class="filter-tab">🤖 Automation</a>
+      <a href="<?= SITE_URL ?>/admin/dashboard.php"            class="filter-tab">📊 Admin Dashboard</a>
+      <a href="<?= SITE_URL ?>/admin/analytics-overview.php"   class="filter-tab">🌍 Analytics</a>
+      <a href="<?= SITE_URL ?>/admin/health-check-overview.php" class="filter-tab">🩺 Health Check</a>
+      <a href="<?= SITE_URL ?>/admin/manage-agents.php"        class="filter-tab">👔 Agents</a>
+      <a href="<?= SITE_URL ?>/admin/manage-creators.php"      class="filter-tab">🎬 Creators</a>
+      <a href="<?= SITE_URL ?>/admin/manage-campaigns.php"     class="filter-tab">📣 Campaigns</a>
+      <a href="<?= SITE_URL ?>/admin/manage-referrals.php"     class="filter-tab">💰 Referrals</a>
+      <a href="<?= SITE_URL ?>/dashboard" class="filter-tab">← Dashboard</a>
+    </div>
+  <div style="display:flex;flex-direction:column;gap:1rem;">
     <?php foreach ($leads as $lead): ?>
       <div class="listing-widget" style="<?= $lead['status']==='new' ? 'border-color:rgba(245,200,66,0.3);background:rgba(245,200,66,0.03);' : '' ?>">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:0.75rem;">

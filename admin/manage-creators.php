@@ -216,8 +216,6 @@ try {
 
 $pageTitle = 'Manage Creators — Admin — 237Biz';
 require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/nav.php';
-adminNav('manage-creators'); adminNavAssets();
 ?>
 
 <style>
@@ -404,13 +402,13 @@ adminNav('manage-creators'); adminNavAssets();
           <input type="hidden" name="csrf" value="<?= csrf() ?>">
           <input type="hidden" name="action" value="switch_to_agent">
           <input type="hidden" name="user_id" value="<?= $cr['id'] ?>">
-          <button type="submit" style="background:rgba(138,180,248,0.08);border:1px solid rgba(138,180,248,0.2);color:#8ab4f8;border-radius:6px;padding:5px 14px;font-size:12px;cursor:pointer;font-family:inherit;" onclick="adminConfirm('Convert <?= e($cr["name"]) ?> to Sales Agent? They will lose their Creator role.', this.closest('form')); return false;">👔 Switch to Agent</button>
+          <button type="submit" style="background:rgba(138,180,248,0.08);border:1px solid rgba(138,180,248,0.2);color:#8ab4f8;border-radius:6px;padding:5px 14px;font-size:12px;cursor:pointer;font-family:inherit;" onclick="return confirm('Convert <?= e($cr['name']) ?> to Sales Agent? They will lose their Creator role.')">👔 Switch to Agent</button>
         </form>
         <form method="POST">
           <input type="hidden" name="csrf" value="<?= csrf() ?>">
           <input type="hidden" name="action" value="suspend_creator">
           <input type="hidden" name="user_id" value="<?= $cr['id'] ?>">
-          <button type="submit" class="btn btn-outline" style="font-size:12px;padding:5px 14px;color:#ff6b7a;border-color:rgba(206,17,38,0.3);" onclick="adminConfirm('Suspend this creator?', this.closest('form')); return false;" >Suspend</button>
+          <button type="submit" class="btn btn-outline" style="font-size:12px;padding:5px 14px;color:#ff6b7a;border-color:rgba(206,17,38,0.3);" onclick="return confirm('Suspend this creator?')">Suspend</button>
         </form>
         <?php endif; ?>
       </div>

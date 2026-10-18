@@ -71,8 +71,6 @@ $packages = db()->query("
 
 $pageTitle = 'Listing Packages — Admin 237Biz';
 require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/nav.php';
-adminNav('packages'); adminNavAssets();
 ?>
 
 <div class="page-header"><div class="container">
@@ -81,8 +79,34 @@ adminNav('packages'); adminNavAssets();
 
 <section class="page-section"><div class="container">
 
+  <div class="filter-tabs" style="margin-bottom:2rem;flex-wrap:wrap;">
+    <a href="<?= SITE_URL ?>/admin/" class="filter-tab">📋 Listings</a>
+    <a href="<?= SITE_URL ?>/agent-health-checks.php" class="filter-tab">🩺 Health Check</a>
+    <a href="<?= SITE_URL ?>/admin/users.php" class="filter-tab">👤 Users</a>
+    <a href="<?= SITE_URL ?>/admin/orders.php" class="filter-tab">📦 Orders</a>
+    <a href="<?= SITE_URL ?>/admin/leads.php" class="filter-tab">🌐 Website Leads</a>
+    <a href="<?= SITE_URL ?>/admin/enquiries.php" class="filter-tab">📬 Enquiries</a>
+    <a href="<?= SITE_URL ?>/admin/claims.php" class="filter-tab">🏢 Claims</a>
+    <a href="<?= SITE_URL ?>/admin/reviews.php" class="filter-tab">⭐ Reviews</a>
+    <a href="<?= SITE_URL ?>/admin/categories.php" class="filter-tab">📂 Categories</a>
+    <a href="<?= SITE_URL ?>/admin/locations.php" class="filter-tab">📍 Locations</a>
+    <a href="<?= SITE_URL ?>/admin/subscribers.php" class="filter-tab">📬 Newsletter</a>
+    <a href="<?= SITE_URL ?>/admin/promos.php" class="filter-tab">🎁 Promo Codes</a>
+    <a href="<?= SITE_URL ?>/admin/packages.php" class="filter-tab active">💳 Packages</a>
+    <a href="<?= SITE_URL ?>/admin/seo-content.php" class="filter-tab">📝 SEO Content</a>
+      <a href="<?= SITE_URL ?>/admin/emails.php"                class="filter-tab">✉️ Emails</a>
+      <a href="<?= SITE_URL ?>/admin/automation/"              class="filter-tab">🤖 Automation</a>
+      <a href="<?= SITE_URL ?>/admin/dashboard.php"            class="filter-tab">📊 Admin Dashboard</a>
+      <a href="<?= SITE_URL ?>/admin/analytics-overview.php"   class="filter-tab">🌍 Analytics</a>
+      <a href="<?= SITE_URL ?>/admin/health-check-overview.php" class="filter-tab">🩺 Health Check</a>
+      <a href="<?= SITE_URL ?>/admin/manage-agents.php"        class="filter-tab">👔 Agents</a>
+      <a href="<?= SITE_URL ?>/admin/manage-creators.php"      class="filter-tab">🎬 Creators</a>
+      <a href="<?= SITE_URL ?>/admin/manage-campaigns.php"     class="filter-tab">📣 Campaigns</a>
+      <a href="<?= SITE_URL ?>/admin/manage-referrals.php"     class="filter-tab">💰 Referrals</a>
+    <a href="<?= SITE_URL ?>/dashboard" class="filter-tab">← Dashboard</a>
+  </div>
 
-<p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.5rem;max-width:640px;">
+  <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.5rem;max-width:640px;">
     <?= t('Changes here apply to all future purchases immediately. Existing approved listings keep whatever duration/price they already paid for — this does not retroactively change live listings.',
           'Les modifications s\'appliquent immédiatement à tous les achats futurs. Les annonces déjà approuvées conservent la durée/prix déjà payés — cela ne modifie pas rétroactivement les annonces en cours.') ?>
   </p>
@@ -154,7 +178,7 @@ adminNav('packages'); adminNavAssets();
         </form>
 
         <?php if ($pkg['use_count'] == 0): ?>
-          <form method="POST" style="margin-top:0.5rem;" data-confirm="<?= t('Delete this package permanently?','Supprimer ce forfait définitivement ?') ?>">
+          <form method="POST" style="margin-top:0.5rem;" onsubmit="return confirm('<?= t('Delete this package permanently?','Supprimer ce forfait définitivement ?') ?>')">
             <input type="hidden" name="csrf" value="<?= csrf() ?>">
             <input type="hidden" name="action" value="delete">
             <input type="hidden" name="pkg_id" value="<?= $pkg['id'] ?>">

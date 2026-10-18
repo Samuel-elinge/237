@@ -166,8 +166,6 @@ try {
 
 $pageTitle = 'Manage Agents — Admin — 237Biz';
 require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/nav.php';
-adminNav('manage-agents'); adminNavAssets();
 ?>
 
 <style>
@@ -343,7 +341,7 @@ adminNav('manage-agents'); adminNavAssets();
       <input type="hidden" name="csrf" value="<?= csrf() ?>">
       <input type="hidden" name="action" value="switch_to_creator">
       <input type="hidden" name="user_id" value="<?= $a['id'] ?>">
-      <button type="submit" style="background:rgba(245,130,245,0.08);border:1px solid rgba(245,130,245,0.2);color:#e07be0;border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:inherit;" onclick="adminConfirm('Convert ' + '<?= e($a["name"]) ?>' + ' to Creator? They will lose their Agent role.', this.closest('form')); return false;">🎬 Switch to Creator</button>
+      <button type="submit" style="background:rgba(245,130,245,0.08);border:1px solid rgba(245,130,245,0.2);color:#e07be0;border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:inherit;" onclick="return confirm('Convert <?= e($a['name']) ?> to Creator? They will lose their Agent role.')">🎬 Switch to Creator</button>
     </form>
   </div>
   <?php endforeach; ?>

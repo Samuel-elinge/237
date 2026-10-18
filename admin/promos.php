@@ -36,15 +36,38 @@ $promos = db()->query("SELECT p.*, (SELECT COUNT(*) FROM promo_uses WHERE code_i
 
 $pageTitle = 'Promo Codes — Admin';
 require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/nav.php';
-adminNav('promos'); adminNavAssets();
 ?>
 <div class="page-header"><div class="container">
   <h1 style="font-family:'Fraunces',serif;font-weight:900;font-size:2rem;">🎁 Promo Codes</h1>
 </div></div>
 <section class="page-section"><div class="container">
-
-<!-- CREATE FORM -->
+    <div class="filter-tabs" style="margin-bottom:2rem;flex-wrap:wrap;">
+      <a href="<?= SITE_URL ?>/admin/" class="filter-tab">📋 Listings</a>
+      <a href="<?= SITE_URL ?>/agent-health-checks.php" class="filter-tab">🩺 Health Check</a>
+      <a href="<?= SITE_URL ?>/admin/users.php" class="filter-tab">👤 Users</a>
+      <a href="<?= SITE_URL ?>/admin/orders.php" class="filter-tab">📦 Orders</a>
+      <a href="<?= SITE_URL ?>/admin/leads.php" class="filter-tab">🌐 Website Leads</a>
+      <a href="<?= SITE_URL ?>/admin/enquiries.php" class="filter-tab">📬 Enquiries</a>
+      <a href="<?= SITE_URL ?>/admin/claims.php" class="filter-tab">🏢 Claims</a>
+      <a href="<?= SITE_URL ?>/admin/reviews.php" class="filter-tab">⭐ Reviews</a>
+      <a href="<?= SITE_URL ?>/admin/categories.php" class="filter-tab">📂 Categories</a>
+      <a href="<?= SITE_URL ?>/admin/locations.php" class="filter-tab">📍 Locations</a>
+      <a href="<?= SITE_URL ?>/admin/subscribers.php" class="filter-tab">📬 Newsletter</a>
+      <a href="<?= SITE_URL ?>/admin/promos.php" class="filter-tab active">🎁 Promo Codes</a>
+      <a href="<?= SITE_URL ?>/admin/packages.php" class="filter-tab">💳 Packages</a>
+      <a href="<?= SITE_URL ?>/admin/seo-content.php" class="filter-tab">📝 SEO Content</a>
+      <a href="<?= SITE_URL ?>/admin/emails.php"                class="filter-tab">✉️ Emails</a>
+      <a href="<?= SITE_URL ?>/admin/automation/"              class="filter-tab">🤖 Automation</a>
+      <a href="<?= SITE_URL ?>/admin/dashboard.php"            class="filter-tab">📊 Admin Dashboard</a>
+      <a href="<?= SITE_URL ?>/admin/analytics-overview.php"   class="filter-tab">🌍 Analytics</a>
+      <a href="<?= SITE_URL ?>/admin/health-check-overview.php" class="filter-tab">🩺 Health Check</a>
+      <a href="<?= SITE_URL ?>/admin/manage-agents.php"        class="filter-tab">👔 Agents</a>
+      <a href="<?= SITE_URL ?>/admin/manage-creators.php"      class="filter-tab">🎬 Creators</a>
+      <a href="<?= SITE_URL ?>/admin/manage-campaigns.php"     class="filter-tab">📣 Campaigns</a>
+      <a href="<?= SITE_URL ?>/admin/manage-referrals.php"     class="filter-tab">💰 Referrals</a>
+      <a href="<?= SITE_URL ?>/dashboard" class="filter-tab">← Dashboard</a>
+    </div>
+  <!-- CREATE FORM -->
   <div class="listing-widget" style="margin-bottom:2rem;">
     <h4 style="margin-bottom:1.25rem;">+ Create Promo Code</h4>
     <form method="POST">
@@ -95,7 +118,7 @@ adminNav('promos'); adminNavAssets();
                 <input type="hidden" name="csrf" value="<?= csrf() ?>">
                 <input type="hidden" name="promo_id" value="<?= $p['id'] ?>">
                 <button name="action" value="toggle" class="btn btn-outline btn-sm"><?= $p['active']?'Disable':'Enable' ?></button>
-                <button name="action" value="delete" class="btn btn-outline btn-sm" style="color:#ff6b6b;border-color:rgba(230,50,50,0.3);" onclick="adminConfirm('Delete code <?= e($p["code"]) ?>?', this.closest('form')); return false;">✗</button>
+                <button name="action" value="delete" class="btn btn-outline btn-sm" style="color:#ff6b6b;border-color:rgba(230,50,50,0.3);" onclick="return confirm('Delete code <?= e($p['code']) ?>?')">✗</button>
               </form>
             </td>
           </tr>
