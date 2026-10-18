@@ -94,6 +94,12 @@ $counts = $countQ->fetchAll(\PDO::FETCH_KEY_PAIR);
 $flash = getFlash();
 $pageTitle = pt('My Assignments');
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($partnerId, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('assignments'); ?>
+
 ?>
 <style>
 .tabs{display:flex;gap:0;border-bottom:2px solid #e5e7eb;margin-bottom:1.25rem}

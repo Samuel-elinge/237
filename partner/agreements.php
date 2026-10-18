@@ -163,6 +163,12 @@ if ($signMode) {
 $flash     = getFlash();
 $pageTitle = pt('My Agreements');
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($partnerId, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('agreements'); ?>
+
 ?>
 <style>
 .page-wrap{max-width:820px;margin:0 auto;padding:1.5rem}

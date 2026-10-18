@@ -107,6 +107,12 @@ $statusColors = ['pending'=>['#fef3c7','#92400e'],'converted'=>['#d1fae5','#065f
 $flash     = getFlash();
 $pageTitle = pt('My Referrals');
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($partnerId, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('referrals'); ?>
+
 ?>
 <style>
 .page-wrap{max-width:860px;margin:0 auto;padding:1.5rem}

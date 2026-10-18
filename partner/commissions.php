@@ -70,6 +70,12 @@ $monthlyData = $monthly->fetchAll();
 
 $pageTitle = pt('Commissions') . ' — ' . pt('Partner Centre');
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($partnerId, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('commissions'); ?>
+
 ?>
 
 <style>

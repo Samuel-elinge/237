@@ -37,28 +37,21 @@ $past   = $pdo->query("SELECT c.* FROM campaigns c WHERE c.status IN ('completed
 
 $pageTitle = 'Campaigns — 237Biz Creator';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
 ?>
+<?php creatorNavAssets(); ?>
+<?php creatorNav('campaigns'); ?>
 
 <style>
-.nav-pill{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.1);}
-.nav-pill:hover,.nav-pill.active{background:rgba(0,168,120,0.15);color:#00A878;border-color:rgba(0,168,120,0.35);}
 .camp-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px 22px;margin-bottom:12px;}
 </style>
 
-<div style="height:65px;"></div>
 <div class="page-header"><div class="container">
   <h1 style="font-family:'Fraunces',serif;font-weight:900;font-size:clamp(1.4rem,3vw,1.9rem);">📣 Campaigns</h1>
 </div></div>
 
 <section class="page-section" style="padding-top:1.25rem;"><div class="container">
 
-  <div style="display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap;">
-    <a href="<?= SITE_URL ?>/creator/dashboard"   class="nav-pill">🏠 Dashboard</a>
-    <a href="<?= SITE_URL ?>/creator/profile"     class="nav-pill">👤 My Profile</a>
-    <a href="<?= SITE_URL ?>/creator/referrals"   class="nav-pill">🔗 Referrals</a>
-    <a href="<?= SITE_URL ?>/creator/campaigns"   class="nav-pill active">📣 Campaigns</a>
-    <a href="<?= SITE_URL ?>/creator/submissions" class="nav-pill">📤 Submissions</a>
-  </div>
 
   <h2 style="font-size:1rem;font-weight:700;margin-bottom:14px;">🟢 Active Campaigns</h2>
   <?php if (empty($active)): ?>

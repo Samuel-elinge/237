@@ -122,6 +122,12 @@ $statusMeta = [
 
 $pageTitle = pt('Capacity & Availability');
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($partnerId, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('capacity'); ?>
+
 ?>
 <style>
 .capacity-grid{display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;align-items:start}

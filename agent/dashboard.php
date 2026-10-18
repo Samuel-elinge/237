@@ -115,7 +115,10 @@ $refUrl = $link ? (SITE_URL . '/r/' . $link['code']) : null;
 
 $pageTitle = 'My Dashboard — 237Biz Agent';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
 ?>
+<?php agentNavAssets(); ?>
+<?php agentNav('dashboard'); ?>
 
 <style>
 .agent-stat-card { background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px 20px; }
@@ -126,8 +129,6 @@ require_once __DIR__ . '/../includes/header.php';
 .ref-box { background:rgba(0,168,120,0.06);border:1px solid rgba(0,168,120,0.25);border-radius:12px;padding:18px 22px; }
 .ref-url { font-family:monospace;font-size:14px;color:#00A878;background:rgba(0,0,0,0.2);border-radius:7px;padding:8px 14px;word-break:break-all;display:block;margin:10px 0; }
 </style>
-
-<div style="height:65px;"></div>
 
 <div class="page-header">
   <div class="container">

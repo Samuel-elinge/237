@@ -105,6 +105,12 @@ $typeIcons = [
 $flash     = getFlash();
 $pageTitle = pt('Resource Library');
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($partnerId, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('resources'); ?>
+
 ?>
 <style>
 .page-wrap{max-width:960px;margin:0 auto;padding:1.5rem}

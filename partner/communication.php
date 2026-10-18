@@ -230,6 +230,12 @@ $admins = $admins->fetchAll();
 $flash     = getFlash();
 $pageTitle = pt('Communication Hub');
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($partnerId, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('communication'); ?>
+
 ?>
 <style>
 .comm-wrap{display:grid;grid-template-columns:280px 1fr;gap:0;max-width:1100px;margin:0 auto;height:calc(100vh - 120px);border:1px solid #e5e7eb;border-radius:.75rem;overflow:hidden;background:#fff}

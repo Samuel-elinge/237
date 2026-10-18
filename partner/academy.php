@@ -154,6 +154,12 @@ $stats = $stats->fetch();
 $flash     = getFlash();
 $pageTitle = pt('Partner Academy');
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($partnerId, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('academy'); ?>
+
 ?>
 <style>
 .page-wrap{max-width:960px;margin:0 auto;padding:1.5rem}

@@ -135,6 +135,12 @@ $platformLabels = ['facebook'=>'Facebook','instagram'=>'Instagram','tiktok'=>'Ti
 
 $pageTitle = pt('Content Management');
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($pid, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('content'); ?>
+
 ?>
 <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/partner.css">
 <style>

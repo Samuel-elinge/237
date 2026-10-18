@@ -49,14 +49,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $pageTitle = ($setup ? 'Apply as Creator' : 'My Creator Profile') . ' — 237Biz';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
 ?>
+<?php creatorNavAssets(); ?>
+<?php creatorNav('profile'); ?>
 
 <style>
-.nav-pill{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.1);}
-.nav-pill:hover,.nav-pill.active{background:rgba(0,168,120,0.15);color:#00A878;border-color:rgba(0,168,120,0.35);}
 </style>
 
-<div style="height:65px;"></div>
 <div class="page-header">
   <div class="container">
     <h1 style="font-family:'Fraunces',serif;font-weight:900;font-size:clamp(1.4rem,3vw,1.9rem);">

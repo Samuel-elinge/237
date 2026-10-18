@@ -118,6 +118,12 @@ $st->execute([$pid]); $todayContent = $st->fetchAll();
 
 $pageTitle = 'Partner Centre — 237Biz';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($pid, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('dashboard'); ?>
+
 ?>
 <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/partner.css">
 <style>
@@ -128,13 +134,6 @@ require_once __DIR__ . '/../includes/header.php';
 .dash-header h1{margin:0 0 4px;font-size:1.7rem;font-weight:800;color:#111827}
 .dash-header .sub{color:#6b7280;font-size:.9rem}
 .dash-header .header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-/* Nav */
-.dash-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
-.dash-nav a{padding:7px 14px;border-radius:8px;font-size:.85rem;font-weight:600;text-decoration:none;
-            background:#fff;border:1px solid #e5e7eb;color:#374151;transition:.15s;position:relative}
-.dash-nav a:hover,.dash-nav a.active{background:var(--pblue);color:#fff;border-color:var(--pblue)}
-.notif-dot{position:absolute;top:-4px;right:-4px;background:var(--pred);color:#fff;border-radius:50%;
-           width:17px;height:17px;font-size:.65rem;display:flex;align-items:center;justify-content:center;font-weight:700}
 /* Summary strip */
 .sum-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:22px}
 .sum-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px 18px}
@@ -249,19 +248,6 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<!-- ── Nav ── -->
-<nav class="dash-nav">
-    <a href="<?= SITE_URL ?>/partner/dashboard" class="active">🏠 <?= pt('Dashboard') ?></a>
-    <a href="<?= SITE_URL ?>/partner/portfolio">📋 <?= pt('Portfolio') ?></a>
-    <a href="<?= SITE_URL ?>/partner/tasks">✅ <?= pt('Tasks') ?> <?php if ($overdueCount): ?><span class="notif-dot"><?= $overdueCount ?></span><?php endif; ?></a>
-    <a href="<?= SITE_URL ?>/partner/leads">💬 <?= pt('Leads') ?> <?php if ($overdueLeadsCount): ?><span class="notif-dot"><?= $overdueLeadsCount ?></span><?php endif; ?></a>
-    <a href="<?= SITE_URL ?>/partner/campaigns">📣 <?= pt('Campaigns') ?></a>
-    <a href="<?= SITE_URL ?>/partner/content">📅 <?= pt('Content') ?></a>
-    <a href="<?= SITE_URL ?>/partner/reports">📊 <?= pt('Reports') ?></a>
-    <a href="<?= SITE_URL ?>/partner/recommendations">✦ <?= pt('Recommendations') ?> <?php if (!empty($dashRecs)): ?><span class="notif-dot"><?= count($dashRecs) ?></span><?php endif; ?></a>
-    <a href="<?= SITE_URL ?>/partner/alerts">🔔 <?= pt('Alerts') ?> <?php if ($activeAlertsCount): ?><span class="notif-dot <?= $urgentAlertsCount ? '' : '' ?>" style="<?= $urgentAlertsCount ? 'background:#f59e0b' : '' ?>"><?= $activeAlertsCount ?></span><?php endif; ?></a>
-    <a href="<?= SITE_URL ?>/partner/commissions">💰 <?= pt('Commissions') ?></a>
-</nav>
 
 <!-- ── Summary strip ── -->
 <div class="sum-strip">

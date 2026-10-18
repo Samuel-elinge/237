@@ -92,6 +92,12 @@ $flash = getFlash();
 
 $pageTitle = $adminMode ? pt('Certifications') . ' — ' . $targetName : pt('My Certifications');
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($partnerId, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('certifications'); ?>
+
 ?>
 <style>
 .cert-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin-bottom:2rem}

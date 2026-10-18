@@ -252,6 +252,12 @@ $totalCampaigns = array_sum($statusCounts);
 
 $pageTitle = pt('Campaign Management');
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($pid, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('campaigns'); ?>
+
 ?>
 <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/partner.css">
 <style>

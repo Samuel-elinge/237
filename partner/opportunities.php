@@ -140,6 +140,12 @@ $urgencyColors = ['high'=>['#fee2e2','#991b1b'],'medium'=>['#fef3c7','#92400e'],
 $flash     = getFlash();
 $pageTitle = pt('Opportunities');
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($partnerId, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('opportunities'); ?>
+
 ?>
 <style>
 .page-wrap{max-width:900px;margin:0 auto;padding:1.5rem}

@@ -44,6 +44,12 @@ $businesses = $listings->fetchAll();
 // Client-side filter (by status flags computed per business)
 $pageTitle = pt('My Portfolio') . ' — ' . pt('Partner Centre');
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($partnerId, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('portfolio'); ?>
+
 ?>
 
 <style>

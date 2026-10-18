@@ -391,6 +391,12 @@ $GLOBALS['ACTIONS']  = $ACTIONS;
 /* ─────────────────── HTML ──────────────────────────────────────── */
 $pageTitle = pt('Automation Builder');
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($pid, $pdo);
+?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('automation'); ?>
+
 ?>
 <style>
 :root{--pauto:#7c3aed;--pauto-light:#f5f3ff;--pauto-border:#ddd6fe}

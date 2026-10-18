@@ -113,7 +113,10 @@ $isApproved = $profile['status'] === 'approved';
 
 $pageTitle = 'Creator Dashboard — 237Biz';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
 ?>
+<?php creatorNavAssets(); ?>
+<?php creatorNav('dashboard'); ?>
 
 <style>
 .creator-stat { background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px 20px; }
@@ -122,11 +125,7 @@ require_once __DIR__ . '/../includes/header.php';
 .ref-box { background:rgba(0,168,120,0.06);border:1px solid rgba(0,168,120,0.25);border-radius:12px;padding:18px 22px; }
 .ref-url { font-family:monospace;font-size:14px;color:#00A878;background:rgba(0,0,0,0.2);border-radius:7px;padding:8px 14px;word-break:break-all;display:block;margin:10px 0; }
 .campaign-chip { background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;margin-bottom:8px; }
-.nav-pill { padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.1); }
-.nav-pill:hover,.nav-pill.active { background:rgba(0,168,120,0.15);color:#00A878;border-color:rgba(0,168,120,0.35); }
 </style>
-
-<div style="height:65px;"></div>
 
 <div class="page-header">
   <div class="container">
@@ -138,14 +137,6 @@ require_once __DIR__ . '/../includes/header.php';
 <section class="page-section" style="padding-top:1.25rem;">
 <div class="container">
 
-  <!-- Creator nav -->
-  <div style="display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap;">
-    <a href="<?= SITE_URL ?>/creator/dashboard" class="nav-pill active">🏠 Dashboard</a>
-    <a href="<?= SITE_URL ?>/creator/profile"    class="nav-pill">👤 My Profile</a>
-    <a href="<?= SITE_URL ?>/creator/referrals"  class="nav-pill">🔗 Referrals</a>
-    <a href="<?= SITE_URL ?>/creator/campaigns"  class="nav-pill">📣 Campaigns</a>
-    <a href="<?= SITE_URL ?>/creator/submissions" class="nav-pill">📤 Submissions</a>
-  </div>
 
   <!-- Pending approval banner -->
   <?php if ($profile['status'] === 'pending'): ?>
