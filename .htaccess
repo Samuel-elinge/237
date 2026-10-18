@@ -22,6 +22,11 @@ RewriteRule ^automation/n8n-workflow\.json - [F,L]
 RewriteRule ^test-email\.php - [F,L]
 RewriteRule ^reset-admin.*\.php - [F,L]
 
+# Block one-time deploy/diagnostic scripts (delete these files after use)
+RewriteRule ^admin/deploy-.*\.php - [F,L]
+RewriteRule ^admin/check-live\.php - [F,L]
+RewriteRule ^admin/setup-test-partner\.php - [F,L]
+
 # Block access to SQL files
 <FilesMatch "\.(sql|log|env|bak|cfg)$">
   Order allow,deny

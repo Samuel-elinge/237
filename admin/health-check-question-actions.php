@@ -10,6 +10,17 @@ require_once __DIR__ . '/../includes/health-check-questions.php';
 
 requireAdmin(); // your existing admin-only check (dies/redirects if not admin)
 
+// CSRF check for all POST actions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $posted = $_POST['csrf_token'] ?? '';
+    $stored = $_SESSION['csrf_token'] ?? '';
+    if (!$stored || !hash_equals($stored, $posted)) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Invalid CSRF token']);
+        exit;
+    }
+}
+
 function json_out(array $data, int $code = 200): void {
     http_response_code($code);
     echo json_encode($data);
