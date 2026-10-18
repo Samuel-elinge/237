@@ -55,7 +55,7 @@ $needsLabels = ['website'=>'Better website','social'=>'Better social media','cus
     'catalogue'=>'Online catalogue','listing'=>'Business listing','whatsapp_marketing'=>'WhatsApp marketing','ai'=>'AI tools','not_sure'=>'Not sure'];
 $pageTitle = 'Market Overview — Admin';
 require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/nav.php';
+require_once __DIR__ . '/includes/nav.php';
 adminNav('health-check-overview'); adminNavAssets();
 ?>
 <style>

@@ -47,7 +47,7 @@ $reviews = db()->query("
 
 $pageTitle = 'Reviews — Admin';
 require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/nav.php';
+require_once __DIR__ . '/includes/nav.php';
 adminNav('reviews'); adminNavAssets();
 ?>
 <div class="page-header"><div class="container">

@@ -8,7 +8,7 @@ $subs      = db()->query("SELECT s.*, l.name_en AS loc_name FROM subscribers s L
 
 $pageTitle = 'Subscribers — Admin';
 require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/nav.php';
+require_once __DIR__ . '/includes/nav.php';
 adminNav('subscribers'); adminNavAssets();
 ?>
 <div class="page-header"><div class="container">

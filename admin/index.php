@@ -151,7 +151,7 @@ function adminUrl(array $overrides = []): string {
 
 $pageTitle = 'All Listings — Admin 237Biz';
 require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/nav.php';
+require_once __DIR__ . '/includes/nav.php';
 adminNav('index'); adminNavAssets();
 ?>
 

@@ -45,7 +45,7 @@ $recentListings = db()->query("
 
 $pageTitle = 'Admin Panel — 237Biz';
 require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/nav.php';
+require_once __DIR__ . '/includes/nav.php';
 adminNav('index'); adminNavAssets();
 ?>
 

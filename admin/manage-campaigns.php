@@ -83,7 +83,7 @@ if ($editId) {
 
 $pageTitle = 'Manage Campaigns — Admin — 237Biz';
 require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/nav.php';
+require_once __DIR__ . '/includes/nav.php';
 adminNav('manage-campaigns'); adminNavAssets();
 ?>
 
