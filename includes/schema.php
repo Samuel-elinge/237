@@ -148,6 +148,42 @@ function schemaFaq(array $faqs): string {
 }
 
 /**
+ * ItemList schema for category / location listing pages.
+ * Pass the array of listing rows (need: slug, title, logo, description).
+ * $listUrl = the canonical URL of the listing page (category or location).
+ */
+function schemaItemList(array $listings, string $listUrl, string $listName): string {
+    if (!$listings) return '';
+    $items = [];
+    foreach ($listings as $i => $l) {
+        $item = [
+            '@type'    => 'ListItem',
+            'position' => $i + 1,
+            'url'      => SITE_URL . '/listing/' . ($l['slug'] ?? ''),
+            'name'     => $l['title'] ?? '',
+        ];
+        if (!empty($l['logo'])) {
+            $item['image'] = UPLOAD_URL . $l['logo'];
+        } elseif (!empty($l['cover_image'])) {
+            $item['image'] = UPLOAD_URL . $l['cover_image'];
+        }
+        if (!empty($l['description'])) {
+            $item['description'] = mb_substr(strip_tags($l['description']), 0, 150);
+        }
+        $items[] = $item;
+    }
+    $data = [
+        '@context'        => 'https://schema.org',
+        '@type'           => 'ItemList',
+        'name'            => $listName,
+        'url'             => $listUrl,
+        'numberOfItems'   => count($items),
+        'itemListElement' => $items,
+    ];
+    return json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+}
+
+/**
  * Echo a JSON-LD string inside the required script tag. Skips output if empty.
  */
 function printSchema(string $json): void {

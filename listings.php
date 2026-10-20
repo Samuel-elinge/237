@@ -120,7 +120,7 @@ function buildQS(array $override = []): string {
     return $params ? '?' . http_build_query($params) : '';
 }
 
-// Structured data — breadcrumb
+// Structured data — breadcrumb + ItemList
 $extraHead = '';
 if (file_exists(__DIR__ . '/includes/schema.php')) {
     require_once __DIR__ . '/includes/schema.php';
@@ -133,6 +133,14 @@ if (file_exists(__DIR__ . '/includes/schema.php')) {
         $crumbs[] = ['name' => t('All Businesses','Toutes les Entreprises')];
     }
     $extraHead = '<script type="application/ld+json">' . schemaBreadcrumb($crumbs) . '</script>' . "\n";
+
+    // ItemList: only emit on category/location filtered pages (avoids schema on generic search)
+    if (($activeCat || $activeLoc) && $listings && $page === 1) {
+        $listUrl  = SITE_URL . '/listings' . buildQS(['page' => '']);
+        $listName = strip_tags($pageTitle);
+        $ilJson   = schemaItemList($listings, $listUrl, $listName);
+        if ($ilJson) $extraHead .= '<script type="application/ld+json">' . $ilJson . '</script>' . "\n";
+    }
 }
 
 require_once __DIR__ . '/includes/header.php';

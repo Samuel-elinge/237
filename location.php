@@ -41,6 +41,14 @@ if (file_exists(__DIR__ . '/includes/schema.php')) {
         ['name' => t('Home','Accueil'), 'url' => SITE_URL . '/'],
         ['name' => $currentLoc['name_en']],
     ]) . '</script>' . "\n";
+
+    // ItemList for the location directory page
+    if ($listings) {
+        $listUrl  = SITE_URL . '/location?slug=' . urlencode($slug);
+        $listName = $currentLoc['name_en'] . ' Business Directory';
+        $ilJson   = schemaItemList($listings, $listUrl, $listName);
+        if ($ilJson) $extraHead .= '<script type="application/ld+json">' . $ilJson . '</script>' . "\n";
+    }
 }
 
 require_once __DIR__ . '/includes/header.php';
