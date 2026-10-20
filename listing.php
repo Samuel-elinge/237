@@ -80,12 +80,27 @@ if ($l['featured']) {
 }
 $avgRating = $reviews ? round(array_sum(array_column($reviews, 'rating')) / count($reviews), 1) : 0;
 
-// Similar listings
+// Similar listings (with location, logo, rating)
 $similar = db()->prepare("
-    SELECT l.*, c.name_en AS cat_en, c.icon AS cat_icon
-    FROM listings l JOIN categories c ON c.id = l.category_id
+    SELECT l.id, l.title, l.slug, l.logo, l.cover_image, l.featured, l.description,
+           l.location_id,
+           c.name_en AS cat_en, c.name_fr AS cat_fr, c.icon AS cat_icon,
+           loc.name_en AS loc_en,
+           COALESCE(rv.avg_rating, 0) AS avg_rating,
+           COALESCE(rv.review_count, 0) AS review_count
+    FROM listings l
+    JOIN categories c   ON c.id   = l.category_id
+    JOIN locations  loc ON loc.id = l.location_id
+    LEFT JOIN (
+        SELECT listing_id,
+               ROUND(AVG(rating), 1) AS avg_rating,
+               COUNT(*) AS review_count
+        FROM reviews WHERE status = 'approved'
+        GROUP BY listing_id
+    ) rv ON rv.listing_id = l.id
     WHERE l.category_id = ? AND l.id != ? AND l.status = 'approved'
-    LIMIT 3
+    ORDER BY l.featured DESC, rv.avg_rating DESC, l.created_at DESC
+    LIMIT 4
 ");
 $similar->execute([$l['category_id'], $l['id']]);
 $similar = $similar->fetchAll();
@@ -642,18 +657,83 @@ require_once __DIR__ . '/includes/header.php';
     <?php if ($similar): ?>
       <div style="margin-top:4rem;">
         <h3 style="font-family:'Fraunces',serif;font-size:1.5rem;margin-bottom:1.5rem;"><?= t('Similar Businesses','Entreprises similaires') ?></h3>
-        <div class="listings-grid">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;">
           <?php foreach ($similar as $s): ?>
-            <a href="<?= SITE_URL ?>/listing/<?= e($s['slug']) ?>" class="listing-card" style="text-decoration:none;color:inherit;">
-              <div class="listing-top">
-                <div class="listing-logo"><?= $s['cat_icon'] ?></div>
-                <div>
-                  <div class="listing-name"><?= e($s['title']) ?></div>
-                  <div class="listing-category"><?= e($s['cat_en']) ?></div>
-                </div>
+            <?php $catLabel = $isFr ? ($s['cat_fr'] ?? $s['cat_en']) : $s['cat_en']; ?>
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;position:relative;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">
+
+              <!-- Cover image or category colour band -->
+              <a href="<?= SITE_URL ?>/listing/<?= e($s['slug']) ?>" style="display:block;height:110px;overflow:hidden;text-decoration:none;flex-shrink:0;">
+                <?php if ($s['cover_image']): ?>
+                  <img src="<?= e(UPLOAD_URL . $s['cover_image']) ?>" alt="<?= e($s['title']) ?>"
+                       style="width:100%;height:100%;object-fit:cover;">
+                <?php else: ?>
+                  <div style="width:100%;height:100%;background:rgba(0,168,120,0.12);display:flex;align-items:center;justify-content:center;font-size:2.5rem;">
+                    <?= $s['cat_icon'] ?>
+                  </div>
+                <?php endif; ?>
+              </a>
+
+              <!-- Fav button — top-right overlay -->
+              <?php
+                $favItemType = 'listing';
+                $favItemId   = (int)$s['id'];
+                $_simFavLoggedIn = isLoggedIn();
+                $_simFavSaved    = false;
+                if ($_simFavLoggedIn) {
+                    try {
+                        $chkSim = db()->prepare("SELECT id FROM user_favourites WHERE user_id=? AND item_type='listing' AND item_id=? LIMIT 1");
+                        $chkSim->execute([(int)currentUser()['id'], $favItemId]);
+                        $_simFavSaved = (bool)$chkSim->fetch();
+                    } catch (Exception $e) {}
+                }
+              ?>
+              <div style="position:absolute;top:8px;right:8px;">
+                <?php if ($_simFavLoggedIn): ?>
+                  <button class="fav-heart-btn <?= $_simFavSaved ? 'is-saved' : '' ?>"
+                          data-item-type="listing"
+                          data-item-id="<?= $favItemId ?>"
+                          data-fav-id="0"
+                          data-csrf="<?= csrf() ?>"
+                          aria-label="<?= t('Save','Enregistrer') ?>"
+                          title="<?= $_simFavSaved ? t('Saved','Enregistré') : t('Save','Enregistrer') ?>"
+                          style="width:32px;height:32px;font-size:0.85rem;">
+                    <span class="fav-heart-icon"><?= $_simFavSaved ? '❤️' : '🤍' ?></span>
+                  </button>
+                <?php else: ?>
+                  <a href="<?= SITE_URL ?>/login?redirect=<?= urlencode('/listing/' . $s['slug']) ?>"
+                     class="fav-heart-btn" title="<?= t('Sign in to save','Connectez-vous pour enregistrer') ?>"
+                     style="width:32px;height:32px;font-size:0.85rem;">
+                    <span class="fav-heart-icon">🤍</span>
+                  </a>
+                <?php endif; ?>
               </div>
-              <p class="listing-desc"><?= e(mb_substr($s['description'] ?? '', 0, 100)) ?>...</p>
-            </a>
+
+              <!-- Logo badge over cover -->
+              <?php if ($s['logo']): ?>
+              <div style="position:absolute;top:80px;left:12px;width:40px;height:40px;border-radius:8px;overflow:hidden;border:2px solid var(--card);background:var(--card);">
+                <img src="<?= e(UPLOAD_URL . $s['logo']) ?>" alt="" style="width:100%;height:100%;object-fit:cover;">
+              </div>
+              <?php endif; ?>
+
+              <!-- Card body -->
+              <div style="padding:<?= $s['logo'] ? '0.6rem 0.9rem 0.9rem 3.6rem' : '0.75rem 0.9rem 0.9rem' ?>;">
+                <?php if ($s['featured']): ?>
+                  <span style="font-size:0.62rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--green);display:block;margin-bottom:0.2rem;"><?= t('Featured','Mis en avant') ?></span>
+                <?php endif; ?>
+                <a href="<?= SITE_URL ?>/listing/<?= e($s['slug']) ?>" style="text-decoration:none;">
+                  <div style="font-weight:600;font-size:0.9rem;color:var(--white);line-height:1.3;margin-bottom:0.25rem;"><?= e($s['title']) ?></div>
+                </a>
+                <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.4rem;"><?= e($catLabel) ?> · <?= e($s['loc_en']) ?></div>
+                <?php if ((float)$s['avg_rating'] > 0): ?>
+                  <div style="font-size:0.75rem;color:var(--yellow);">
+                    <?= str_repeat('⭐', (int)round((float)$s['avg_rating'])) ?>
+                    <span style="color:var(--muted);margin-left:0.2rem;"><?= $s['avg_rating'] ?> (<?= (int)$s['review_count'] ?>)</span>
+                  </div>
+                <?php endif; ?>
+              </div>
+
+            </div>
           <?php endforeach; ?>
         </div>
       </div>

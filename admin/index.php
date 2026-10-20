@@ -120,12 +120,30 @@ $cntSt->execute($params);
 $total      = (int)$cntSt->fetchColumn();
 $totalPages = max(1, ceil($total / $perPage));
 
-// Listings
+// Listings (with quality score)
 $st = db()->prepare("
     SELECT l.*, c.name_en AS cat_en, c.icon AS cat_icon,
            loc.name_en AS loc_en,
            u.name AS user_name, u.email AS user_email,
-           (SELECT COUNT(*) FROM listing_products p WHERE p.listing_id=l.id) AS product_count
+           (SELECT COUNT(*) FROM listing_products p WHERE p.listing_id=l.id) AS product_count,
+           (SELECT COUNT(*) FROM reviews r WHERE r.listing_id=l.id AND r.status='approved') AS review_count,
+           /* Quality score 0-100 */
+           (
+               (l.logo IS NOT NULL AND l.logo != '') * 15 +
+               (l.cover_image IS NOT NULL AND l.cover_image != '') * 15 +
+               (CHAR_LENGTH(COALESCE(l.description,'')) > 100) * 15 +
+               (l.phone IS NOT NULL AND l.phone != '') * 10 +
+               (l.address IS NOT NULL AND l.address != '') * 10 +
+               (l.website IS NOT NULL AND l.website != '') * 10 +
+               (
+                   (l.facebook IS NOT NULL AND l.facebook != '') OR
+                   (l.instagram IS NOT NULL AND l.instagram != '') OR
+                   (l.whatsapp IS NOT NULL AND l.whatsapp != '') OR
+                   (l.tiktok IS NOT NULL AND l.tiktok != '')
+               ) * 10 +
+               (SELECT COUNT(*) > 0 FROM reviews r2 WHERE r2.listing_id=l.id AND r2.status='approved') * 10 +
+               (l.views > 10) * 5
+           ) AS quality_score
     FROM listings l
     JOIN categories c   ON c.id = l.category_id
     JOIN locations loc  ON loc.id = l.location_id
@@ -136,6 +154,41 @@ $st = db()->prepare("
 ");
 $st->execute($params);
 $listings = $st->fetchAll();
+
+// Low-quality listings widget (approved, score < 40, limit 5)
+$lowQuality = [];
+try {
+    $lq = db()->query("
+        SELECT l.id, l.title, l.slug, l.logo,
+               c.icon AS cat_icon, loc.name_en AS loc_en,
+               u.name AS user_name,
+               (
+                   (l.logo IS NOT NULL AND l.logo != '') * 15 +
+                   (l.cover_image IS NOT NULL AND l.cover_image != '') * 15 +
+                   (CHAR_LENGTH(COALESCE(l.description,'')) > 100) * 15 +
+                   (l.phone IS NOT NULL AND l.phone != '') * 10 +
+                   (l.address IS NOT NULL AND l.address != '') * 10 +
+                   (l.website IS NOT NULL AND l.website != '') * 10 +
+                   (
+                       (l.facebook IS NOT NULL AND l.facebook != '') OR
+                       (l.instagram IS NOT NULL AND l.instagram != '') OR
+                       (l.whatsapp IS NOT NULL AND l.whatsapp != '') OR
+                       (l.tiktok IS NOT NULL AND l.tiktok != '')
+                   ) * 10 +
+                   (SELECT COUNT(*) > 0 FROM reviews r2 WHERE r2.listing_id=l.id AND r2.status='approved') * 10 +
+                   (l.views > 10) * 5
+               ) AS quality_score
+        FROM listings l
+        JOIN categories c  ON c.id = l.category_id
+        JOIN locations loc ON loc.id = l.location_id
+        LEFT JOIN users u  ON u.id = l.user_id
+        WHERE l.status = 'approved'
+        HAVING quality_score < 40
+        ORDER BY quality_score ASC, l.created_at DESC
+        LIMIT 5
+    ");
+    $lowQuality = $lq->fetchAll();
+} catch (Exception $e) {}
 
 // ── Helper: build filter URL ──────────────────────────────
 function adminUrl(array $overrides = []): string {
@@ -170,6 +223,39 @@ adminNav('index'); adminNavAssets();
     <div class="dash-stat"><strong style="color:var(--yellow);"><?= $stats['featured'] ?></strong><span>Featured</span></div>
     <div class="dash-stat"><strong><?= $userCount ?></strong><span>Users</span></div>
   </div>
+
+  <!-- Low-quality listings widget -->
+  <?php if ($lowQuality): ?>
+  <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:1.25rem;margin-bottom:1.75rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.9rem;flex-wrap:wrap;gap:0.5rem;">
+      <h3 style="font-size:0.95rem;font-weight:600;color:#f87171;margin:0;">⚠️ Needs Attention — Low Quality Listings</h3>
+      <a href="<?= SITE_URL ?>/admin/?status=approved" style="font-size:0.78rem;color:var(--muted);text-decoration:none;">View all approved →</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.5rem;">
+      <?php foreach ($lowQuality as $lq): ?>
+        <?php
+          $qs = (int)$lq['quality_score'];
+          $qColor = $qs < 20 ? '#ef4444' : ($qs < 40 ? '#f97316' : '#eab308');
+        ?>
+        <div style="display:flex;align-items:center;gap:0.75rem;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.9rem;">
+          <div style="font-size:1.3rem;flex-shrink:0;"><?= $lq['cat_icon'] ?></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:0.85rem;font-weight:500;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= e($lq['title']) ?></div>
+            <div style="font-size:0.72rem;color:var(--muted);"><?= e($lq['user_name'] ?? '—') ?> · <?= e($lq['loc_en']) ?></div>
+          </div>
+          <!-- Quality score bar -->
+          <div style="flex-shrink:0;text-align:right;min-width:80px;">
+            <div style="font-size:0.72rem;color:<?= $qColor ?>;font-weight:700;margin-bottom:3px;"><?= $qs ?>%</div>
+            <div style="width:80px;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:<?= $qs ?>%;background:<?= $qColor ?>;border-radius:3px;transition:width .3s;"></div>
+            </div>
+          </div>
+          <a href="<?= SITE_URL ?>/edit-listing?id=<?= $lq['id'] ?>" class="btn btn-sm btn-outline" style="flex-shrink:0;font-size:0.75rem;padding:0.25rem 0.65rem;">Edit</a>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+  <?php endif; ?>
 
 
 <!-- Search + filter bar -->
@@ -243,11 +329,12 @@ adminNav('index'); adminNavAssets();
               <input type="checkbox" id="select-all" title="Select all on this page"
                      style="width:15px;height:15px;cursor:pointer;accent-color:#00A878;">
             </th>
-            <th style="width:30%;">Business</th>
+            <th style="width:28%;">Business</th>
             <th>Owner</th>
             <th>Category</th>
             <th>City</th>
             <th>Status</th>
+            <th title="Profile completeness + activity score">Quality</th>
             <th>Products</th>
             <th>Views</th>
             <th>Date</th>
@@ -298,6 +385,20 @@ adminNav('index'); adminNavAssets();
                 <span class="badge badge-<?= $l['status'] ?>">
                   <?= ucfirst($l['status']) ?>
                 </span>
+              </td>
+
+              <!-- Quality score -->
+              <td style="text-align:center;">
+                <?php
+                  $qs = (int)($l['quality_score'] ?? 0);
+                  $qc = $qs >= 70 ? '#00a878' : ($qs >= 40 ? '#eab308' : '#ef4444');
+                ?>
+                <div style="display:inline-flex;flex-direction:column;align-items:center;gap:2px;" title="Quality score: <?= $qs ?>% (logo, cover, description, phone, address, website, social, reviews, views)">
+                  <span style="font-size:0.75rem;font-weight:700;color:<?= $qc ?>;"><?= $qs ?>%</span>
+                  <div style="width:40px;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;">
+                    <div style="height:100%;width:<?= $qs ?>%;background:<?= $qc ?>;border-radius:2px;"></div>
+                  </div>
+                </div>
               </td>
 
               <!-- Products count -->
