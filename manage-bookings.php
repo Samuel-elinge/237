@@ -4,6 +4,7 @@
  * Business owner manages bookings and blocked times.
  */
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/notify.php';
 requireLogin();
 
 $u = currentUser();
@@ -58,6 +59,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 db()->prepare("UPDATE listing_bookings SET status=?, business_notes=COALESCE(NULLIF(?,''),business_notes), updated_at=NOW() WHERE id=?")
                    ->execute([$action, $notes, $bkId]);
                 flash('success', t('Booking updated.','Réservation mise à jour.'));
+
+                // Notify the customer of the booking status change
+                try {
+                    $bkInfo = db()->prepare("SELECT b.user_id, b.customer_name, b.preferred_date, l.title, l.slug FROM listing_bookings b JOIN listings l ON l.id=b.listing_id WHERE b.id=? LIMIT 1");
+                    $bkInfo->execute([$bkId]);
+                    $bk = $bkInfo->fetch();
+                    if ($bk && $bk['user_id']) {
+                        $dateStr = $bk['preferred_date'] ? date('d M Y', strtotime($bk['preferred_date'])) : '';
+                        if ($action === 'confirmed') {
+                            dispatch_notification(
+                                (int)$bk['user_id'],
+                                'bell',
+                                "Booking confirmed — " . $bk['title'],
+                                "Réservation confirmée — " . $bk['title'],
+                                "Your booking" . ($dateStr ? " for {$dateStr}" : '') . " has been confirmed.",
+                                "Votre réservation" . ($dateStr ? " du {$dateStr}" : '') . " a été confirmée.",
+                                '/listing/' . $bk['slug'],
+                                'listing',
+                                $lid,
+                                'booking'
+                            );
+                        } elseif ($action === 'cancelled') {
+                            dispatch_notification(
+                                (int)$bk['user_id'],
+                                'bell',
+                                "Booking cancelled — " . $bk['title'],
+                                "Réservation annulée — " . $bk['title'],
+                                "Your booking" . ($dateStr ? " for {$dateStr}" : '') . " has been cancelled." . ($notes ? " Note: {$notes}" : ''),
+                                "Votre réservation" . ($dateStr ? " du {$dateStr}" : '') . " a été annulée." . ($notes ? " Note : {$notes}" : ''),
+                                '/listing/' . $bk['slug'],
+                                'listing',
+                                $lid,
+                                'booking'
+                            );
+                        }
+                    }
+                } catch (Exception $e2) { /* non-critical */ }
             }
         } catch (Exception $e) {
             flash('error', t('Could not update booking.','Impossible de mettre à jour.'));

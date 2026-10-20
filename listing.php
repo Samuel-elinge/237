@@ -175,6 +175,18 @@ require_once __DIR__ . '/includes/header.php';
           </div>
         </div>
 
+        <!-- Action row: Follow + Favourite -->
+        <?php
+        $followItemType = 'listing';
+        $followItemId   = (int)$l['id'];
+        $favItemType    = 'listing';
+        $favItemId      = (int)$l['id'];
+        ?>
+        <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+          <?php require __DIR__ . '/includes/follow-button.php'; ?>
+          <?php require __DIR__ . '/includes/fav-button.php'; ?>
+        </div>
+
         <!-- Cover image -->
         <?php if ($l['cover_image']): ?>
           <div style="border-radius:14px;overflow:hidden;margin-bottom:1.25rem;max-height:320px;">
