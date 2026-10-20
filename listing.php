@@ -37,9 +37,26 @@ $images = db()->prepare("SELECT * FROM listing_images WHERE listing_id = ? ORDER
 $images->execute([$l['id']]);
 $images = $images->fetchAll();
 
-// Reviews
-$reviews = db()->prepare("SELECT * FROM reviews WHERE listing_id = ? AND status = 'approved' ORDER BY created_at DESC");
-$reviews->execute([$l['id']]);
+// Reviews (with vote tallies + user's own vote)
+$reviewUserId = isLoggedIn() ? (int)(currentUser()['id'] ?? 0) : 0;
+$reviews = db()->prepare("
+    SELECT
+        r.*,
+        COALESCE(vt.helpful,0)        AS helpful,
+        COALESCE(vt.not_helpful,0)    AS not_helpful,
+        COALESCE(uv.vote, 0)          AS user_vote
+    FROM reviews r
+    LEFT JOIN (
+        SELECT review_id,
+               SUM(vote= 1) AS helpful,
+               SUM(vote=-1) AS not_helpful
+        FROM review_votes GROUP BY review_id
+    ) vt ON vt.review_id = r.id
+    LEFT JOIN review_votes uv ON uv.review_id = r.id AND uv.user_id = ?
+    WHERE r.listing_id = ? AND r.status = 'approved'
+    ORDER BY r.created_at DESC
+");
+$reviews->execute([$reviewUserId, $l['id']]);
 $reviews = $reviews->fetchAll();
 
 // Products (featured listings only)
@@ -258,13 +275,65 @@ require_once __DIR__ . '/includes/header.php';
           <h4><?= t('Reviews','Avis') ?> (<?= count($reviews) ?>)</h4>
           <?php if ($reviews): ?>
             <?php foreach ($reviews as $r): ?>
-              <div style="border-bottom:1px solid var(--border);padding:1rem 0;">
-                <div style="display:flex;justify-content:space-between;margin-bottom:0.35rem;">
-                  <strong style="font-size:0.875rem;color:var(--white);"><?= e($r['name'] ?? t('Anonymous','Anonyme')) ?></strong>
+              <?php $isOwner = isLoggedIn() && (int)(currentUser()['id'] ?? 0) === (int)$l['user_id']; ?>
+              <div class="rv-card" data-rid="<?= $r['id'] ?>" style="border-bottom:1px solid var(--border);padding:1rem 0;">
+                <!-- Reviewer row -->
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.35rem;flex-wrap:wrap;gap:0.35rem;">
+                  <div style="display:flex;align-items:center;gap:0.6rem;">
+                    <div style="width:30px;height:30px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.78rem;color:#fff;flex-shrink:0;">
+                      <?= strtoupper(mb_substr($r['name'] ?? 'A', 0, 1)) ?>
+                    </div>
+                    <div>
+                      <strong style="font-size:0.875rem;color:var(--white);"><?= e($r['name'] ?? t('Anonymous','Anonyme')) ?></strong>
+                      <span style="font-size:0.7rem;color:var(--muted-2);margin-left:0.4rem;"><?= timeAgo($r['created_at']) ?></span>
+                    </div>
+                  </div>
                   <span style="color:var(--yellow);font-size:0.85rem;"><?= str_repeat('⭐', (int)$r['rating']) ?></span>
                 </div>
-                <p style="color:var(--muted);font-size:0.83rem;"><?= e($r['comment'] ?? '') ?></p>
-                <span style="font-size:0.72rem;color:var(--muted-2);"><?= timeAgo($r['created_at']) ?></span>
+
+                <!-- Comment -->
+                <p style="color:var(--muted);font-size:0.83rem;margin:0.25rem 0 0.5rem;"><?= e($r['comment'] ?? '') ?></p>
+
+                <!-- Owner reply -->
+                <?php if (!empty($r['owner_reply'])): ?>
+                <div style="background:rgba(0,168,120,0.07);border-left:3px solid var(--green);border-radius:0 8px 8px 0;padding:0.6rem 0.9rem;margin:0.6rem 0;">
+                  <div style="font-size:0.68rem;color:var(--green);font-weight:600;margin-bottom:0.25rem;">
+                    🏢 <?= t('Owner reply','Réponse du propriétaire') ?> · <?= timeAgo($r['owner_reply_at'] ?? $r['created_at']) ?>
+                  </div>
+                  <p style="color:var(--muted);font-size:0.82rem;margin:0;"><?= e($r['owner_reply']) ?></p>
+                </div>
+                <?php endif; ?>
+
+                <!-- Helpfulness voting -->
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.4rem;flex-wrap:wrap;">
+                  <span style="font-size:0.7rem;color:var(--muted-2);"><?= t('Helpful?','Utile ?') ?></span>
+                  <?php if (isLoggedIn() && (int)$r['user_id'] !== $reviewUserId): ?>
+                    <button class="vote-btn<?= $r['user_vote'] == 1  ? ' voted' : '' ?>"
+                            onclick="castVote(<?= $r['id'] ?>, 1)"
+                            style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:0.2rem 0.55rem;font-size:0.72rem;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:0.3rem;"
+                            data-type="helpful">
+                      👍 <span id="h-<?= $r['id'] ?>"><?= (int)$r['helpful'] ?></span>
+                    </button>
+                    <button class="vote-btn<?= $r['user_vote'] == -1 ? ' voted' : '' ?>"
+                            onclick="castVote(<?= $r['id'] ?>, -1)"
+                            style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:0.2rem 0.55rem;font-size:0.72rem;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:0.3rem;"
+                            data-type="not_helpful">
+                      👎 <span id="nh-<?= $r['id'] ?>"><?= (int)$r['not_helpful'] ?></span>
+                    </button>
+                  <?php else: ?>
+                    <span style="font-size:0.72rem;color:var(--muted-2);">
+                      👍 <?= (int)$r['helpful'] ?> &nbsp; 👎 <?= (int)$r['not_helpful'] ?>
+                    </span>
+                  <?php endif; ?>
+
+                  <?php if ($isOwner && $r['status'] === 'approved'): ?>
+                    <a href="<?= SITE_URL ?>/manage-reviews?lid=<?= $l['id'] ?>"
+                       style="margin-left:auto;font-size:0.7rem;color:var(--green);text-decoration:none;">
+                      <?= empty($r['owner_reply']) ? t('Reply →','Répondre →') : t('Edit reply →','Modifier →') ?>
+                    </a>
+                  <?php endif; ?>
+                </div>
+
               </div>
             <?php endforeach; ?>
           <?php else: ?>
@@ -625,5 +694,42 @@ require_once __DIR__ . '/includes/header.php';
     </div>
   </div>
 </div>
+
+<?php if (isLoggedIn()): ?>
+<script>
+(function(){
+  const CSRF = '<?= csrf() ?>';
+  const API  = '<?= SITE_URL ?>/api/review-actions.php';
+
+  window.castVote = function(rid, vote) {
+    const fd = new FormData();
+    fd.append('csrf',      CSRF);
+    fd.append('action',    'vote');
+    fd.append('review_id', rid);
+    fd.append('vote',      vote);
+
+    fetch(API, { method:'POST', body:fd })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) return;
+        const h  = document.getElementById('h-'  + rid);
+        const nh = document.getElementById('nh-' + rid);
+        if (h)  h.textContent  = data.helpful;
+        if (nh) nh.textContent = data.not_helpful;
+        // Highlight active vote button
+        const card = document.querySelector('[data-rid="' + rid + '"]');
+        if (card) {
+          card.querySelectorAll('.vote-btn').forEach(function(b) {
+            const type = b.dataset.type;
+            const active = (vote === 1 && type === 'helpful') || (vote === -1 && type === 'not_helpful');
+            b.style.borderColor = active ? 'var(--green)' : 'var(--border)';
+            b.style.color       = active ? 'var(--green)' : 'var(--muted)';
+          });
+        }
+      });
+  };
+})();
+</script>
+<?php endif; ?>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
