@@ -50,9 +50,9 @@ $badgeLabel = ''; $badgeClass = '';
 switch ($offer['offer_type']) {
     case 'percent_off': $badgeLabel = '-'.(int)$offer['discount_value'].'%'; break;
     case 'fixed_off':   $badgeLabel = number_format($offer['discount_value']).' XAF '.t('off','de rabais'); break;
-    case 'bogo':        $badgeLabel = 'Buy 1 Get 1'; $badgeClass = 'bogo'; break;
+    case 'bogo':        $badgeLabel = t('Buy 1 Get 1','1 Acheté 1 Offert'); $badgeClass = 'bogo'; break;
     case 'free_item':   $badgeLabel = t('Free Item Included','Article Gratuit Inclus'); break;
-    case 'bundle':      $badgeLabel = 'Bundle Deal'; $badgeClass = 'bundle'; break;
+    case 'bundle':      $badgeLabel = t('Bundle Deal','Offre Groupée'); $badgeClass = 'bundle'; break;
 }
 
 // ── More offers from same business ───────────────────────────────────────
@@ -74,6 +74,9 @@ try {
 // ── Page meta ─────────────────────────────────────────────────────────────
 $pageTitle = htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . ' — 237Biz Marketplace';
 $pageDesc  = $desc ? mb_substr(strip_tags($desc), 0, 160) : t('Exclusive deal from '.$offer['biz_name'].' on 237Biz Marketplace.', 'Offre exclusive de '.$offer['biz_name'].' sur le Marketplace 237Biz.');
+if (!empty($offer['image'])) {
+    $pageImage = UPLOAD_URL . $offer['image'];
+}
 
 require_once __DIR__ . '/includes/header.php';
 ?>

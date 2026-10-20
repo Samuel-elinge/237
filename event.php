@@ -112,6 +112,15 @@ $typeEmoji = [
 ];
 
 $pageTitle = htmlspecialchars($etitle, ENT_QUOTES, 'UTF-8') . ' — 237Biz Events';
+$_evDescRaw = $edesc ? mb_substr(strip_tags($edesc), 0, 160) : '';
+$pageDesc   = $_evDescRaw ?: t(
+    'Join '.$etitle.' — an upcoming event on 237Biz.',
+    'Participez à '.$etitle.' — un événement à venir sur 237Biz.'
+);
+if (!empty($ev['image'])) {
+    $pageImage = UPLOAD_URL . $ev['image'];
+}
+
 require_once __DIR__ . '/includes/header.php';
 ?>
 <style>

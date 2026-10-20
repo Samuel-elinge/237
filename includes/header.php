@@ -28,7 +28,7 @@ $cuRole = $cu['role'] ?? 'guest';
 <meta property="og:url"         content="<?= e(SITE_URL . ($_SERVER['REQUEST_URI'] ?? '/')) ?>">
 <meta property="og:title"       content="<?= e($pageTitle ?? '237Biz — Cameroon\'s Business Hub') ?>">
 <meta property="og:description" content="<?= e($pageDesc ?? t('Discover, connect and grow with Cameroon\'s Business Hub.','Le Hub des Entreprises du Cameroun.')) ?>">
-<meta property="og:image"       content="<?= SITE_URL ?>/assets/images/og-image.jpg">
+<meta property="og:image"       content="<?= isset($pageImage) ? e($pageImage) : SITE_URL.'/assets/images/og-image.jpg' ?>">
 <meta property="og:locale"      content="<?= lang() === 'fr' ? 'fr_CM' : 'en_CM' ?>">
 <meta property="og:site_name"   content="237Biz">
 
@@ -36,7 +36,7 @@ $cuRole = $cu['role'] ?? 'guest';
 <meta name="twitter:card"        content="summary_large_image">
 <meta name="twitter:title"       content="<?= e($pageTitle ?? '237Biz — Cameroon\'s Business Hub') ?>">
 <meta name="twitter:description" content="<?= e($pageDesc ?? t('Discover, connect and grow with Cameroon\'s Business Hub.','Le Hub des Entreprises du Cameroun.')) ?>">
-<meta name="twitter:image"       content="<?= SITE_URL ?>/assets/images/og-image.jpg">
+<meta name="twitter:image"       content="<?= isset($pageImage) ? e($pageImage) : SITE_URL.'/assets/images/og-image.jpg' ?>">
 
 <!-- Canonical -->
 <link rel="canonical" href="<?= e(SITE_URL . strtok($_SERVER['REQUEST_URI'] ?? '/', '?')) ?>">
