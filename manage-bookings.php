@@ -244,6 +244,12 @@ require_once __DIR__ . '/includes/header.php';
   <?php endif; ?>
 </div>
 
+<!-- Banner: new partner bookings page -->
+<div style="background:rgba(0,168,120,0.08);border:1px solid rgba(0,168,120,0.25);border-radius:10px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+  <span style="font-size:13px;color:rgba(255,255,255,0.7);">✨ <?= t('Try the new type-aware booking manager:','Essayez le nouveau gestionnaire :') ?></span>
+  <a href="<?= SITE_URL ?>/partner/bookings?listing_id=<?= $lid ?>" style="color:#00A878;font-weight:700;font-size:13px;"><?= t('Partner Bookings →','Réservations partenaire →') ?></a>
+</div>
+
 <!-- Main tabs: Bookings | Block Times -->
 <div style="display:flex;gap:8px;margin-bottom:18px;">
   <button class="main-tab <?= $tab==='bookings'?'active':'' ?>" onclick="switchTab('bookings')"><?= t('📋 Bookings','📋 Réservations') ?> (<?= $counts['all'] ?>)</button>
@@ -301,8 +307,20 @@ require_once __DIR__ . '/includes/header.php';
         </div>
         <?php if ($bk['customer_email']): ?><div class="bk-info-item"><span>Email</span><a href="mailto:<?= e($bk['customer_email']) ?>" style="color:var(--green);font-size:13px;"><?= e($bk['customer_email']) ?></a></div><?php endif; ?>
         <?php if ($bk['service_name']): ?><div class="bk-info-item"><span><?= t('Service','Service') ?></span><?= e($bk['service_name']) ?></div><?php endif; ?>
+        <?php
+        $bkType = $bk['booking_type'] ?? 'appointment';
+        $typeLabels = ['appointment'=>t('Appointment','Rendez-vous'),'table'=>t('Table','Table'),'service'=>t('Service','Service'),'experience'=>t('Experience','Expérience')];
+        $typeIcons  = ['appointment'=>'📅','table'=>'🍽️','service'=>'🛠️','experience'=>'🎟️'];
+        ?>
+        <div class="bk-info-item"><span><?= t('Type','Type') ?></span><?= ($typeIcons[$bkType]??'📅').' '.($typeLabels[$bkType]??$bkType) ?></div>
+        <?php if (!empty($bk['party_size']) && (int)$bk['party_size'] > 0): ?>
+        <div class="bk-info-item"><span><?= t('Guests','Convives') ?></span>👥 <?= (int)$bk['party_size'] ?></div>
+        <?php endif; ?>
       </div>
-      <?php if ($bk['message']): ?><div style="font-size:12.5px;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.03);border-radius:6px;padding:7px 11px;margin-bottom:9px;font-style:italic;">"<?= e($bk['message']) ?>"</div><?php endif; ?>
+      <?php
+      $displayMsg = ($bk['special_requests'] ?? null) ?: ($bk['message'] ?? null);
+      ?>
+      <?php if ($displayMsg): ?><div style="font-size:12.5px;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.03);border-radius:6px;padding:7px 11px;margin-bottom:9px;font-style:italic;">"<?= e($displayMsg) ?>"</div><?php endif; ?>
       <?php if ($bk['business_notes']): ?><div style="font-size:11.5px;color:rgba(255,255,255,0.45);margin-bottom:8px;">📝 <?= e($bk['business_notes']) ?></div><?php endif; ?>
 
       <?php if ($isPending): ?>
