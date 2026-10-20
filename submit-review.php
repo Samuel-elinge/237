@@ -23,17 +23,31 @@ if ($listingId && $rating >= 1 && $rating <= 5) {
         $listing2 = $ls2->fetch();
         if ($listing2 && $listing2['user_id'] && (int)$listing2['user_id'] !== (int)$u['id']) {
             $stars = str_repeat('⭐', $rating);
+            $reviewTitle = $listing2['title'];
+            $reviewExcerpt = mb_substr($comment, 0, 100) . (mb_strlen($comment) > 100 ? '…' : '');
             dispatch_notification(
                 (int)$listing2['user_id'],
                 'bell',
-                "New {$rating}-star review on " . $listing2['title'],
-                "Nouvel avis {$stars} pour " . $listing2['title'],
-                "{$u['name']} left a review: \"" . mb_substr($comment, 0, 100) . (mb_strlen($comment) > 100 ? '…' : '') . "\"",
+                "New {$rating}-star review on {$reviewTitle}",
+                "Nouvel avis {$stars} pour {$reviewTitle}",
+                "{$u['name']} left a review: \"{$reviewExcerpt}\"",
                 "{$u['name']} a laissé un avis.",
                 '/listing/' . $listing2['slug'],
                 'listing',
                 $listingId,
                 null  // always notify owner of reviews (no pref gating for this)
+            );
+            dispatch_notification(
+                (int)$listing2['user_id'],
+                'email',
+                "New {$rating}-star review on {$reviewTitle}",
+                "Nouvel avis {$stars} pour {$reviewTitle}",
+                "{$u['name']} has left a {$rating}-star review on your listing \"{$reviewTitle}\":\n\n\"{$reviewExcerpt}\"\n\nYou can view and respond to reviews from your business dashboard.",
+                "{$u['name']} a laissé un avis {$stars} pour votre annonce « {$reviewTitle} » :\n\n« {$reviewExcerpt} »\n\nVous pouvez consulter et répondre aux avis depuis votre tableau de bord.",
+                '/listing/' . $listing2['slug'],
+                'listing',
+                $listingId,
+                null  // no pref gating for review emails either
             );
         }
     } catch (Exception $e) { /* non-critical */ }

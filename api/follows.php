@@ -98,6 +98,18 @@ function notifyListingOwner(int $followerUserId, int $listingId): void {
             $listingId,
             'follow'
         );
+        dispatch_notification(
+            $ownerId,
+            'email',
+            "New follower on {$title}",
+            "Nouvel abonné pour {$title}",
+            "{$followerName} started following your listing \"{$title}\" on 237Biz. You can view your listing and connect with your audience from your dashboard.",
+            "{$followerName} suit désormais votre annonce « {$title} » sur 237Biz. Vous pouvez consulter votre annonce depuis votre tableau de bord.",
+            '/listing/' . $listing['slug'],
+            'listing',
+            $listingId,
+            'follow'
+        );
     } catch (Exception $e) { /* non-critical */ }
 }
 

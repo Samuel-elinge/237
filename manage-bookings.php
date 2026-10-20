@@ -68,30 +68,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($bk && $bk['user_id']) {
                         $dateStr = $bk['preferred_date'] ? date('d M Y', strtotime($bk['preferred_date'])) : '';
                         if ($action === 'confirmed') {
+                            $confBodyEn = "Your booking" . ($dateStr ? " for {$dateStr}" : '') . " at \"{$bk['title']}\" has been confirmed. We look forward to seeing you!";
+                            $confBodyFr = "Votre réservation" . ($dateStr ? " du {$dateStr}" : '') . " pour « {$bk['title']} » a été confirmée. Nous avons hâte de vous accueillir !";
                             dispatch_notification(
-                                (int)$bk['user_id'],
-                                'bell',
+                                (int)$bk['user_id'], 'bell',
                                 "Booking confirmed — " . $bk['title'],
                                 "Réservation confirmée — " . $bk['title'],
-                                "Your booking" . ($dateStr ? " for {$dateStr}" : '') . " has been confirmed.",
-                                "Votre réservation" . ($dateStr ? " du {$dateStr}" : '') . " a été confirmée.",
-                                '/listing/' . $bk['slug'],
-                                'listing',
-                                $lid,
-                                'booking'
+                                $confBodyEn, $confBodyFr,
+                                '/listing/' . $bk['slug'], 'listing', $lid, 'booking'
+                            );
+                            dispatch_notification(
+                                (int)$bk['user_id'], 'email',
+                                "Booking confirmed — " . $bk['title'],
+                                "Réservation confirmée — " . $bk['title'],
+                                $confBodyEn, $confBodyFr,
+                                '/listing/' . $bk['slug'], 'listing', $lid, 'booking'
                             );
                         } elseif ($action === 'cancelled') {
+                            $canBodyEn = "Your booking" . ($dateStr ? " for {$dateStr}" : '') . " at \"{$bk['title']}\" has been cancelled." . ($notes ? " Note: {$notes}" : '');
+                            $canBodyFr = "Votre réservation" . ($dateStr ? " du {$dateStr}" : '') . " pour « {$bk['title']} » a été annulée." . ($notes ? " Note : {$notes}" : '');
                             dispatch_notification(
-                                (int)$bk['user_id'],
-                                'bell',
+                                (int)$bk['user_id'], 'bell',
                                 "Booking cancelled — " . $bk['title'],
                                 "Réservation annulée — " . $bk['title'],
-                                "Your booking" . ($dateStr ? " for {$dateStr}" : '') . " has been cancelled." . ($notes ? " Note: {$notes}" : ''),
-                                "Votre réservation" . ($dateStr ? " du {$dateStr}" : '') . " a été annulée." . ($notes ? " Note : {$notes}" : ''),
-                                '/listing/' . $bk['slug'],
-                                'listing',
-                                $lid,
-                                'booking'
+                                $canBodyEn, $canBodyFr,
+                                '/listing/' . $bk['slug'], 'listing', $lid, 'booking'
+                            );
+                            dispatch_notification(
+                                (int)$bk['user_id'], 'email',
+                                "Booking cancelled — " . $bk['title'],
+                                "Réservation annulée — " . $bk['title'],
+                                $canBodyEn, $canBodyFr,
+                                '/listing/' . $bk['slug'], 'listing', $lid, 'booking'
                             );
                         }
                     }

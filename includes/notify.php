@@ -4,14 +4,15 @@
  *
  * Usage:
  *   require_once __DIR__ . '/notify.php';
- *   dispatch_notification($userId, 'bell', 'Title EN', 'Titre FR', 'Body EN', 'Corps FR', '/listing/slug', 'listing', $listingId);
+ *   dispatch_notification($userId, 'bell',  'Title EN', 'Titre FR', 'Body EN', 'Corps FR', '/listing/slug', 'listing', $listingId);
+ *   dispatch_notification($userId, 'email', 'Subject EN', 'Objet FR', '<p>Body EN</p>', '<p>Corps FR</p>', '/listing/slug', 'listing', $listingId, 'follow');
  *
  * Respects the user's notification_prefs row:
- *   - bell_* columns gate whether the bell row is inserted
- *   - email_* columns are checked but email sending is handled separately
+ *   - bell_*  columns gate whether the bell row is inserted
+ *   - email_* columns gate whether the email is sent
  *
  * $channel values: 'bell'  (in-app bell icon)
- *                  'email' (future — placeholder, no SMTP send here)
+ *                  'email' (transactional email via sendMail())
  *
  * $pref_key values: 'booking' | 'event' | 'follow' | 'promo'
  *   Pass null to skip the pref check and always dispatch.
@@ -97,8 +98,142 @@ if (!function_exists('dispatch_notification')) {
             }
         }
 
-        // email channel — not yet implemented, placeholder
+        // ── Send email notification ───────────────────────────────────────
+        if ($channel === 'email') {
+            if (!function_exists('sendMail')) return false; // sendMail lives in config.php
+
+            // Fetch recipient email + language preference
+            try {
+                $ur = db()->prepare("SELECT email, name FROM users WHERE id = ? LIMIT 1");
+                $ur->execute([$userId]);
+                $recipient = $ur->fetch();
+                if (!$recipient || !$recipient['email']) return false;
+
+                // Detect language preference via user_tags (tag name 'french')
+                $langSt = db()->prepare(
+                    "SELECT 1 FROM user_tags ut
+                     JOIN automation_tags at ON at.id = ut.tag_id
+                     WHERE ut.user_id = ? AND at.name = 'french' LIMIT 1"
+                );
+                $langSt->execute([$userId]);
+                $isFrUser = (bool)$langSt->fetchColumn();
+            } catch (Exception $e) {
+                $recipient = null;
+                $isFrUser  = false;
+                if (!$recipient) return false;
+            }
+
+            $subject = $isFrUser ? $titleFr  : $titleEn;
+            $body    = $isFrUser ? $bodyFr   : $bodyEn;
+            $name    = $recipient['name'] ?? '';
+
+            try {
+                $html = emailWrap($subject, $name, $body, $link);
+                sendMail($recipient['email'], $subject, $html);
+                return true;
+            } catch (Exception $e) {
+                return false;
+            }
+        }
+
         return false;
+    }
+
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// emailWrap() — branded HTML wrapper for transactional notification emails
+// ─────────────────────────────────────────────────────────────────────────────
+if (!function_exists('emailWrap')) {
+
+    /**
+     * Wraps a notification body in a simple branded HTML email template.
+     *
+     * @param string      $subject  Email subject / pre-header text
+     * @param string      $name     Recipient display name (for personalised greeting)
+     * @param string      $body     Notification body text (plain text or simple HTML)
+     * @param string|null $link     Optional CTA URL (absolute or relative)
+     * @return string  Complete HTML email string
+     */
+    function emailWrap(string $subject, string $name, string $body, ?string $link = null): string {
+        $siteUrl   = defined('SITE_URL')  ? SITE_URL  : 'https://237biz.net';
+        $siteName  = '237Biz';
+        $accentColor = '#00A878';
+        $bgColor     = '#f4f7f6';
+        $cardBg      = '#ffffff';
+        $textColor   = '#1a2e29';
+        $mutedColor  = '#6b8c83';
+        $year        = date('Y');
+
+        // Convert relative link to absolute
+        if ($link && !str_starts_with($link, 'http')) {
+            $link = $siteUrl . $link;
+        }
+
+        // Build CTA button (if link provided)
+        $ctaHtml = '';
+        if ($link) {
+            $ctaLabel = 'View Details';
+            $ctaHtml  = '<p style="text-align:center;margin:28px 0 0;">'
+                      . '<a href="' . htmlspecialchars($link, ENT_QUOTES) . '" '
+                      . 'style="background:' . $accentColor . ';color:#fff;text-decoration:none;'
+                      . 'padding:12px 28px;border-radius:6px;font-size:14px;font-weight:600;'
+                      . 'display:inline-block;">' . $ctaLabel . '</a>'
+                      . '</p>';
+        }
+
+        // Greeting
+        $greeting = $name ? 'Hi ' . htmlspecialchars($name, ENT_QUOTES) . ',' : 'Hello,';
+
+        // Body: plain text gets paragraph wrapped; HTML passed through
+        $bodyHtml = strip_tags($body) === $body
+            ? '<p style="margin:0 0 12px;line-height:1.6;">' . nl2br(htmlspecialchars($body, ENT_QUOTES)) . '</p>'
+            : $body;
+
+        // Unsubscribe placeholder
+        $unsubUrl = $siteUrl . '/customer-dashboard.php?tab=preferences';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{$subject}</title>
+</head>
+<body style="margin:0;padding:0;background:{$bgColor};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:{$bgColor};padding:32px 16px;">
+  <tr><td align="center">
+    <table width="100%" style="max-width:560px;background:{$cardBg};border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+      <!-- Header -->
+      <tr>
+        <td style="background:{$accentColor};padding:22px 32px;text-align:center;">
+          <a href="{$siteUrl}" style="color:#fff;text-decoration:none;font-size:22px;font-weight:700;letter-spacing:-0.5px;">
+            {$siteName}
+          </a>
+        </td>
+      </tr>
+      <!-- Body -->
+      <tr>
+        <td style="padding:32px 32px 24px;color:{$textColor};font-size:15px;">
+          <p style="margin:0 0 18px;font-size:15px;">{$greeting}</p>
+          {$bodyHtml}
+          {$ctaHtml}
+        </td>
+      </tr>
+      <!-- Footer -->
+      <tr>
+        <td style="padding:16px 32px 28px;text-align:center;font-size:12px;color:{$mutedColor};border-top:1px solid #eef0ef;">
+          &copy; {$year} {$siteName} &mdash; Cameroon&#39;s Business Directory<br>
+          <a href="{$unsubUrl}" style="color:{$mutedColor};text-decoration:underline;">Manage notification preferences</a>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>
+HTML;
     }
 
 }
