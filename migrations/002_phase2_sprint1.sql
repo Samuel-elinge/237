@@ -20,8 +20,9 @@ SET @sql_b = IF(@b_uid = 0,
 PREPARE stmt_b FROM @sql_b; EXECUTE stmt_b; DEALLOCATE PREPARE stmt_b;
 
 -- Back-fill user_id where customer_email matches a registered user
+-- COLLATE forces a common collation so utf8mb4_general_ci vs utf8mb4_unicode_ci doesn't clash
 UPDATE listing_bookings b
-  JOIN users u ON u.email = b.customer_email
+  JOIN users u ON u.email COLLATE utf8mb4_unicode_ci = b.customer_email COLLATE utf8mb4_unicode_ci
   SET b.user_id = u.id
   WHERE b.user_id IS NULL AND b.customer_email IS NOT NULL AND b.customer_email != '';
 
@@ -42,7 +43,7 @@ PREPARE stmt_e FROM @sql_e; EXECUTE stmt_e; DEALLOCATE PREPARE stmt_e;
 
 -- Back-fill user_id where registration email matches a registered user
 UPDATE event_registrations er
-  JOIN users u ON u.email = er.email
+  JOIN users u ON u.email COLLATE utf8mb4_unicode_ci = er.email COLLATE utf8mb4_unicode_ci
   SET er.user_id = u.id
   WHERE er.user_id IS NULL AND er.email IS NOT NULL AND er.email != '';
 
