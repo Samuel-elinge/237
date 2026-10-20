@@ -6,8 +6,8 @@
 
 -- ── Offers (Deals & Special Offers) ─────────────────────────
 CREATE TABLE IF NOT EXISTS offers (
-  id                INT          NOT NULL AUTO_INCREMENT,
-  listing_id        INT          NOT NULL,
+  id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  listing_id        INT UNSIGNED NOT NULL,
   title             VARCHAR(200) NOT NULL,
   title_fr          VARCHAR(200) DEFAULT NULL,
   slug              VARCHAR(220) NOT NULL,
@@ -34,15 +34,13 @@ CREATE TABLE IF NOT EXISTS offers (
   KEY     idx_offers_status_expires (status, expires_at),
   KEY     idx_offers_starts (starts_at),
 
-  CONSTRAINT fk_offers_listing
-    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Events ──────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS events (
-  id                INT          NOT NULL AUTO_INCREMENT,
-  listing_id        INT          DEFAULT NULL,    -- NULL = platform event
-  organiser_id      INT          NOT NULL,        -- user_id
+  id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  listing_id        INT UNSIGNED DEFAULT NULL,    -- NULL = platform event
+  organiser_id      INT UNSIGNED NOT NULL,        -- user_id
   title             VARCHAR(200) NOT NULL,
   title_fr          VARCHAR(200) DEFAULT NULL,
   slug              VARCHAR(220) NOT NULL,
@@ -51,7 +49,7 @@ CREATE TABLE IF NOT EXISTS events (
   event_type        ENUM('workshop','networking','exhibition','conference','social','other') NOT NULL DEFAULT 'other',
   venue_name        VARCHAR(200) DEFAULT NULL,
   venue_address     TEXT         DEFAULT NULL,
-  location_id       INT          DEFAULT NULL,
+  location_id       INT UNSIGNED DEFAULT NULL,
   lat               DECIMAL(10,7) DEFAULT NULL,
   lng               DECIMAL(10,7) DEFAULT NULL,
   starts_at         DATETIME     NOT NULL,
@@ -79,8 +77,8 @@ CREATE TABLE IF NOT EXISTS events (
 
 -- ── Event Registrations ──────────────────────────────────────
 CREATE TABLE IF NOT EXISTS event_registrations (
-  id          INT          NOT NULL AUTO_INCREMENT,
-  event_id    INT          NOT NULL,
+  id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  event_id    INT UNSIGNED NOT NULL,
   name        VARCHAR(150) NOT NULL,
   email       VARCHAR(200) NOT NULL,
   phone       VARCHAR(30)  DEFAULT NULL,
@@ -94,15 +92,13 @@ CREATE TABLE IF NOT EXISTS event_registrations (
   UNIQUE  KEY ux_reg_qr (qr_token),
   KEY     idx_reg_event (event_id),
 
-  CONSTRAINT fk_reg_event
-    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Marketplace Impressions (analytics) ─────────────────────
 CREATE TABLE IF NOT EXISTS marketplace_impressions (
   id            BIGINT       NOT NULL AUTO_INCREMENT,
   entity_type   ENUM('listing','offer','event') NOT NULL,
-  entity_id     INT          NOT NULL,
+  entity_id     INT UNSIGNED NOT NULL,
   page_context  VARCHAR(100) DEFAULT NULL,   -- 'marketplace','offers','listing_page' etc.
   visitor_hash  VARCHAR(64)  DEFAULT NULL,   -- SHA256(ip+ua) for dedup, no PII stored
   created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
