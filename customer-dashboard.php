@@ -7,7 +7,7 @@ $userId = (int)$u['id'];
 
 // Active tab
 $tab = $_GET['tab'] ?? 'bookings';
-$validTabs = ['bookings', 'events', 'favourites', 'reviews'];
+$validTabs = ['bookings', 'events', 'favourites', 'reviews', 'follows', 'preferences'];
 if (!in_array($tab, $validTabs)) $tab = 'bookings';
 
 // ── My Bookings ──────────────────────────────────────────────
@@ -104,6 +104,71 @@ if ($tab === 'favourites') {
         $myFavs['event'] = $feq->fetchAll();
         $favCounts['event'] = count($myFavs['event']);
     } catch (Exception $e) {}
+}
+
+// ── Businesses I Follow ──────────────────────────────────────
+$myFollows = [];
+if ($tab === 'follows') {
+    try {
+        $fwq = db()->prepare("
+            SELECT uf.id AS follow_row_id, uf.created_at AS followed_at, uf.notify,
+                   l.id AS listing_id, l.title, l.slug, l.status,
+                   c.name_en AS cat_en, c.icon AS cat_icon,
+                   loc.name_en AS loc_en
+            FROM user_follows uf
+            JOIN listings l ON l.id = uf.follow_id AND uf.follow_type = 'listing'
+            LEFT JOIN categories c ON c.id = l.category_id
+            LEFT JOIN locations loc ON loc.id = l.location_id
+            WHERE uf.user_id = ? AND uf.unfollowed_at IS NULL
+            ORDER BY uf.created_at DESC
+        ");
+        $fwq->execute([$userId]);
+        $myFollows = $fwq->fetchAll();
+    } catch (Exception $e) {}
+}
+
+// ── Notification Preferences ─────────────────────────────────
+$notifPrefs = null;
+$prefsFlash = '';
+if ($tab === 'preferences') {
+    // Handle save
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_prefs'])) {
+        verifyCsrfOrDie();
+        $cols = ['booking_email','booking_bell','event_email','event_bell','follow_email','follow_bell','promo_email'];
+        $vals = [];
+        foreach ($cols as $col) { $vals[$col] = isset($_POST[$col]) ? 1 : 0; }
+        try {
+            $upd = db()->prepare("
+                INSERT INTO notification_prefs (user_id, booking_email, booking_bell, event_email, event_bell, follow_email, follow_bell, promo_email)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                  booking_email=VALUES(booking_email), booking_bell=VALUES(booking_bell),
+                  event_email=VALUES(event_email), event_bell=VALUES(event_bell),
+                  follow_email=VALUES(follow_email), follow_bell=VALUES(follow_bell),
+                  promo_email=VALUES(promo_email)
+            ");
+            $upd->execute([$userId, $vals['booking_email'], $vals['booking_bell'],
+                           $vals['event_email'], $vals['event_bell'],
+                           $vals['follow_email'], $vals['follow_bell'], $vals['promo_email']]);
+            $prefsFlash = 'saved';
+        } catch (Exception $e) {
+            $prefsFlash = 'error';
+        }
+    }
+    // Load prefs (defaults if none)
+    try {
+        $pq = db()->prepare("SELECT * FROM notification_prefs WHERE user_id = ? LIMIT 1");
+        $pq->execute([$userId]);
+        $notifPrefs = $pq->fetch() ?: [
+            'booking_email'=>1,'booking_bell'=>1,
+            'event_email'=>1,'event_bell'=>1,
+            'follow_email'=>1,'follow_bell'=>1,
+            'promo_email'=>0,
+        ];
+    } catch (Exception $e) {
+        $notifPrefs = ['booking_email'=>1,'booking_bell'=>1,'event_email'=>1,'event_bell'=>1,
+                       'follow_email'=>1,'follow_bell'=>1,'promo_email'=>0];
+    }
 }
 
 // ── My Reviews ───────────────────────────────────────────────
@@ -303,10 +368,12 @@ require_once __DIR__ . '/includes/header.php';
 
     <!-- Tabs -->
     <nav class="cdash-tabs">
-      <a href="?tab=bookings"   class="cdash-tab <?= $tab==='bookings'   ? 'active' : '' ?>">📅 <?= t('My Bookings','Mes Réservations') ?></a>
-      <a href="?tab=events"     class="cdash-tab <?= $tab==='events'     ? 'active' : '' ?>">🎟 <?= t('My Events','Mes Événements') ?></a>
-      <a href="?tab=favourites" class="cdash-tab <?= $tab==='favourites' ? 'active' : '' ?>">❤️ <?= t('Favourites','Favoris') ?></a>
-      <a href="?tab=reviews"    class="cdash-tab <?= $tab==='reviews'    ? 'active' : '' ?>">⭐ <?= t('My Reviews','Mes Avis') ?></a>
+      <a href="?tab=bookings"     class="cdash-tab <?= $tab==='bookings'     ? 'active' : '' ?>">📅 <?= t('My Bookings','Mes Réservations') ?></a>
+      <a href="?tab=events"       class="cdash-tab <?= $tab==='events'       ? 'active' : '' ?>">🎟 <?= t('My Events','Mes Événements') ?></a>
+      <a href="?tab=favourites"   class="cdash-tab <?= $tab==='favourites'   ? 'active' : '' ?>">❤️ <?= t('Favourites','Favoris') ?></a>
+      <a href="?tab=follows"      class="cdash-tab <?= $tab==='follows'      ? 'active' : '' ?>">🔔 <?= t('Following','Abonnements') ?></a>
+      <a href="?tab=reviews"      class="cdash-tab <?= $tab==='reviews'      ? 'active' : '' ?>">⭐ <?= t('My Reviews','Mes Avis') ?></a>
+      <a href="?tab=preferences"  class="cdash-tab <?= $tab==='preferences'  ? 'active' : '' ?>">⚙️ <?= t('Preferences','Préférences') ?></a>
     </nav>
 
     <!-- ─── MY BOOKINGS ─────────────────────────── -->
@@ -609,6 +676,125 @@ require_once __DIR__ . '/includes/header.php';
 
     <?php endif; ?>
 
+    <!-- ─── BUSINESSES I FOLLOW ────────────────────── -->
+    <?php if ($tab === 'follows'): ?>
+
+      <div class="cdash-card">
+        <div class="cdash-card-header">
+          <h4>🔔 <?= t('Businesses I Follow','Entreprises Suivies') ?> <?php if ($myFollows): ?><span class="cdash-tab-badge"><?= count($myFollows) ?></span><?php endif; ?></h4>
+          <a href="<?= SITE_URL ?>/listings" class="btn btn-outline btn-sm"><?= t('Find Businesses','Trouver des Entreprises') ?></a>
+        </div>
+
+        <?php if ($myFollows): ?>
+        <div class="fav-grid">
+          <?php foreach ($myFollows as $fw): ?>
+          <div class="fav-card" id="follow-card-<?= $fw['follow_row_id'] ?>">
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;">
+              <span style="font-size:1.3rem;"><?= $fw['cat_icon'] ?? '🏢' ?></span>
+              <?php if ($fw['status'] !== 'approved'): ?>
+              <span class="fav-badge-inactive"><?= t('Unlisted','Non répertoriée') ?></span>
+              <?php endif; ?>
+            </div>
+            <div class="fav-card-title"><?= e($fw['title']) ?></div>
+            <div class="fav-card-meta"><?= e($fw['cat_en']) ?><?= $fw['loc_en'] ? ' · '.e($fw['loc_en']) : '' ?></div>
+            <div class="fav-card-meta" style="margin-top:.2rem;">
+              <?= t('Following since','Suivi depuis') ?> <?= date('d M Y', strtotime($fw['followed_at'])) ?>
+            </div>
+            <div class="fav-card-actions">
+              <?php if ($fw['status'] === 'approved'): ?>
+              <a href="<?= SITE_URL ?>/listing/<?= e($fw['slug']) ?>" class="btn btn-outline btn-sm"><?= t('View','Voir') ?></a>
+              <?php endif; ?>
+              <button class="fav-unsave-btn"
+                      onclick="unfollowBiz(<?= $fw['follow_row_id'] ?>, <?= $fw['listing_id'] ?>, this)">
+                🔕 <?= t('Unfollow','Ne plus suivre') ?>
+              </button>
+            </div>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+        <div class="cdash-empty">
+          <div class="cdash-empty-icon">🔔</div>
+          <h3><?= t('Not following anyone yet','Aucun abonnement') ?></h3>
+          <p><?= t('Follow businesses to get updates on their offers and events.','Suivez des entreprises pour recevoir leurs mises à jour.') ?></p>
+          <a href="<?= SITE_URL ?>/listings" class="btn btn-primary" style="margin-top:1rem;"><?= t('Find Businesses','Trouver des Entreprises') ?></a>
+        </div>
+        <?php endif; ?>
+      </div>
+
+    <?php endif; ?>
+
+    <!-- ─── PREFERENCES ─────────────────────────── -->
+    <?php if ($tab === 'preferences'): ?>
+
+      <?php if ($prefsFlash === 'saved'): ?>
+      <div class="alert alert-success" style="margin-bottom:1.25rem;">✅ <?= t('Preferences saved.','Préférences enregistrées.') ?></div>
+      <?php elseif ($prefsFlash === 'error'): ?>
+      <div class="alert alert-error" style="margin-bottom:1.25rem;">⚠️ <?= t('Could not save. Please try again.','Impossible d\'enregistrer. Réessayez.') ?></div>
+      <?php endif; ?>
+
+      <div class="cdash-card">
+        <div class="cdash-card-header">
+          <h4>⚙️ <?= t('Notification Preferences','Préférences de Notification') ?></h4>
+        </div>
+        <form method="POST" style="padding:1.25rem;">
+          <?= csrf() ? '<input type="hidden" name="csrf" value="'.csrf().'">' : '' ?>
+          <input type="hidden" name="save_prefs" value="1">
+
+          <?php
+          $prefRows = [
+            ['booking_email','booking_bell', t('Bookings','Réservations'),        t('Receive email updates on your bookings','Mises à jour e-mail de vos réservations')],
+            ['event_email',  'event_bell',   t('Events','Événements'),             t('Reminders and updates for registered events','Rappels et mises à jour pour les événements')],
+            ['follow_email', 'follow_bell',  t('Followed Businesses','Abonnements'),t('New offers and events from businesses you follow','Nouvelles offres et événements des entreprises suivies')],
+            ['promo_email',  null,            t('Promotions','Promotions'),          t('Special offers and platform news','Offres spéciales et actualités de la plateforme')],
+          ];
+          ?>
+
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:.6rem .5rem;font-size:.8rem;color:var(--muted);font-weight:600;"><?= t('Notification type','Type') ?></th>
+                <th style="text-align:center;padding:.6rem .5rem;font-size:.8rem;color:var(--muted);font-weight:600;">✉️ <?= t('Email','Email') ?></th>
+                <th style="text-align:center;padding:.6rem .5rem;font-size:.8rem;color:var(--muted);font-weight:600;">🔔 <?= t('In-app','In-app') ?></th>
+              </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($prefRows as [$emailCol, $bellCol, $label, $desc]): ?>
+            <tr style="border-top:1px solid var(--border);">
+              <td style="padding:.85rem .5rem;">
+                <div style="font-weight:600;font-size:.875rem;color:var(--white);"><?= $label ?></div>
+                <div style="font-size:.775rem;color:var(--muted);"><?= $desc ?></div>
+              </td>
+              <td style="text-align:center;padding:.85rem .5rem;">
+                <label style="display:inline-flex;align-items:center;cursor:pointer;gap:.35rem;">
+                  <input type="checkbox" name="<?= $emailCol ?>" value="1" <?= ($notifPrefs[$emailCol] ?? 1) ? 'checked' : '' ?>
+                         style="width:1rem;height:1rem;accent-color:var(--green);">
+                </label>
+              </td>
+              <td style="text-align:center;padding:.85rem .5rem;">
+                <?php if ($bellCol): ?>
+                <label style="display:inline-flex;align-items:center;cursor:pointer;gap:.35rem;">
+                  <input type="checkbox" name="<?= $bellCol ?>" value="1" <?= ($notifPrefs[$bellCol] ?? 1) ? 'checked' : '' ?>
+                         style="width:1rem;height:1rem;accent-color:var(--green);">
+                </label>
+                <?php else: ?>
+                <span style="color:var(--muted);font-size:.8rem;">—</span>
+                <?php endif; ?>
+              </td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+
+          <div style="margin-top:1.5rem;display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
+            <button type="submit" class="btn btn-primary"><?= t('Save Preferences','Enregistrer') ?></button>
+            <span style="font-size:.8rem;color:var(--muted);"><?= t('Changes take effect immediately.','Les modifications prennent effet immédiatement.') ?></span>
+          </div>
+        </form>
+      </div>
+
+    <?php endif; ?>
+
     <!-- ─── MY REVIEWS ───────────────────────────── -->
     <?php if ($tab === 'reviews'): ?>
 
@@ -659,6 +845,25 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <script>
+function unfollowBiz(rowId, listingId, btn) {
+  if (!confirm('<?= t('Unfollow this business?','Ne plus suivre cette entreprise ?') ?>')) return;
+  btn.disabled = true;
+  fetch('<?= SITE_URL ?>/api/follows', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({action:'unfollow', follow_type:'listing', follow_id:listingId,
+                          row_id:rowId, csrf:'<?= csrf() ?>'}),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      const card = document.getElementById('follow-card-' + rowId);
+      if (card) { card.style.transition='opacity .25s'; card.style.opacity='0'; setTimeout(()=>card.remove(),260); }
+    } else { btn.disabled=false; alert(d.error||'Error'); }
+  })
+  .catch(()=>{ btn.disabled=false; });
+}
+
 function unsaveFav(favId, btn) {
   if (!confirm('<?= t('Remove from favourites?','Retirer des favoris ?') ?>')) return;
   btn.disabled = true;

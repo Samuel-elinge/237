@@ -178,6 +178,33 @@ $cuRole = $cu['role'] ?? 'guest';
   font-size:1.3rem; cursor:pointer; margin-left:auto; padding:4px 8px;
 }
 
+/* ── Notification Bell ── */
+.nav-bell {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.75);
+  text-decoration: none;
+  font-size: 16px;
+  transition: background .15s, color .15s;
+  flex-shrink: 0;
+}
+.nav-bell:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.nav-bell-icon { line-height: 1; }
+.nav-bell-badge {
+  position: absolute; top: -5px; right: -5px;
+  min-width: 16px; height: 16px;
+  background: #e63946; color: #fff;
+  font-size: 9.5px; font-weight: 800; font-family: inherit;
+  border-radius: 99px; padding: 0 3px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid #081410;
+  pointer-events: none;
+}
+
 /* ── Impersonation banner ── */
 .impersonation-bar {
   position:fixed; bottom:0; left:0; right:0; z-index:9999;
@@ -369,6 +396,23 @@ $cuRole = $cu['role'] ?? 'guest';
     </div>
 
     <?php if ($cu): ?>
+
+    <?php
+    // Bell: unread notification count
+    $_bellCount = 0;
+    try {
+        $_bs = db()->prepare("SELECT COUNT(*) FROM notifications WHERE user_id=? AND channel='bell' AND is_read=0");
+        $_bs->execute([(int)$cu['id']]);
+        $_bellCount = (int)$_bs->fetchColumn();
+    } catch (Exception $e) {}
+    ?>
+    <a href="<?= SITE_URL ?>/notifications" class="nav-bell" title="<?= t('Notifications','Notifications') ?>" aria-label="<?= t('Notifications','Notifications') ?><?= $_bellCount ? " ({$_bellCount} " . t('unread','non lues') . ')' : '' ?>">
+      <span class="nav-bell-icon">🔔</span>
+      <?php if ($_bellCount): ?>
+      <span class="nav-bell-badge"><?= $_bellCount > 9 ? '9+' : $_bellCount ?></span>
+      <?php endif; ?>
+    </a>
+
     <div class="nav-user-menu">
       <button type="button" class="nav-user-btn" onclick="this.closest('.nav-user-menu').classList.toggle('open')" aria-expanded="false">
         👤 <?= e(explode(' ',$cu['name'])[0]) ?> ▾
@@ -401,6 +445,14 @@ $cuRole = $cu['role'] ?? 'guest';
         <?php endif; ?>
         <div class="nav-dd-sep"></div>
         <a href="<?= SITE_URL ?>/add-listing" class="nav-dd-item">➕ <?= t('Add Listing','Ajouter une annonce') ?></a>
+        <div class="nav-dd-sep"></div>
+        <a href="<?= SITE_URL ?>/notifications" class="nav-dd-item">
+          🔔 <?= t('Notifications','Notifications') ?>
+          <?php if ($_bellCount): ?>
+          <span style="margin-left:auto;background:#e63946;color:#fff;font-size:9px;font-weight:800;border-radius:99px;padding:1px 5px;"><?= $_bellCount > 9 ? '9+' : $_bellCount ?></span>
+          <?php endif; ?>
+        </a>
+        <a href="<?= SITE_URL ?>/customer-dashboard?tab=preferences" class="nav-dd-item">⚙️ <?= t('Notification Prefs','Préférences') ?></a>
         <div class="nav-dd-sep"></div>
         <a href="<?= SITE_URL ?>/logout" class="nav-dd-item danger">🚪 <?= t('Sign Out','Déconnexion') ?></a>
       </div>
