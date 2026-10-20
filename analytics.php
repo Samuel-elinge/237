@@ -69,6 +69,38 @@ if ($l) {
         $bp->execute([$lid]);
         $stats['bookings_period'] = (int)$bp->fetchColumn();
     } catch (Exception $e) {}
+
+    // Marketplace: offers & events counts
+    $stats['offers_active'] = 0;
+    $stats['events_upcoming'] = 0;
+    $stats['offer_impressions'] = 0;
+    $stats['event_impressions'] = 0;
+    try {
+        $oq = db()->prepare("SELECT COUNT(*) FROM offers WHERE listing_id=? AND status='active' AND (expires_at IS NULL OR expires_at > NOW())");
+        $oq->execute([$lid]);
+        $stats['offers_active'] = (int)$oq->fetchColumn();
+
+        $eq = db()->prepare("SELECT COUNT(*) FROM events WHERE listing_id=? AND status='approved' AND starts_at > NOW()");
+        $eq->execute([$lid]);
+        $stats['events_upcoming'] = (int)$eq->fetchColumn();
+
+        // Impressions from marketplace_impressions
+        $oiStmt = db()->prepare("
+            SELECT COUNT(*) FROM marketplace_impressions mi
+            JOIN offers o ON o.id = mi.entity_id AND mi.entity_type = 'offer'
+            WHERE o.listing_id = ? AND mi.created_at >= {$rangeSQL}
+        ");
+        $oiStmt->execute([$lid]);
+        $stats['offer_impressions'] = (int)$oiStmt->fetchColumn();
+
+        $eiStmt = db()->prepare("
+            SELECT COUNT(*) FROM marketplace_impressions mi
+            JOIN events e ON e.id = mi.entity_id AND mi.entity_type = 'event'
+            WHERE e.listing_id = ? AND mi.created_at >= {$rangeSQL}
+        ");
+        $eiStmt->execute([$lid]);
+        $stats['event_impressions'] = (int)$eiStmt->fetchColumn();
+    } catch (Exception $e) {}
 }
 
 // ── Daily views for chart ─────────────────────────────────────────────────
@@ -237,6 +269,16 @@ require_once __DIR__ . '/includes/header.php';
     <div class="stat-main" style="color:<?= $profile['pct']>=80?'#00A878':($profile['pct']>=50?'var(--yellow)':'#e63946') ?>;"><?= $profile['pct'] ?>%</div>
     <div class="stat-sub"><?= $profile['score'] ?>/<?= $profile['total'] ?> <?= t('sections complete','sections complètes') ?></div>
   </div>
+  <div class="stat-card">
+    <div class="stat-label">🏷️ <?= t('Active Offers','Offres actives') ?></div>
+    <div class="stat-main" style="color:#f4a261;"><?= number_format($stats['offers_active']) ?></div>
+    <div class="stat-sub"><?= number_format($stats['offer_impressions']) ?> <?= t('views this period','vues cette période') ?></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">🎟️ <?= t('Upcoming Events','Événements à venir') ?></div>
+    <div class="stat-main" style="color:#c77dff;"><?= number_format($stats['events_upcoming']) ?></div>
+    <div class="stat-sub"><?= number_format($stats['event_impressions']) ?> <?= t('views this period','vues cette période') ?></div>
+  </div>
 </div>
 
 <div class="an-cols">
@@ -347,6 +389,8 @@ require_once __DIR__ . '/includes/header.php';
       <?php if (!empty($l['booking_enabled'])): ?>
       <a href="<?= SITE_URL ?>/manage-bookings?listing_id=<?= $lid ?>" style="font-size:13px;color:var(--green);text-decoration:none;">📅 <?= t('Manage Bookings','Gérer les réservations') ?></a>
       <?php endif; ?>
+      <a href="<?= SITE_URL ?>/partner/offers?listing_id=<?= $lid ?>" style="font-size:13px;color:var(--green);text-decoration:none;">🏷️ <?= t('Manage Offers','Gérer les offres') ?></a>
+      <a href="<?= SITE_URL ?>/partner/events?listing_id=<?= $lid ?>" style="font-size:13px;color:var(--green);text-decoration:none;">🎟️ <?= t('Manage Events','Gérer les événements') ?></a>
       <a href="<?= SITE_URL ?>/listing/<?= e($l['slug']) ?>" style="font-size:13px;color:var(--green);text-decoration:none;" target="_blank">👁 <?= t('View Live Listing','Voir l\'annonce en ligne') ?></a>
     </div>
   </div>

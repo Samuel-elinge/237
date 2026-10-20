@@ -479,4 +479,13 @@ require_once __DIR__ . '/includes/header.php';
   </div>
 </div>
 
+<?php if ($ev): ?>
+<script>
+fetch('<?= SITE_URL ?>/api/track', {
+  method: 'POST',
+  headers: {'Content-Type':'application/json'},
+  body: JSON.stringify({entity_type:'event',entity_id:<?= (int)$ev['id'] ?>,page_context:'event_page'})
+});
+</script>
+<?php endif; ?>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

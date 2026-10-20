@@ -69,6 +69,9 @@ RewriteRule ^services/?$                services.php                 [L,QSA]
 RewriteRule ^online-presence/?$         online-presence.php          [L,QSA]
 RewriteRule ^business-listing/?$        business-listing.php         [L,QSA]
 
+# API
+RewriteRule ^api/track/?$               api/track.php                [L,QSA]
+
 # Bookings
 RewriteRule ^booking/?$                 booking.php                  [L,QSA]
 RewriteRule ^manage-bookings/?$         manage-bookings.php          [L,QSA]
