@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS offers (
   UNIQUE  KEY ux_offers_slug (slug),
   KEY     idx_offers_listing (listing_id),
   KEY     idx_offers_status_expires (status, expires_at),
-  KEY     idx_offers_starts (starts_at),
+  KEY     idx_offers_starts (starts_at)
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS event_registrations (
   PRIMARY KEY (id),
   UNIQUE  KEY ux_reg_event_email (event_id, email),
   UNIQUE  KEY ux_reg_qr (qr_token),
-  KEY     idx_reg_event (event_id),
+  KEY     idx_reg_event (event_id)
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
