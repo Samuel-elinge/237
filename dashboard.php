@@ -93,6 +93,39 @@ if ($firstApprovedId) {
     }
 }
 
+// ── Phase 3: Subscription + Promotion quick-stats ───────────────────────────
+$subStatus = null;   // active subscription status (or null)
+$subPlanName = '';
+$activePromos = 0;
+$pendingPromos = 0;
+try {
+    // Latest active/pending subscription for this user
+    $sq = db()->prepare("
+        SELECT bs.status, sp.name_en AS plan_name
+        FROM business_subscriptions bs
+        JOIN subscription_plans sp ON sp.id = bs.plan_id
+        WHERE bs.user_id = ? AND bs.status NOT IN ('cancelled','expired')
+        ORDER BY bs.created_at DESC LIMIT 1
+    ");
+    $sq->execute([$u['id']]);
+    $subRow = $sq->fetch();
+    if ($subRow) { $subStatus = $subRow['status']; $subPlanName = $subRow['plan_name']; }
+} catch (Exception $e) {}
+try {
+    $pq = db()->prepare("
+        SELECT
+          SUM(CASE WHEN po.status='active' THEN 1 ELSE 0 END) AS cnt_active,
+          SUM(CASE WHEN po.status='pending' THEN 1 ELSE 0 END) AS cnt_pending
+        FROM promotion_orders po
+        JOIN listings l ON l.id = po.listing_id
+        WHERE l.user_id = ?
+    ");
+    $pq->execute([$u['id']]);
+    $pRow = $pq->fetch();
+    $activePromos  = (int)($pRow['cnt_active']  ?? 0);
+    $pendingPromos = (int)($pRow['cnt_pending'] ?? 0);
+} catch (Exception $e) {}
+
 $pageTitle = t('My Dashboard — 237Biz', 'Mon Tableau de Bord — 237Biz');
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -144,6 +177,8 @@ require_once __DIR__ . '/includes/header.php';
           <?php if ($hasFeatured): ?>
           <a href="<?= SITE_URL ?>/manage-bookings?listing_id=<?= $firstFeaturedId ?>">📅 <?= t('Bookings','Réservations') ?><?php if ($pendingBookings): ?> <span style="background:#e63946;color:#fff;border-radius:99px;font-size:10px;padding:1px 7px;font-weight:700;margin-left:4px;"><?= $pendingBookings ?></span><?php endif; ?></a>
           <?php endif; ?>
+          <a href="<?= SITE_URL ?>/my-subscription">💳 <?= t('Subscription','Abonnement') ?><?php if ($subStatus==='active'): ?> <span style="background:#00A878;color:#0A1A0F;border-radius:99px;font-size:10px;padding:1px 7px;font-weight:700;margin-left:4px;"><?= t('Active','Actif') ?></span><?php elseif ($subStatus==='pending_payment'): ?> <span style="background:rgba(245,200,66,0.85);color:#0A1A0F;border-radius:99px;font-size:10px;padding:1px 7px;font-weight:700;margin-left:4px;"><?= t('Pending','En attente') ?></span><?php endif; ?></a>
+          <a href="<?= SITE_URL ?>/my-promotions">📣 <?= t('Promotions','Promotions') ?><?php if ($activePromos): ?> <span style="background:#00A878;color:#0A1A0F;border-radius:99px;font-size:10px;padding:1px 7px;font-weight:700;margin-left:4px;"><?= $activePromos ?></span><?php endif; ?></a>
           <a href="<?= SITE_URL ?>/profile.php">👤 <?= t('My Profile','Mon Profil') ?></a>
           <?php if (isAdmin()): ?>
           <a href="<?= SITE_URL ?>/admin/">🔧 <?= t('Admin Panel','Panneau Admin') ?></a>
@@ -226,6 +261,51 @@ require_once __DIR__ . '/includes/header.php';
           <?php endif; ?>
         </div>
         <?php endif; ?>
+
+        <!-- Phase 3: Subscription & Promotions quick-links -->
+        <div class="feature-cards" style="margin-bottom:1.5rem;">
+          <a href="<?= SITE_URL ?>/my-subscription" class="feature-card" style="<?= $subStatus==='active' ? 'border-color:rgba(0,168,120,0.35);' : '' ?>">
+            <span class="feature-card-icon">💳</span>
+            <div class="feature-card-text">
+              <span class="feature-card-label"><?= t('My Subscription','Mon Abonnement') ?></span>
+              <span class="feature-card-sub"><?php
+                if ($subStatus === 'active')       echo '<span style="color:#00A878;">● </span>' . e($subPlanName) . ' ' . t('active','actif');
+                elseif ($subStatus === 'pending_payment') echo t('Payment under review','Paiement en cours de vérification');
+                elseif ($subStatus === 'pending')  echo t('Awaiting activation','En attente d\'activation');
+                else                               echo t('Free — upgrade for more visibility','Gratuit — améliorez votre visibilité');
+              ?></span>
+            </div>
+          </a>
+          <a href="<?= SITE_URL ?>/my-promotions" class="feature-card" style="<?= $activePromos ? 'border-color:rgba(0,168,120,0.35);' : '' ?>">
+            <span class="feature-card-icon">📣</span>
+            <div class="feature-card-text">
+              <span class="feature-card-label"><?= t('My Promotions','Mes Promotions') ?></span>
+              <span class="feature-card-sub"><?php
+                if ($activePromos && $pendingPromos)      echo $activePromos.' '.t('active','actives').', '.$pendingPromos.' '.t('pending','en attente');
+                elseif ($activePromos)                    echo $activePromos.' '.t('active promotion(s)','promotion(s) active(s)');
+                elseif ($pendingPromos)                   echo $pendingPromos.' '.t('pending review','en attente de validation');
+                else                                      echo t('Boost your listing visibility','Boostez la visibilité de votre annonce');
+              ?></span>
+            </div>
+            <?php if ($pendingPromos): ?><span class="feature-card-badge"><?= $pendingPromos ?></span><?php endif; ?>
+          </a>
+          <a href="<?= SITE_URL ?>/promote" class="feature-card">
+            <span class="feature-card-icon">🚀</span>
+            <div class="feature-card-text">
+              <span class="feature-card-label"><?= t('Promote a Listing','Promouvoir une Annonce') ?></span>
+              <span class="feature-card-sub"><?= t('Featured, event & offer slots','Emplacements vedette, événement & offre') ?></span>
+            </div>
+          </a>
+          <?php if (!$subStatus || $subStatus === 'expired' || $subStatus === 'cancelled'): ?>
+          <a href="<?= SITE_URL ?>/subscribe" class="feature-card" style="border-color:rgba(245,200,66,0.25);">
+            <span class="feature-card-icon">⭐</span>
+            <div class="feature-card-text">
+              <span class="feature-card-label" style="color:var(--yellow);"><?= t('Upgrade Plan','Changer de Plan') ?></span>
+              <span class="feature-card-sub"><?= t('Growth & Premium plans available','Plans Growth & Premium disponibles') ?></span>
+            </div>
+          </a>
+          <?php endif; ?>
+        </div>
 
         <!-- Listings table -->
         <div class="listing-widget">

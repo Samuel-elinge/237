@@ -536,8 +536,9 @@ partnerNavBadges($pid, $pdo);
             <div class="comm-row"><span class="label"><?= pt('Pending') ?></span><span class="value" style="color:var(--pyellow)"><?= number_format($pendingComm,0) ?> XAF</span></div>
             <div class="comm-row"><span class="label"><?= pt('Total Earned') ?></span><span class="value"><?= number_format($totalComm,0) ?> XAF</span></div>
         </div>
-        <div style="margin-top:12px">
-            <a href="<?= SITE_URL ?>/partner/commissions" class="btn-sm outline" style="width:100%;text-align:center;display:block"><?= pt('View details') ?> →</a>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px;">
+            <a href="<?= SITE_URL ?>/partner/earnings" class="btn-sm outline" style="width:100%;text-align:center;display:block">💰 <?= pt('Commission Earnings') ?> →</a>
+            <a href="<?= SITE_URL ?>/partner/payouts" class="btn-sm outline" style="width:100%;text-align:center;display:block">💸 <?= pt('Payout History') ?> →</a>
         </div>
     </div>
 
