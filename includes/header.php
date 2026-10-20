@@ -390,6 +390,7 @@ $cuRole = $cu['role'] ?? 'guest';
         <a href="<?= SITE_URL ?>/creator/campaigns"  class="nav-dd-item">📣 <?= t('Campaigns','Campagnes') ?></a>
         <div class="nav-dd-sep"></div>
         <?php endif; ?>
+        <a href="<?= SITE_URL ?>/customer-dashboard"      class="nav-dd-item">👤 <?= t('My Account','Mon Compte') ?></a>
         <a href="<?= SITE_URL ?>/dashboard"             class="nav-dd-item">🏠 <?= t('Dashboard','Tableau de bord') ?></a>
         <a href="<?= SITE_URL ?>/analytics"             class="nav-dd-item">📊 <?= t('Analytics','Analytiques') ?></a>
         <a href="<?= SITE_URL ?>/manage-announcements"  class="nav-dd-item">📢 <?= t('Announcements','Annonces') ?></a>
