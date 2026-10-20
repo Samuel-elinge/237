@@ -57,6 +57,42 @@ try {
     $activeAnnouncements = (int)$aq->fetchColumn();
 } catch (Exception $e) {}
 
+// Total followers across all approved listings
+$totalFollowers = 0;
+try {
+    $fq = db()->prepare("
+        SELECT COUNT(*) FROM user_follows uf
+        JOIN listings l ON l.id = uf.follow_id AND uf.follow_type='listing'
+        WHERE l.user_id=? AND uf.unfollowed_at IS NULL
+    ");
+    $fq->execute([$u['id']]);
+    $totalFollowers = (int)$fq->fetchColumn();
+} catch (Exception $e) {}
+
+// Profile completeness for first approved listing (quick check)
+$dashProfilePct = 0;
+$dashProfileLid = 0;
+if ($firstApprovedId) {
+    $dashProfileLid = $firstApprovedId;
+    foreach ($myListings as $ml) {
+        if ($ml['id'] === $firstApprovedId) {
+            $checks = [
+                !empty($ml['tagline']),
+                str_word_count(strip_tags($ml['description']??'')) >= 50,
+                !empty($ml['phone']) || !empty($ml['whatsapp'] ?? ''),
+                !empty($ml['services_json']) && $ml['services_json']!=='[]',
+                !empty($ml['keywords']),
+                !empty($ml['hours_json']) && $ml['hours_json']!=='{}',
+                !empty($ml['cta_url'] ?? ''),
+                !empty($ml['video_url'] ?? ''),
+            ];
+            $done = count(array_filter($checks));
+            $dashProfilePct = (int)round(($done + 1) / 9 * 100); // +1 for 'Business name' always true
+            break;
+        }
+    }
+}
+
 $pageTitle = t('My Dashboard — 237Biz', 'Mon Tableau de Bord — 237Biz');
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -133,6 +169,16 @@ require_once __DIR__ . '/includes/header.php';
             <strong><?= number_format($totalViews) ?></strong>
             <span><?= t('Total Views','Vues totales') ?></span>
           </div>
+          <div class="dash-stat">
+            <strong style="color:#56b4d3;"><?= number_format($totalFollowers) ?></strong>
+            <span><?= t('Followers','Abonnés') ?></span>
+          </div>
+          <?php if ($dashProfilePct > 0): ?>
+          <div class="dash-stat">
+            <strong style="color:<?= $dashProfilePct>=80?'#00A878':($dashProfilePct>=50?'var(--yellow)':'#e63946') ?>;"><?= $dashProfilePct ?>%</strong>
+            <span><?= t('Profile Score','Score profil') ?></span>
+          </div>
+          <?php endif; ?>
           <?php if ($hasFeatured): ?>
           <div class="dash-stat" style="<?= $pendingBookings ? 'border-color:rgba(206,17,38,0.4);' : '' ?>">
             <strong style="<?= $pendingBookings ? 'color:#e63946;' : '' ?>"><?= $pendingBookings ?></strong>

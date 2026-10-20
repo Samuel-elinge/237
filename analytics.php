@@ -43,9 +43,9 @@ if ($l) {
     // Total views (from listings table)
     $stats['views_total'] = (int)($l['views'] ?? 0);
 
-    // Views in period (from listing_views)
+    // Views in period (from marketplace_impressions, entity_type='listing')
     try {
-        $vp = db()->prepare("SELECT COUNT(*) FROM listing_views WHERE listing_id=? AND viewed_at >= {$rangeSQL}");
+        $vp = db()->prepare("SELECT COUNT(*) FROM marketplace_impressions WHERE entity_type='listing' AND entity_id=? AND created_at >= {$rangeSQL}");
         $vp->execute([$lid]);
         $stats['views_period'] = (int)$vp->fetchColumn();
     } catch (Exception $e) {}
@@ -103,15 +103,15 @@ if ($l) {
     } catch (Exception $e) {}
 }
 
-// ── Daily views for chart ─────────────────────────────────────────────────
+// ── Daily views for chart (from marketplace_impressions) ──────────────────
 $chartData = [];
 if ($l) {
     try {
         $cv = db()->prepare("
-            SELECT DATE(viewed_at) AS day, COUNT(*) AS cnt
-            FROM listing_views
-            WHERE listing_id=? AND viewed_at >= {$rangeSQL}
-            GROUP BY DATE(viewed_at)
+            SELECT DATE(created_at) AS day, COUNT(*) AS cnt
+            FROM marketplace_impressions
+            WHERE entity_type='listing' AND entity_id=? AND created_at >= {$rangeSQL}
+            GROUP BY DATE(created_at)
             ORDER BY day ASC
         ");
         $cv->execute([$lid]);
@@ -148,6 +148,40 @@ function profileScore(array $l): array {
     ];
 }
 $profile = $l ? profileScore($l) : ['checks'=>[],'score'=>0,'total'=>9,'pct'=>0];
+
+// ── Follower count ────────────────────────────────────────────────────────
+$followerCount = 0;
+$newFollowers  = 0;
+if ($l) {
+    try {
+        $fc = db()->prepare("SELECT COUNT(*) FROM user_follows WHERE follow_type='listing' AND follow_id=? AND unfollowed_at IS NULL");
+        $fc->execute([$lid]);
+        $followerCount = (int)$fc->fetchColumn();
+
+        $fn = db()->prepare("SELECT COUNT(*) FROM user_follows WHERE follow_type='listing' AND follow_id=? AND unfollowed_at IS NULL AND created_at >= {$rangeSQL}");
+        $fn->execute([$lid]);
+        $newFollowers = (int)$fn->fetchColumn();
+    } catch (Exception $e) {}
+}
+
+// ── Review summary ────────────────────────────────────────────────────────
+$reviewSummary = ['count'=>0,'avg'=>null,'stars'=>[]];
+if ($l) {
+    try {
+        $rs = db()->prepare("SELECT COUNT(*) AS cnt, ROUND(AVG(rating),1) AS avg_r FROM reviews WHERE listing_id=? AND status='approved'");
+        $rs->execute([$lid]);
+        $rsRow = $rs->fetch();
+        $reviewSummary['count'] = (int)($rsRow['cnt'] ?? 0);
+        $reviewSummary['avg']   = $rsRow['avg_r'] ? (float)$rsRow['avg_r'] : null;
+
+        // Distribution per star (1-5)
+        $rd = db()->prepare("SELECT rating, COUNT(*) AS n FROM reviews WHERE listing_id=? AND status='approved' GROUP BY rating");
+        $rd->execute([$lid]);
+        $dist = [];
+        foreach ($rd->fetchAll() as $row) $dist[(int)$row['rating']] = (int)$row['n'];
+        for ($s=5; $s>=1; $s--) $reviewSummary['stars'][$s] = $dist[$s] ?? 0;
+    } catch (Exception $e) {}
+}
 
 // ── Active announcements ──────────────────────────────────────────────────
 $announcements = [];
@@ -279,6 +313,16 @@ require_once __DIR__ . '/includes/header.php';
     <div class="stat-main" style="color:#c77dff;"><?= number_format($stats['events_upcoming']) ?></div>
     <div class="stat-sub"><?= number_format($stats['event_impressions']) ?> <?= t('views this period','vues cette période') ?></div>
   </div>
+  <div class="stat-card">
+    <div class="stat-label">👥 <?= t('Followers','Abonnés') ?></div>
+    <div class="stat-main" style="color:#56b4d3;"><?= number_format($followerCount) ?></div>
+    <div class="stat-sub">+<?= number_format($newFollowers) ?> <?= t('in last','dans les derniers') ?> <?= $range ?> <?= t('days','jours') ?></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">⭐ <?= t('Reviews','Avis') ?></div>
+    <div class="stat-main" style="color:#fcd116;"><?= $reviewSummary['avg'] !== null ? number_format($reviewSummary['avg'],1) : '—' ?></div>
+    <div class="stat-sub"><?= number_format($reviewSummary['count']) ?> <?= t('approved reviews','avis approuvés') ?></div>
+  </div>
 </div>
 
 <div class="an-cols">
@@ -359,6 +403,39 @@ require_once __DIR__ . '/includes/header.php';
   <?php endif; ?>
 </div>
 
+<!-- Review summary -->
+<?php if ($reviewSummary['count'] > 0 || true): ?>
+<div class="chart-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+    <div style="font-size:14px;font-weight:700;">⭐ <?= t('Review Summary','Résumé des avis') ?></div>
+    <a href="<?= SITE_URL ?>/manage-reviews?listing_id=<?= $lid ?>" style="font-size:12px;color:var(--green);"><?= t('Manage reviews →','Gérer les avis →') ?></a>
+  </div>
+  <?php if ($reviewSummary['count'] === 0): ?>
+  <p style="font-size:13px;color:var(--muted);"><?= t('No approved reviews yet.','Aucun avis approuvé pour l\'instant.') ?></p>
+  <?php else: ?>
+  <div style="display:flex;align-items:center;gap:20px;margin-bottom:14px;flex-wrap:wrap;">
+    <div style="text-align:center;">
+      <div style="font-size:2.5rem;font-weight:900;font-family:'Fraunces',serif;color:#fcd116;line-height:1;"><?= number_format($reviewSummary['avg'],1) ?></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;"><?= t('out of 5','sur 5') ?></div>
+    </div>
+    <div style="flex:1;min-width:160px;">
+      <?php foreach ($reviewSummary['stars'] as $star => $n): ?>
+      <?php $pct = $reviewSummary['count'] > 0 ? (int)round($n/$reviewSummary['count']*100) : 0; ?>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+        <span style="font-size:11px;color:var(--muted);width:14px;text-align:right;"><?= $star ?>★</span>
+        <div style="flex:1;height:7px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden;">
+          <div style="height:100%;width:<?= $pct ?>%;background:#fcd116;border-radius:99px;"></div>
+        </div>
+        <span style="font-size:11px;color:var(--muted);width:24px;"><?= $n ?></span>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+  <div style="font-size:12px;color:var(--muted);"><?= number_format($reviewSummary['count']) ?> <?= t('approved review(s)','avis approuvé(s)') ?></div>
+  <?php endif; ?>
+</div>
+<?php endif; ?>
+
 </div><!-- /main col -->
 
 <!-- Sidebar -->
@@ -380,6 +457,20 @@ require_once __DIR__ . '/includes/header.php';
     <div style="font-size:10.5px;color:var(--muted);text-align:center;word-break:break-all;"><?= $listingUrl ?></div>
   </div>
 
+  <!-- Followers mini widget -->
+  <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px;margin-top:14px;">
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:rgba(255,255,255,0.8);">👥 <?= t('Followers','Abonnés') ?></div>
+    <div style="display:flex;align-items:flex-end;gap:6px;margin-bottom:6px;">
+      <span style="font-size:2rem;font-weight:900;font-family:'Fraunces',serif;color:#56b4d3;line-height:1;"><?= number_format($followerCount) ?></span>
+      <span style="font-size:12px;color:var(--muted);padding-bottom:3px;"><?= t('total','total') ?></span>
+    </div>
+    <?php if ($newFollowers > 0): ?>
+    <div style="font-size:12px;color:#00A878;">+<?= number_format($newFollowers) ?> <?= t('new this period','nouveaux cette période') ?></div>
+    <?php else: ?>
+    <div style="font-size:12px;color:var(--muted);"><?= t('No new followers this period','Aucun nouvel abonné cette période') ?></div>
+    <?php endif; ?>
+  </div>
+
   <!-- Quick actions -->
   <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px;margin-top:14px;">
     <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:rgba(255,255,255,0.8);"><?= t('Quick Actions','Actions rapides') ?></div>
@@ -389,6 +480,7 @@ require_once __DIR__ . '/includes/header.php';
       <?php if (!empty($l['booking_enabled'])): ?>
       <a href="<?= SITE_URL ?>/manage-bookings?listing_id=<?= $lid ?>" style="font-size:13px;color:var(--green);text-decoration:none;">📅 <?= t('Manage Bookings','Gérer les réservations') ?></a>
       <?php endif; ?>
+      <a href="<?= SITE_URL ?>/manage-reviews?listing_id=<?= $lid ?>" style="font-size:13px;color:var(--green);text-decoration:none;">⭐ <?= t('Manage Reviews','Gérer les avis') ?></a>
       <a href="<?= SITE_URL ?>/partner/offers?listing_id=<?= $lid ?>" style="font-size:13px;color:var(--green);text-decoration:none;">🏷️ <?= t('Manage Offers','Gérer les offres') ?></a>
       <a href="<?= SITE_URL ?>/partner/events?listing_id=<?= $lid ?>" style="font-size:13px;color:var(--green);text-decoration:none;">🎟️ <?= t('Manage Events','Gérer les événements') ?></a>
       <a href="<?= SITE_URL ?>/listing/<?= e($l['slug']) ?>" style="font-size:13px;color:var(--green);text-decoration:none;" target="_blank">👁 <?= t('View Live Listing','Voir l\'annonce en ligne') ?></a>
