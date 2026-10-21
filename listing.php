@@ -656,7 +656,7 @@ require_once __DIR__ . '/includes/header.php';
         <!-- Book Now CTA — paid listings with booking enabled -->
         <?php if ($bookingEnabled): ?>
         <div class="listing-widget" style="background:rgba(0,168,120,0.06);border-color:rgba(0,168,120,0.35);">
-          <a href="<?= SITE_URL ?>/booking?listing=<?= e($l['slug']) ?>"
+          <a href="<?= SITE_URL ?>/booking?slug=<?= e($l['slug']) ?>"
              class="btn btn-primary btn-full"
              style="font-size:1rem;padding:0.85rem 1rem;font-weight:700;letter-spacing:0.02em;">
             📅 <?= t('Book Now','Réserver maintenant') ?>
