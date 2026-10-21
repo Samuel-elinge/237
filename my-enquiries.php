@@ -229,8 +229,6 @@ require_once __DIR__ . '/includes/header.php';
 <section class="page-section" style="padding-top:1.25rem;">
 <div class="enq-wrap">
 
-<?= flash() ?>
-
 <!-- Listing selector + status tabs -->
 <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
   <?php if (count($myListings) > 1): ?>
