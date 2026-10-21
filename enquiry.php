@@ -33,14 +33,43 @@ if ($errors) {
     redirect($_SERVER['HTTP_REFERER'] ?? SITE_URL . '/listings');
 }
 
+// ── Rate-limit check (Phase 4): max 3 enquiries per IP per listing per hour ─
+$ipHash = hash('sha256', $_SERVER['REMOTE_ADDR'] ?? '');
+try {
+    db()->prepare("DELETE FROM enquiry_rate_limit WHERE submitted_at < DATE_SUB(NOW(), INTERVAL 1 HOUR)")->execute();
+    $rlCount = (int)db()->prepare("SELECT COUNT(*) FROM enquiry_rate_limit WHERE ip_hash=? AND listing_id=?")->execute([$ipHash, $listingId]) ? 0 : 0;
+    $rlSt = db()->prepare("SELECT COUNT(*) FROM enquiry_rate_limit WHERE ip_hash=? AND listing_id=?");
+    $rlSt->execute([$ipHash, $listingId]);
+    $rlCount = (int)$rlSt->fetchColumn();
+    if ($rlCount >= 3) {
+        flash('error', t('Too many enquiries sent. Please wait before sending another.','Trop de demandes envoyées. Veuillez patienter avant d\'en envoyer une autre.'));
+        redirect($_SERVER['HTTP_REFERER'] ?? SITE_URL . '/listings');
+    }
+} catch (Exception $e) {} // table may not exist yet
+
 // Save to DB
 try {
-    db()->prepare("INSERT INTO listing_enquiries (listing_id,sender_name,sender_email,sender_phone,message) VALUES (?,?,?,?,?)")
-         ->execute([$listingId, $senderName, $senderEmail, $senderPhone ?: null, $message]);
-    $enquiryId = db()->lastInsertId();
+    $monthRef = strtoupper(date('Ym'));
+    db()->prepare("
+        INSERT INTO listing_enquiries
+            (listing_id, sender_name, sender_email, sender_phone, message, crm_status)
+        VALUES (?,?,?,?,?,'new')
+    ")->execute([$listingId, $senderName, $senderEmail, $senderPhone ?: null, $message]);
+    $enquiryId = (int)db()->lastInsertId();
+    // Set auto-ref ENQ-YYYYMM-XXXX
+    if ($enquiryId) {
+        db()->prepare("UPDATE listing_enquiries SET ref=? WHERE id=? AND ref IS NULL")
+             ->execute(["ENQ-{$monthRef}-" . str_pad($enquiryId, 4, '0', STR_PAD_LEFT), $enquiryId]);
+    }
 } catch (Exception $e) {
-    // Table may not exist yet
     $enquiryId = 0;
+}
+
+// Log rate-limit row
+if ($enquiryId) {
+    try {
+        db()->prepare("INSERT INTO enquiry_rate_limit (ip_hash, listing_id) VALUES (?,?)")->execute([$ipHash, $listingId]);
+    } catch (Exception $e) {}
 }
 
 // ── Automation: tag listing owner as has-enquiry ──────────
