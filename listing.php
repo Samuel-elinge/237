@@ -546,13 +546,13 @@ require_once __DIR__ . '/includes/header.php';
           <?php if ($l['phone']): ?>
             <div class="contact-item">
               <span class="contact-icon">📞</span>
-              <a href="tel:<?= e($l['phone']) ?>" style="color:var(--muted);"><?= e($l['phone']) ?></a>
+              <a href="tel:<?= e($l['phone']) ?>" class="track-click" data-subtype="phone_click" style="color:var(--muted);"><?= e($l['phone']) ?></a>
             </div>
           <?php endif; ?>
           <?php if ($l['whatsapp']): ?>
             <div class="contact-item">
               <span class="contact-icon">💬</span>
-              <a href="https://wa.me/<?= e(preg_replace('/\D/','',$l['whatsapp'])) ?>" target="_blank" style="color:#25D366;">WhatsApp</a>
+              <a href="https://wa.me/<?= e(preg_replace('/\D/','',$l['whatsapp'])) ?>" target="_blank" class="track-click" data-subtype="whatsapp_click" style="color:#25D366;">WhatsApp</a>
             </div>
           <?php endif; ?>
           <?php if ($l['email']): ?>
@@ -568,7 +568,7 @@ require_once __DIR__ . '/includes/header.php';
           <?php if ($l['website']): ?>
             <div class="contact-item">
               <span class="contact-icon">🌐</span>
-              <a href="<?= e($l['website']) ?>" target="_blank" rel="noopener" style="color:var(--green);">
+              <a href="<?= e($l['website']) ?>" target="_blank" rel="noopener" class="track-click" data-subtype="website_click" style="color:var(--green);">
                 <?= e(parse_url($l['website'], PHP_URL_HOST) ?? $l['website']) ?>
               </a>
             </div>
@@ -835,5 +835,29 @@ require_once __DIR__ . '/includes/header.php';
 })();
 </script>
 <?php endif; ?>
+
+<script>
+(function(){
+  var LID = <?= (int)$l['id'] ?>;
+  var TRACK_URL = '<?= SITE_URL ?>/api/track';
+  document.querySelectorAll('.track-click').forEach(function(el) {
+    el.addEventListener('click', function() {
+      var sub = el.getAttribute('data-subtype') || '';
+      if (!sub) return;
+      fetch(TRACK_URL, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          entity_type: 'listing',
+          entity_id: LID,
+          page_context: 'listing',
+          event_subtype: sub
+        }),
+        keepalive: true
+      }).catch(function(){});
+    });
+  });
+})();
+</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

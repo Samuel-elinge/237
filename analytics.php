@@ -103,6 +103,86 @@ if ($l) {
     } catch (Exception $e) {}
 }
 
+// ── Click tracking metrics (Phase 4: event_subtype in marketplace_impressions) ──
+$clicks = ['phone'=>0,'whatsapp'=>0,'website'=>0,'offer'=>0];
+$prevClicks = ['phone'=>0,'whatsapp'=>0,'website'=>0,'offer'=>0];
+if ($l) {
+    try {
+        $subtypeMap = ['phone'=>'phone_click','whatsapp'=>'whatsapp_click','website'=>'website_click','offer'=>'offer_click'];
+        foreach ($subtypeMap as $key => $subtype) {
+            $cq = db()->prepare("SELECT COUNT(*) FROM marketplace_impressions WHERE entity_type='listing' AND entity_id=? AND event_subtype=? AND created_at >= {$rangeSQL}");
+            $cq->execute([$lid, $subtype]);
+            $clicks[$key] = (int)$cq->fetchColumn();
+            // Prior period for comparison
+            $prevSQL = "DATE_SUB({$rangeSQL}, INTERVAL {$range} DAY)";
+            $pq = db()->prepare("SELECT COUNT(*) FROM marketplace_impressions WHERE entity_type='listing' AND entity_id=? AND event_subtype=? AND created_at >= $prevSQL AND created_at < {$rangeSQL}");
+            $pq->execute([$lid, $subtype]);
+            $prevClicks[$key] = (int)$pq->fetchColumn();
+        }
+    } catch (Exception $e) {}
+}
+$totalClicks = array_sum($clicks);
+$prevTotalClicks = array_sum($prevClicks);
+
+// ── Prior period views for comparison ────────────────────────────────────────
+$prevViewsPeriod = 0;
+$prevEnqPeriod   = 0;
+if ($l) {
+    try {
+        $prevRangeSQL = "DATE_SUB(DATE_SUB(NOW(), INTERVAL {$range} DAY), INTERVAL {$range} DAY)";
+        $endPrevSQL   = "DATE_SUB(NOW(), INTERVAL {$range} DAY)";
+        $pvq = db()->prepare("SELECT COUNT(*) FROM marketplace_impressions WHERE entity_type='listing' AND entity_id=? AND (event_subtype IS NULL OR event_subtype='') AND created_at >= $prevRangeSQL AND created_at < $endPrevSQL");
+        $pvq->execute([$lid]);
+        $prevViewsPeriod = (int)$pvq->fetchColumn();
+
+        $peq = db()->prepare("SELECT COUNT(*) FROM listing_enquiries WHERE listing_id=? AND created_at >= $prevRangeSQL AND created_at < $endPrevSQL");
+        $peq->execute([$lid]);
+        $prevEnqPeriod = (int)$peq->fetchColumn();
+    } catch (Exception $e) {}
+}
+
+// ── Enquiry CRM status breakdown (Phase 4 columns) ────────────────────────
+$enquiryStatuses = ['new'=>0,'contacted'=>0,'quoted'=>0,'won'=>0,'lost'=>0];
+$wonInPeriod = 0;
+if ($l) {
+    try {
+        $esq = db()->prepare("SELECT crm_status, COUNT(*) as n FROM listing_enquiries WHERE listing_id=? GROUP BY crm_status");
+        $esq->execute([$lid]);
+        foreach ($esq->fetchAll() as $row) {
+            $s = $row['crm_status'] ?? 'new';
+            $enquiryStatuses[$s] = (int)$row['n'];
+        }
+        $wonQ = db()->prepare("SELECT COUNT(*) FROM listing_enquiries WHERE listing_id=? AND crm_status='won' AND won_at >= {$rangeSQL}");
+        $wonQ->execute([$lid]);
+        $wonInPeriod = (int)$wonQ->fetchColumn();
+    } catch (Exception $e) {
+        // crm_status column not yet added — migration pending
+    }
+}
+$totalEnquiriesAll = array_sum($enquiryStatuses);
+$conversionRate = ($totalEnquiriesAll > 0) ? round($enquiryStatuses['won'] / $totalEnquiriesAll * 100, 1) : 0;
+
+// ── Growth recommendations ────────────────────────────────────────────────
+$growthRecs = [];
+if ($l) {
+    try {
+        $grq = db()->prepare("SELECT * FROM growth_recommendations WHERE listing_id=? AND rec_status='open' ORDER BY priority ASC LIMIT 5");
+        $grq->execute([$lid]);
+        $growthRecs = $grq->fetchAll();
+    } catch (Exception $e) {}
+}
+
+// ── Helper: trend badge ───────────────────────────────────────────────────
+function trendBadge(int $now, int $prev): string {
+    if ($prev === 0 && $now === 0) return '<span style="font-size:11px;color:var(--muted);">— no data</span>';
+    if ($prev === 0) return '<span style="font-size:11px;color:#00A878;">▲ new</span>';
+    $diff = $now - $prev;
+    $pct  = (int)round(abs($diff) / $prev * 100);
+    if ($diff > 0) return "<span style='font-size:11px;color:#00A878;'>▲ +{$pct}%</span>";
+    if ($diff < 0) return "<span style='font-size:11px;color:#e63946;'>▼ -{$pct}%</span>";
+    return '<span style="font-size:11px;color:var(--muted);">→ 0%</span>';
+}
+
 // ── Daily views for chart (from marketplace_impressions) ──────────────────
 $chartData = [];
 if ($l) {
@@ -286,12 +366,12 @@ require_once __DIR__ . '/includes/header.php';
   <div class="stat-card">
     <div class="stat-label">👁 <?= t('Total Views','Vues totales') ?></div>
     <div class="stat-main" style="color:#00A878;"><?= number_format($stats['views_total']) ?></div>
-    <div class="stat-sub"><?= number_format($stats['views_period']) ?> <?= t('in last','dans les derniers') ?> <?= $range ?> <?= t('days','jours') ?></div>
+    <div class="stat-sub"><?= number_format($stats['views_period']) ?> <?= t('this period','cette période') ?> <?= trendBadge($stats['views_period'], $prevViewsPeriod) ?></div>
   </div>
   <div class="stat-card">
     <div class="stat-label">📬 <?= t('Enquiries','Demandes') ?></div>
     <div class="stat-main" style="color:var(--yellow);"><?= number_format($stats['enquiries_total']) ?></div>
-    <div class="stat-sub"><?= number_format($stats['enquiries_period']) ?> <?= t('this period','cette période') ?></div>
+    <div class="stat-sub"><?= number_format($stats['enquiries_period']) ?> <?= t('this period','cette période') ?> <?= trendBadge($stats['enquiries_period'], $prevEnqPeriod) ?></div>
   </div>
   <div class="stat-card">
     <div class="stat-label">📅 <?= t('Bookings','Réservations') ?></div>
@@ -325,6 +405,32 @@ require_once __DIR__ . '/includes/header.php';
   </div>
 </div>
 
+<!-- Phase 4: Click tracking cards -->
+<?php if ($totalClicks > 0 || true): ?>
+<div class="an-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:20px;">
+  <div class="stat-card" style="border-color:rgba(0,168,120,0.25);">
+    <div class="stat-label">📞 <?= t('Phone Clicks','Clics téléphone') ?></div>
+    <div class="stat-main" style="color:#00A878;font-size:1.6rem;"><?= number_format($clicks['phone']) ?></div>
+    <div class="stat-sub"><?= trendBadge($clicks['phone'], $prevClicks['phone']) ?></div>
+  </div>
+  <div class="stat-card" style="border-color:rgba(37,211,102,0.25);">
+    <div class="stat-label">💬 WhatsApp</div>
+    <div class="stat-main" style="color:#25D366;font-size:1.6rem;"><?= number_format($clicks['whatsapp']) ?></div>
+    <div class="stat-sub"><?= trendBadge($clicks['whatsapp'], $prevClicks['whatsapp']) ?></div>
+  </div>
+  <div class="stat-card" style="border-color:rgba(138,180,248,0.25);">
+    <div class="stat-label">🌐 <?= t('Website Clicks','Clics site web') ?></div>
+    <div class="stat-main" style="color:#8ab4f8;font-size:1.6rem;"><?= number_format($clicks['website']) ?></div>
+    <div class="stat-sub"><?= trendBadge($clicks['website'], $prevClicks['website']) ?></div>
+  </div>
+  <div class="stat-card" style="border-color:rgba(244,162,97,0.25);">
+    <div class="stat-label">🏷️ <?= t('Offer Clicks','Clics offres') ?></div>
+    <div class="stat-main" style="color:#f4a261;font-size:1.6rem;"><?= number_format($clicks['offer']) ?></div>
+    <div class="stat-sub"><?= trendBadge($clicks['offer'], $prevClicks['offer']) ?></div>
+  </div>
+</div>
+<?php endif; ?>
+
 <div class="an-cols">
 <div>
 
@@ -354,6 +460,67 @@ require_once __DIR__ . '/includes/header.php';
   <?php if (array_sum($chartData) === 0): ?>
   <p style="font-size:13px;color:var(--muted);text-align:center;margin-top:8px;"><?= t('No views recorded in this period yet.','Aucune vue enregistrée dans cette période.') ?></p>
   <?php endif; ?>
+</div>
+<?php endif; ?>
+
+<!-- Phase 4: Enquiry CRM Funnel -->
+<?php if ($totalEnquiriesAll > 0): ?>
+<div class="chart-card" style="margin-bottom:20px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+    <div style="font-size:14px;font-weight:700;">📬 <?= t('Enquiry Funnel','Entonnoir demandes') ?></div>
+    <a href="<?= SITE_URL ?>/my-enquiries?listing_id=<?= $lid ?>" style="font-size:12px;color:var(--green);"><?= t('Manage Enquiries →','Gérer les demandes →') ?></a>
+  </div>
+  <?php
+  $funnelSteps = [
+    'new'       => ['label'=>t('New','Nouveau'), 'color'=>'#56b4d3', 'icon'=>'🆕'],
+    'contacted' => ['label'=>t('Contacted','Contacté'), 'color'=>'#00A878', 'icon'=>'📞'],
+    'quoted'    => ['label'=>t('Quoted','Devis envoyé'), 'color'=>'#f4a261', 'icon'=>'📋'],
+    'won'       => ['label'=>t('Won','Gagné'), 'color'=>'#00A878', 'icon'=>'✅'],
+    'lost'      => ['label'=>t('Lost','Perdu'), 'color'=>'#e63946', 'icon'=>'❌'],
+  ];
+  $maxFunnel = max(array_values($enquiryStatuses) ?: [1]);
+  $maxFunnel = max($maxFunnel, 1);
+  foreach ($funnelSteps as $status => $step):
+    $n = $enquiryStatuses[$status] ?? 0;
+    $pct = $totalEnquiriesAll > 0 ? (int)round($n/$totalEnquiriesAll*100) : 0;
+  ?>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+    <span style="font-size:13px;width:18px;"><?= $step['icon'] ?></span>
+    <span style="font-size:12px;color:var(--muted);width:80px;flex-shrink:0;"><?= $step['label'] ?></span>
+    <div style="flex:1;height:8px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden;">
+      <div style="height:100%;width:<?= $pct ?>%;background:<?= $step['color'] ?>;border-radius:99px;transition:width .4s;"></div>
+    </div>
+    <span style="font-size:12px;color:rgba(255,255,255,0.7);width:36px;text-align:right;flex-shrink:0;"><?= $n ?></span>
+    <span style="font-size:11px;color:var(--muted);width:32px;text-align:right;flex-shrink:0;"><?= $pct ?>%</span>
+  </div>
+  <?php endforeach; ?>
+  <?php if ($conversionRate > 0): ?>
+  <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);font-size:12.5px;color:#00A878;font-weight:600;">
+    🏆 <?= t('Conversion rate','Taux de conversion') ?>: <?= $conversionRate ?>%
+    <?php if ($wonInPeriod > 0): ?> · <?= $wonInPeriod ?> <?= t('won this period','gagnés cette période') ?><?php endif; ?>
+  </div>
+  <?php endif; ?>
+</div>
+<?php endif; ?>
+
+<!-- Phase 4: Growth Recommendations -->
+<?php if (!empty($growthRecs)): ?>
+<div class="chart-card" style="margin-bottom:20px;">
+  <div style="font-size:14px;font-weight:700;margin-bottom:12px;">💡 <?= t('Growth Tips','Conseils de croissance') ?></div>
+  <?php foreach ($growthRecs as $rec):
+    $title  = $isFr ? $rec['title_fr'] : $rec['title_en'];
+    $body   = $isFr ? ($rec['body_fr'] ?? '') : ($rec['body_en'] ?? '');
+    $actUrl = $rec['action_url'] ?? '';
+  ?>
+  <div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:flex-start;gap:10px;">
+    <span style="font-size:1.1rem;margin-top:1px;">💡</span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);"><?= e($title) ?></div>
+      <?php if ($body): ?><div style="font-size:12px;color:var(--muted);margin-top:3px;"><?= e($body) ?></div><?php endif; ?>
+      <?php if ($actUrl): ?><a href="<?= e($actUrl) ?>" style="font-size:11.5px;color:var(--green);margin-top:4px;display:inline-block;"><?= t('Take action →','Agir →') ?></a><?php endif; ?>
+    </div>
+  </div>
+  <?php endforeach; ?>
 </div>
 <?php endif; ?>
 
