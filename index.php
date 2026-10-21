@@ -117,6 +117,36 @@ $pageDesc  = t(
     "Découvrez, connectez et grandissez avec le Hub des Entreprises du Cameroun."
 );
 
+// ── Structured data (JSON-LD) ─────────────────────────────────────────────────
+$jsonLd = [
+    '@context' => 'https://schema.org',
+    '@graph'   => [
+        [
+            '@type'  => 'WebSite',
+            '@id'    => SITE_URL . '/#website',
+            'url'    => SITE_URL . '/',
+            'name'   => '237Biz',
+            'description' => 'Cameroon\'s Business Hub — discover, connect and grow.',
+            'inLanguage'  => ['en-CM', 'fr-CM'],
+            'potentialAction' => [
+                '@type'       => 'SearchAction',
+                'target'      => ['@type' => 'EntryPoint', 'urlTemplate' => SITE_URL . '/listings?q={search_term_string}'],
+                'query-input' => 'required name=search_term_string',
+            ],
+        ],
+        [
+            '@type'     => 'Organization',
+            '@id'       => SITE_URL . '/#organization',
+            'name'      => '237Biz',
+            'url'       => SITE_URL . '/',
+            'logo'      => ['@type' => 'ImageObject', 'url' => SITE_URL . '/assets/images/logo.png'],
+            'sameAs'    => [],
+            'areaServed' => ['@type' => 'Country', 'name' => 'Cameroon'],
+        ],
+    ],
+];
+$extraHead = '<script type="application/ld+json">' . json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>';
+
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -702,7 +732,11 @@ require_once __DIR__ . '/includes/header.php';
         <div class="event-date-band">
           <div class="event-day">
             <div class="num"><?= $dt->format('d') ?></div>
-            <div class="mon"><?= $isFr ? strftime('%b', $dt->getTimestamp()) : $dt->format('M') ?></div>
+            <?php
+              $frMonths = ['','jan','fév','mar','avr','mai','juin','juil','aoû','sep','oct','nov','déc'];
+              $monLabel = $isFr ? $frMonths[(int)$dt->format('n')] : $dt->format('M');
+            ?>
+            <div class="mon"><?= $monLabel ?></div>
           </div>
           <div class="event-meta-row">
             <div class="event-time">🕐 <?= $dt->format('H:i') ?></div>
