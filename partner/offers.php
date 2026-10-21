@@ -58,7 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $startsAt = $_POST['starts_at'] ?? date('Y-m-d H:i:s');
         $expiresAt= $_POST['expires_at'] !== '' ? $_POST['expires_at'] : null;
         $terms    = trim($_POST['terms'] ?? '');
-        $maxRed   = $_POST['max_redemptions'] !== '' ? (int)$_POST['max_redemptions'] : null;
+        $maxRed          = $_POST['max_redemptions'] !== '' ? (int)$_POST['max_redemptions'] : null;
+        $maxClaimsPerUser = isset($_POST['max_claims_per_user']) && $_POST['max_claims_per_user'] !== '' ? max(1, (int)$_POST['max_claims_per_user']) : 1;
 
         $validTypes = ['percent_off','fixed_off','bogo','free_item','bundle'];
         if (!$title)                              { flash('error', t('Title is required.','Le titre est requis.')); }
@@ -96,13 +97,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         INSERT INTO offers
                             (listing_id, title, title_fr, slug, description, description_fr,
                              offer_type, discount_value, original_price, promo_code, image,
-                             starts_at, expires_at, status, terms, max_redemptions)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',?,?)
+                             starts_at, expires_at, status, terms, max_redemptions, max_claims_per_user)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',?,?,?)
                     ");
                     $st->execute([
                         $lid, $title, $titleFr ?: null, $slug, $desc ?: null, $descFr ?: null,
                         $offerType, $discVal > 0 ? $discVal : null, $origPx, $promoCode ?: null,
-                        $image, $startsAt, $expiresAt, $terms ?: null, $maxRed
+                        $image, $startsAt, $expiresAt, $terms ?: null, $maxRed, $maxClaimsPerUser
                     ]);
                     flash('success', t('Offer submitted for review — it will go live once approved.','Offre soumise pour révision — elle sera publiée une fois approuvée.'));
                 } else {
@@ -115,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             UPDATE offers
                             SET title=?, title_fr=?, description=?, description_fr=?,
                                 offer_type=?, discount_value=?, original_price=?, promo_code=?,
-                                starts_at=?, expires_at=?, terms=?, max_redemptions=?,
+                                starts_at=?, expires_at=?, terms=?, max_redemptions=?, max_claims_per_user=?,
                                 image = COALESCE(?,image),
                                 status = IF(status IN ('rejected'), 'pending', status),
                                 updated_at=NOW()
@@ -124,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $st->execute([
                             $title, $titleFr ?: null, $desc ?: null, $descFr ?: null,
                             $offerType, $discVal > 0 ? $discVal : null, $origPx, $promoCode ?: null,
-                            $startsAt, $expiresAt, $terms ?: null, $maxRed,
+                            $startsAt, $expiresAt, $terms ?: null, $maxRed, $maxClaimsPerUser,
                             $image,
                             $oid, $lid
                         ]);
@@ -394,6 +395,11 @@ $statusLabels = [
             <label><?= t('Max Redemptions','Utilisations Maximales') ?></label>
             <input type="number" name="max_redemptions" value="<?= htmlspecialchars($editing['max_redemptions'] ?? '', ENT_QUOTES, 'UTF-8') ?>" min="1" placeholder="100">
             <span class="po-form-hint"><?= t('Leave blank for unlimited.','Laisser vide pour illimité.') ?></span>
+          </div>
+          <div class="po-form-group">
+            <label><?= t('Codes Per Customer','Codes par Client') ?></label>
+            <input type="number" name="max_claims_per_user" value="<?= htmlspecialchars($editing['max_claims_per_user'] ?? '1', ENT_QUOTES, 'UTF-8') ?>" min="1" max="10" placeholder="1">
+            <span class="po-form-hint"><?= t('How many codes one customer can claim (default: 1).','Combien de codes un client peut obtenir (défaut : 1).') ?></span>
           </div>
           <!-- Image -->
           <div class="po-form-group">
