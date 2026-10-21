@@ -656,6 +656,52 @@ require_once __DIR__ . '/includes/header.php';
   </div>
 </section>
 
+<!-- ══ NOTIFICATION SUBSCRIPTION WIDGET ════════════════ -->
+<section class="hp-section" style="background:rgba(0,168,120,0.04);border-top:1px solid rgba(0,168,120,0.12) !important;">
+  <div class="container">
+    <div style="max-width:560px;margin:0 auto;text-align:center">
+      <div style="font-size:2rem;margin-bottom:0.75rem">🔔</div>
+      <div class="section-label" style="margin-bottom:0.5rem">
+        <?= t('STAY INFORMED','RESTEZ INFORMÉ') ?>
+      </div>
+      <h2 class="section-title" style="margin-bottom:0.5rem">
+        <?= t('Get offers &amp; events in your inbox','Recevez les offres et événements par e-mail') ?>
+      </h2>
+      <p class="section-sub" style="margin-bottom:1.75rem">
+        <?= t('Subscribe to 237biz email updates — special offers from local businesses and upcoming events near you. Free. Unsubscribe any time.','Abonnez-vous aux actualités 237biz — offres spéciales des entreprises locales et événements à venir. Gratuit. Désabonnez-vous à tout moment.') ?>
+      </p>
+
+      <!-- Inline mini subscribe form -->
+      <form method="POST" action="/notify-subscribe.php"
+            style="display:flex;gap:0.6rem;flex-wrap:wrap;justify-content:center;margin-bottom:1rem"
+            id="hp-notify-form">
+        <?= csrf() ?>
+        <input type="hidden" name="lang"             value="<?= t('en','fr') ?>">
+        <input type="hidden" name="source"           value="homepage">
+        <input type="hidden" name="interests[]"      value="special_offers">
+        <input type="hidden" name="interests[]"      value="events">
+        <input
+          type="email"
+          name="email"
+          placeholder="<?= t('Your email address','Votre adresse e-mail') ?>"
+          required
+          autocomplete="email"
+          maxlength="254"
+          style="flex:1;min-width:220px;max-width:300px;padding:0.75rem 1rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.9rem;"
+        >
+        <button type="submit"
+                style="padding:0.75rem 1.5rem;background:#00A878;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.9rem;white-space:nowrap;">
+          <?= t('Subscribe free →','S\'abonner →') ?>
+        </button>
+      </form>
+      <p style="font-size:0.75rem;color:rgba(255,255,255,0.35)">
+        <?= t('Or <a href="/notify-subscribe.php" style="color:rgba(255,255,255,0.45)">choose specific updates</a>',
+               'Ou <a href="/notify-subscribe.php?lang=fr" style="color:rgba(255,255,255,0.45)">choisir les mises à jour</a>') ?>
+      </p>
+    </div>
+  </div>
+</section>
+
 <!-- ══ FOOTER CTA ══════════════════════════════════════ -->
 <section style="background:linear-gradient(135deg,#08472F,#081C10);padding:70px 0;text-align:center;">
   <div class="container">
