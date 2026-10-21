@@ -143,8 +143,8 @@ require_once __DIR__ . '/includes/header.php';
       </h1>
       <p style="color:var(--muted);font-size:0.875rem;margin-top:0.35rem;">
         <?= $mode === 'register'
-            ? t('List your business free. No spam, no hidden fees.','Listez votre entreprise gratuitement. Sans spam ni frais cachés.')
-            : t('Sign in to manage your listings and orders.','Connectez-vous pour gérer vos annonces et commandes.') ?>
+            ? t('Free account — book appointments, claim offers &amp; leave reviews.','Compte gratuit — réservez, profitez des offres et laissez des avis.')
+            : t('Sign in to book appointments, use offers &amp; manage your account.','Connectez-vous pour réserver, utiliser vos offres et gérer votre compte.') ?>
       </p>
     </div>
 
@@ -178,6 +178,13 @@ require_once __DIR__ . '/includes/header.php';
         <?= t('Register','S\'inscrire') ?>
       </a>
     </div>
+
+    <?php if ($mode === 'register'): ?>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.8rem;color:var(--muted);line-height:1.6;">
+        <?= t('🗓️ <strong>Book appointments</strong> · 🎟️ <strong>Claim discount offers</strong> · ⭐ <strong>Write reviews</strong> — all with one free account.',
+              '🗓️ <strong>Réserver</strong> · 🎟️ <strong>Profiter des offres</strong> · ⭐ <strong>Laisser des avis</strong> — avec un seul compte gratuit.') ?>
+      </div>
+    <?php endif; ?>
 
     <?php foreach ($errors as $err): ?>
       <div class="flash flash-error" style="margin-bottom:0.75rem;margin-top:0;"><?= e($err) ?></div>
