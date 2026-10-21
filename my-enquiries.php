@@ -295,7 +295,7 @@ $tabLabels = [
     <div style="flex:1;min-width:0;">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
         <span class="enq-badge <?= $sl['class'] ?>"><?= $sl['label'] ?></span>
-        <span style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);"><?= e($enq['name'] ?? t('Anonymous','Anonyme')) ?></span>
+        <span style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);"><?= e($enq['sender_name'] ?? t('Anonymous','Anonyme')) ?></span>
         <?php if (!empty($enq['ref'])): ?>
         <span style="font-size:11px;color:var(--muted);"><?= e($enq['ref']) ?></span>
         <?php endif; ?>
@@ -303,8 +303,8 @@ $tabLabels = [
       <div class="enq-meta">
         📋 <?= e($enq['listing_title']) ?>
         · <?= date('d M Y H:i', strtotime($enq['created_at'])) ?>
-        <?php if (!empty($enq['email'])): ?> · <a href="mailto:<?= e($enq['email']) ?>" style="color:var(--green);"><?= e($enq['email']) ?></a><?php endif; ?>
-        <?php if (!empty($enq['phone'])): ?> · <a href="tel:<?= e($enq['phone']) ?>" style="color:var(--green);"><?= e($enq['phone']) ?></a><?php endif; ?>
+        <?php if (!empty($enq['sender_email'])): ?> · <a href="mailto:<?= e($enq['sender_email']) ?>" style="color:var(--green);"><?= e($enq['sender_email']) ?></a><?php endif; ?>
+        <?php if (!empty($enq['sender_phone'])): ?> · <a href="tel:<?= e($enq['sender_phone']) ?>" style="color:var(--green);"><?= e($enq['sender_phone']) ?></a><?php endif; ?>
       </div>
     </div>
     <button class="enq-expand-toggle" onclick="toggleEnq('<?= $expandId ?>')">
@@ -395,13 +395,13 @@ $tabLabels = [
 
     <!-- Contact action buttons -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-      <?php if (!empty($enq['email'])): ?>
-      <a href="mailto:<?= e($enq['email']) ?>?subject=Re:+<?= urlencode(t('Your enquiry to','Votre demande à').' '.($enq['listing_title']??'')) ?>"
+      <?php if (!empty($enq['sender_email'])): ?>
+      <a href="mailto:<?= e($enq['sender_email']) ?>?subject=Re:+<?= urlencode(t('Your enquiry to','Votre demande à').' '.($enq['listing_title']??'')) ?>"
          class="btn btn-outline btn-sm" style="font-size:11.5px;">✉️ <?= t('Reply by email','Répondre par email') ?></a>
       <?php endif; ?>
-      <?php if (!empty($enq['phone'])): ?>
-      <a href="tel:<?= e($enq['phone']) ?>" class="btn btn-outline btn-sm" style="font-size:11.5px;">📞 <?= t('Call','Appeler') ?></a>
-      <a href="https://wa.me/<?= e(preg_replace('/\D/','',$enq['phone'])) ?>" target="_blank" class="btn btn-outline btn-sm" style="font-size:11.5px;color:#25D366;border-color:#25D366;">💬 WhatsApp</a>
+      <?php if (!empty($enq['sender_phone'])): ?>
+      <a href="tel:<?= e($enq['sender_phone']) ?>" class="btn btn-outline btn-sm" style="font-size:11.5px;">📞 <?= t('Call','Appeler') ?></a>
+      <a href="https://wa.me/<?= e(preg_replace('/\D/','',$enq['sender_phone'])) ?>" target="_blank" class="btn btn-outline btn-sm" style="font-size:11.5px;color:#25D366;border-color:#25D366;">💬 WhatsApp</a>
       <?php endif; ?>
     </div>
   </div>
