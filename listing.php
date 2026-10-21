@@ -127,11 +127,11 @@ $bookingEnabled = !empty($l['booking_enabled']);
 $listingEvents = [];
 try {
     $evQ = db()->prepare("
-        SELECT id, title, slug, start_date, end_date, cover_image, description
+        SELECT id, title, slug, starts_at, ends_at, image, description
         FROM events
         WHERE listing_id = ? AND status = 'published'
-          AND (end_date IS NULL OR end_date >= CURDATE())
-        ORDER BY start_date ASC
+          AND (ends_at IS NULL OR ends_at >= CURDATE())
+        ORDER BY starts_at ASC
         LIMIT 5
     ");
     $evQ->execute([$l['id']]);
@@ -142,10 +142,10 @@ try {
 $listingOffers = [];
 try {
     $ofQ = db()->prepare("
-        SELECT id, title, slug, expiry_date, cover_image, discount_label, description
+        SELECT id, title, slug, expires_at, image, discount_value, offer_type, description
         FROM offers
         WHERE listing_id = ? AND status = 'published'
-          AND (expiry_date IS NULL OR expiry_date >= CURDATE())
+          AND (expires_at IS NULL OR expires_at >= CURDATE())
         ORDER BY created_at DESC
         LIMIT 5
     ");
@@ -513,20 +513,20 @@ require_once __DIR__ . '/includes/header.php';
               <a href="<?= SITE_URL ?>/event/<?= e($ev['slug']) ?>"
                  style="text-decoration:none;color:inherit;display:flex;gap:0.9rem;align-items:flex-start;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.85rem;transition:border-color 0.2s;"
                  onmouseover="this.style.borderColor='rgba(0,168,120,0.4)'" onmouseout="this.style.borderColor='var(--border)'">
-                <?php if ($ev['cover_image']): ?>
+                <?php if ($ev['image']): ?>
                   <div style="width:60px;height:60px;border-radius:8px;overflow:hidden;flex-shrink:0;">
-                    <img src="<?= e(UPLOAD_URL . $ev['cover_image']) ?>" alt="" style="width:100%;height:100%;object-fit:cover;">
+                    <img src="<?= e(UPLOAD_URL . $ev['image']) ?>" alt="" style="width:100%;height:100%;object-fit:cover;">
                   </div>
                 <?php else: ?>
                   <div style="width:60px;height:60px;border-radius:8px;background:rgba(0,168,120,0.12);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;">📅</div>
                 <?php endif; ?>
                 <div style="flex:1;min-width:0;">
                   <div style="font-weight:600;font-size:0.88rem;color:var(--white);margin-bottom:0.2rem;line-height:1.3;"><?= e(mb_substr($ev['title'], 0, 70)) ?></div>
-                  <?php if ($ev['start_date']): ?>
+                  <?php if ($ev['starts_at']): ?>
                     <div style="font-size:0.73rem;color:var(--green);font-weight:500;margin-bottom:0.2rem;">
-                      <?= date('j M Y', strtotime($ev['start_date'])) ?>
-                      <?php if ($ev['end_date'] && $ev['end_date'] !== $ev['start_date']): ?>
-                        — <?= date('j M Y', strtotime($ev['end_date'])) ?>
+                      <?= date('j M Y', strtotime($ev['starts_at'])) ?>
+                      <?php if ($ev['ends_at'] && $ev['ends_at'] !== $ev['starts_at']): ?>
+                        — <?= date('j M Y', strtotime($ev['ends_at'])) ?>
                       <?php endif; ?>
                     </div>
                   <?php endif; ?>
@@ -553,20 +553,22 @@ require_once __DIR__ . '/includes/header.php';
               <a href="<?= SITE_URL ?>/offer/<?= e($of['slug']) ?>"
                  style="text-decoration:none;color:inherit;display:flex;gap:0.9rem;align-items:flex-start;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.85rem;transition:border-color 0.2s;"
                  onmouseover="this.style.borderColor='rgba(245,200,66,0.4)'" onmouseout="this.style.borderColor='var(--border)'">
-                <?php if ($of['cover_image']): ?>
+                <?php if ($of['image']): ?>
                   <div style="width:60px;height:60px;border-radius:8px;overflow:hidden;flex-shrink:0;">
-                    <img src="<?= e(UPLOAD_URL . $of['cover_image']) ?>" alt="" style="width:100%;height:100%;object-fit:cover;">
+                    <img src="<?= e(UPLOAD_URL . $of['image']) ?>" alt="" style="width:100%;height:100%;object-fit:cover;">
                   </div>
                 <?php else: ?>
                   <div style="width:60px;height:60px;border-radius:8px;background:rgba(245,200,66,0.1);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;">🏷️</div>
                 <?php endif; ?>
                 <div style="flex:1;min-width:0;">
                   <div style="font-weight:600;font-size:0.88rem;color:var(--white);margin-bottom:0.2rem;line-height:1.3;"><?= e(mb_substr($of['title'], 0, 70)) ?></div>
-                  <?php if (!empty($of['discount_label'])): ?>
-                    <span style="display:inline-block;background:rgba(245,200,66,0.15);color:var(--yellow);font-size:0.68rem;font-weight:600;padding:0.1rem 0.5rem;border-radius:20px;margin-bottom:0.25rem;"><?= e($of['discount_label']) ?></span>
+                  <?php if (!empty($of['discount_value'])): ?>
+                    <span style="display:inline-block;background:rgba(245,200,66,0.15);color:var(--yellow);font-size:0.68rem;font-weight:600;padding:0.1rem 0.5rem;border-radius:20px;margin-bottom:0.25rem;">
+                      <?= e($of['offer_type'] === 'percentage' ? $of['discount_value'].'% OFF' : ($of['offer_type'] === 'fixed' ? '-'.$of['discount_value'] : $of['discount_value'])) ?>
+                    </span>
                   <?php endif; ?>
-                  <?php if ($of['expiry_date']): ?>
-                    <div style="font-size:0.73rem;color:var(--muted-2);"><?= t('Expires','Expire') ?> <?= date('j M Y', strtotime($of['expiry_date'])) ?></div>
+                  <?php if ($of['expires_at']): ?>
+                    <div style="font-size:0.73rem;color:var(--muted-2);"><?= t('Expires','Expire') ?> <?= date('j M Y', strtotime($of['expires_at'])) ?></div>
                   <?php endif; ?>
                   <?php if ($of['description']): ?>
                     <p style="font-size:0.78rem;color:var(--muted-2);margin:0.2rem 0 0;line-height:1.4;"><?= e(mb_substr($of['description'], 0, 90)) ?><?= mb_strlen($of['description']) > 90 ? '…' : '' ?></p>

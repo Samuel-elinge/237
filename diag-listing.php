@@ -20,6 +20,12 @@ try {
     $r = $row->fetch();
     echo "=== listing: $slug ===\n";
     print_r($r);
+
+    // Enable booking on this listing for testing
+    if ($r && isset($_GET['enable_booking'])) {
+        db()->prepare("UPDATE listings SET booking_enabled=1 WHERE id=?")->execute([$r['id']]);
+        echo ">>> booking_enabled set to 1 for listing id={$r['id']}\n";
+    }
 } catch (Exception $e) {
     echo "booking_enabled column error: " . $e->getMessage() . "\n";
 }
