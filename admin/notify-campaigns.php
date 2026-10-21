@@ -291,9 +291,16 @@ $errMsg  = getFlash('error');
           <td style="font-size:0.78rem;color:var(--muted-2)"><?= $c['sent_at'] ? date('d M H:i', strtotime($c['sent_at'])) : '—' ?></td>
           <td style="font-size:0.83rem;color:#00A878"><?= $c['delivered_count'] > 0 ? number_format($c['delivered_count']) : '—' ?></td>
           <td style="font-size:0.83rem;color:<?= $c['failed_count'] > 0 ? '#ff6b6b' : 'var(--muted)' ?>"><?= $c['failed_count'] > 0 ? number_format($c['failed_count']) : '—' ?></td>
-          <td><a href="?edit=<?= $c['id'] ?>" class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);font-size:0.78rem">
-            <?= in_array($c['status'], ['draft','ready','scheduled']) ? '✏️ Edit' : '👁 View' ?>
-          </a></td>
+          <td style="display:flex;gap:0.4rem;flex-wrap:wrap">
+            <a href="?edit=<?= $c['id'] ?>" class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);font-size:0.78rem">
+              <?= in_array($c['status'], ['draft','ready','scheduled']) ? '✏️ Edit' : '👁 View' ?>
+            </a>
+            <?php if (in_array($c['status'], ['completed','sending','failed'])): ?>
+            <a href="<?= SITE_URL ?>/admin/notify-report.php?id=<?= $c['id'] ?>" class="btn btn-sm" style="background:rgba(0,168,120,0.1);border:1px solid rgba(0,168,120,0.25);color:#00A878;font-size:0.78rem">
+              📊
+            </a>
+            <?php endif; ?>
+          </td>
         </tr>
         <?php endforeach; ?>
       </tbody>
@@ -433,6 +440,12 @@ $errMsg  = getFlash('error');
   <?php if ($editCamp): ?>
   <div class="listing-widget" style="padding:1.5rem">
     <h3 style="font-family:'Fraunces',serif;font-weight:900;margin:0 0 1.25rem">Campaign Actions</h3>
+    <?php if (in_array($editCamp['status'], ['completed','sending','failed'])): ?>
+    <a href="<?= SITE_URL ?>/admin/notify-report.php?id=<?= $editId ?>"
+       class="btn btn-sm" style="background:rgba(0,168,120,0.12);border:1px solid rgba(0,168,120,0.3);color:#00A878;margin-bottom:1rem;display:inline-block">
+      📊 View delivery report
+    </a>
+    <?php endif; ?>
     <?php if ($editCamp['test_sent']): ?>
     <div style="background:rgba(0,168,120,0.08);border:1px solid rgba(0,168,120,0.2);border-radius:8px;padding:0.6rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#00A878">
       ✓ Test email has been sent for this campaign.
