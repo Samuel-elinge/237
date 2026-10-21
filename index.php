@@ -420,6 +420,31 @@ require_once __DIR__ . '/includes/header.php';
   body { padding-bottom: 72px; }
 }
 </style>
+<script>
+/* 237Biz homepage click tracker — fires against /api/track (no PII) */
+(function(){
+  function track(type, id, subtype, ctx) {
+    try {
+      fetch('/api/track', {
+        method:'POST', keepalive:true,
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({entity_type:type, entity_id:id, page_context:ctx||'homepage', event_subtype:subtype})
+      });
+    } catch(e){}
+  }
+  document.addEventListener('click', function(e){
+    var el = e.target.closest('[data-track]');
+    if (!el) return;
+    var d = el.dataset;
+    track(d.trackType||'listing', parseInt(d.trackId)||0, d.track, 'homepage');
+  });
+  /* Homepage subscribe form submission */
+  var f = document.getElementById('hp-notify-form');
+  if (f) f.addEventListener('submit', function(){
+    track('listing', 0, 'offer_click', 'homepage_subscribe');
+  });
+})();
+</script>
 
 <!-- ══ HERO ══════════════════════════════════════════════ -->
 <section class="hero">
@@ -558,7 +583,8 @@ require_once __DIR__ . '/includes/header.php';
           </div>
           <?php endif; ?>
           <div class="biz-card-actions">
-            <a href="<?= SITE_URL ?>/booking?listing_id=<?= $biz['id'] ?>" class="biz-btn biz-btn-book">
+            <a href="<?= SITE_URL ?>/booking?listing_id=<?= $biz['id'] ?>" class="biz-btn biz-btn-book"
+               data-track="booking_click" data-track-type="listing" data-track-id="<?= $biz['id'] ?>">
               📅 <?= $instant ? t('Book Now', 'Réserver') : t('Request Appt.', 'Demander RDV') ?>
             </a>
             <a href="<?= SITE_URL ?>/listing/<?= e($biz['slug']) ?>" class="biz-btn biz-btn-view">👁 <?= t('View', 'Voir') ?></a>
@@ -620,7 +646,8 @@ require_once __DIR__ . '/includes/header.php';
           <?php endif; ?>
           <div class="biz-card-actions">
             <?php if ($waNum): ?>
-            <a href="https://wa.me/<?= $waNum ?>?text=<?= $waMsg ?>" target="_blank" class="biz-btn biz-btn-wa">💬 WhatsApp</a>
+            <a href="https://wa.me/<?= $waNum ?>?text=<?= $waMsg ?>" target="_blank" class="biz-btn biz-btn-wa"
+               data-track="whatsapp_click" data-track-type="listing" data-track-id="<?= $biz['id'] ?>">💬 WhatsApp</a>
             <?php endif; ?>
             <?php if (!empty($biz['phone'])): ?>
             <a href="tel:<?= e($biz['phone']) ?>" class="biz-btn biz-btn-tel">📞 <?= t('Call', 'Appel') ?></a>
@@ -687,7 +714,8 @@ require_once __DIR__ . '/includes/header.php';
         </div>
         <div class="offer-actions">
           <?php if ($waNum): ?>
-          <a href="https://wa.me/<?= $waNum ?>?text=<?= $waMsg ?>" target="_blank" class="biz-btn biz-btn-wa" style="flex:1;padding:9px 10px;">💬 <?= t('Enquire', 'Renseignements') ?></a>
+          <a href="https://wa.me/<?= $waNum ?>?text=<?= $waMsg ?>" target="_blank" class="biz-btn biz-btn-wa" style="flex:1;padding:9px 10px;"
+             data-track="offer_click" data-track-type="offer" data-track-id="<?= $offer['id'] ?>">💬 <?= t('Enquire', 'Renseignements') ?></a>
           <?php endif; ?>
           <a href="<?= SITE_URL ?>/listing/<?= e($offer['biz_slug']) ?>" class="biz-btn biz-btn-view" style="flex:1;padding:9px 10px;">👁 <?= t('View Business', 'Voir l\'entreprise') ?></a>
         </div>
@@ -728,7 +756,8 @@ require_once __DIR__ . '/includes/header.php';
         ];
         $typeLabel = $typeMap[$ev['event_type'] ?? 'other'] ?? t('Event','Événement');
       ?>
-      <a href="<?= SITE_URL ?>/event/<?= e($ev['slug']) ?>" class="event-card">
+      <a href="<?= SITE_URL ?>/event/<?= e($ev['slug']) ?>" class="event-card"
+         data-track="website_click" data-track-type="event" data-track-id="<?= $ev['id'] ?>">
         <div class="event-date-band">
           <div class="event-day">
             <div class="num"><?= $dt->format('d') ?></div>
