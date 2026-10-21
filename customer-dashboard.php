@@ -755,6 +755,42 @@ require_once __DIR__ . '/includes/header.php';
       <div class="alert alert-error" style="margin-bottom:1.25rem;">⚠️ <?= t('Could not save. Please try again.','Impossible d\'enregistrer. Réessayez.') ?></div>
       <?php endif; ?>
 
+      <!-- My Profile card -->
+      <div class="cdash-card" style="margin-bottom:1.25rem;">
+        <div class="cdash-card-header">
+          <h4>👤 <?= t('My Profile','Mon Profil') ?></h4>
+        </div>
+        <div style="padding:1.25rem;">
+          <table style="width:100%;border-collapse:collapse;font-size:.9rem;">
+            <tr>
+              <td style="padding:.55rem .5rem;color:var(--muted);width:38%;vertical-align:top;"><?= t('Name','Nom') ?></td>
+              <td style="padding:.55rem .5rem;font-weight:600;"><?= e($u['name'] ?? '') ?></td>
+            </tr>
+            <tr style="border-top:1px solid var(--border);">
+              <td style="padding:.55rem .5rem;color:var(--muted);vertical-align:top;"><?= t('Email','E-mail') ?></td>
+              <td style="padding:.55rem .5rem;">
+                <?= e($u['email'] ?? '') ?>
+                <?php if (!empty($u['verified'])): ?>
+                  <span style="display:inline-flex;align-items:center;gap:3px;background:rgba(16,185,129,.12);color:#10b981;font-size:.72rem;font-weight:600;padding:2px 7px;border-radius:99px;margin-left:6px;">✅ <?= t('Verified','Vérifié') ?></span>
+                <?php else: ?>
+                  <span style="display:inline-flex;align-items:center;gap:3px;background:rgba(245,158,11,.12);color:#f59e0b;font-size:.72rem;font-weight:600;padding:2px 7px;border-radius:99px;margin-left:6px;">⚠️ <?= t('Not verified','Non vérifié') ?></span>
+                  <br><a href="<?= SITE_URL ?>/verify-email.php?resend=1" style="font-size:.8rem;color:var(--accent);margin-top:4px;display:inline-block;"><?= t('Resend verification email','Renvoyer l\'e-mail de vérification') ?></a>
+                <?php endif; ?>
+              </td>
+            </tr>
+            <tr style="border-top:1px solid var(--border);">
+              <td style="padding:.55rem .5rem;color:var(--muted);vertical-align:middle;"><?= t('Language','Langue') ?></td>
+              <td style="padding:.55rem .5rem;">
+                <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                  <a href="?tab=preferences&lang=en" style="padding:4px 14px;border-radius:99px;font-size:.82rem;font-weight:600;text-decoration:none;<?= (lang()==='en') ? 'background:var(--accent);color:#fff;' : 'border:1px solid var(--border);color:var(--muted);' ?>">English</a>
+                  <a href="?tab=preferences&lang=fr" style="padding:4px 14px;border-radius:99px;font-size:.82rem;font-weight:600;text-decoration:none;<?= (lang()==='fr') ? 'background:var(--accent);color:#fff;' : 'border:1px solid var(--border);color:var(--muted);' ?>">Français</a>
+                </div>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
       <div class="cdash-card">
         <div class="cdash-card-header">
           <h4>⚙️ <?= t('Notification Preferences','Préférences de Notification') ?></h4>

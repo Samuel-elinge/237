@@ -4,6 +4,7 @@
  * URL: /offer/{slug}  (via .htaccess rewrite)
  */
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/notify.php';
 
 $isFr = lang() === 'fr';
 
@@ -134,6 +135,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     ->execute([$offer['id']]);
 
                 db()->commit();
+
+                // ── Notify customer: offer claimed ────────────────────────
+                $offerTitleNotif = ($isFr && !empty($offer['title_fr'])) ? $offer['title_fr'] : $offer['title'];
+                $bizTitle        = $offer['biz_name'] ?? '';
+                $offersLink      = SITE_URL . '/customer-dashboard.php?tab=offers';
+                dispatch_notification(
+                    $claimUser['id'], 'bell',
+                    '🎟️ Offer Code Ready',      'Code prêt',
+                    "Your discount code <strong>{$newCode}</strong> for <em>{$offerTitleNotif}</em>" . ($bizTitle ? " at {$bizTitle}" : '') . " is ready to use.",
+                    "Votre code de réduction <strong>{$newCode}</strong> pour <em>{$offerTitleNotif}</em>" . ($bizTitle ? " chez {$bizTitle}" : '') . " est prêt à l'emploi.",
+                    $offersLink, 'offer', (int)$offer['id'], 'promo'
+                );
+                dispatch_notification(
+                    $claimUser['id'], 'email',
+                    '🎟️ Your Discount Code — ' . $offerTitleNotif, 'Votre Code de Réduction — ' . $offerTitleNotif,
+                    "Your discount code <strong>{$newCode}</strong> for <em>{$offerTitleNotif}</em>" . ($bizTitle ? " at {$bizTitle}" : '') . " is ready.<br><br>Present this code to redeem your offer.",
+                    "Votre code de réduction <strong>{$newCode}</strong> pour <em>{$offerTitleNotif}</em>" . ($bizTitle ? " chez {$bizTitle}" : '') . " est prêt.<br><br>Présentez ce code pour bénéficier de l'offre.",
+                    $offersLink, 'offer', (int)$offer['id'], 'promo'
+                );
 
                 $claimCode      = $newCode;
                 $alreadyClaimed = true;

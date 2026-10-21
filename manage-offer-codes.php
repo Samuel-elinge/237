@@ -5,6 +5,7 @@
  * Lets them: view claimed codes per offer, validate a code, mark it redeemed.
  */
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/notify.php';
 
 // ── Auth ──────────────────────────────────────────────────────────────────
 if (!isLoggedIn()) {
@@ -88,6 +89,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $msg = t('✅ Code redeemed successfully!', '✅ Code validé avec succès !') . ' — '
                          . e($code) . ' (' . e($codeRow['customer_name'] ?: $codeRow['customer_email']) . ')';
                     $msgType = 'success';
+
+                    // ── Notify customer: code was redeemed ────────────────
+                    if ($codeRow['customer_id']) {
+                        $offersLink = SITE_URL . '/customer-dashboard.php?tab=offers';
+                        dispatch_notification(
+                            (int)$codeRow['customer_id'], 'bell',
+                            '✅ Code Redeemed',    '✅ Code utilisé',
+                            "Your code <strong>{$code}</strong> for <em>{$offerTitle}</em> at <em>" . e($codeRow['biz_title']) . "</em> has been successfully redeemed. Thank you!",
+                            "Votre code <strong>{$code}</strong> pour <em>{$offerTitle}</em> chez <em>" . e($codeRow['biz_title']) . "</em> a bien été validé. Merci !",
+                            $offersLink, 'offer', (int)$codeRow['offer_id'], 'promo'
+                        );
+                    }
                 }
             } catch (Exception $e) {
                 $msg = t('Error processing code. Please try again.', 'Erreur lors du traitement du code. Veuillez réessayer.');

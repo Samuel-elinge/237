@@ -10,6 +10,7 @@
  *   experience  — date + time slot + party size + notes
  */
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/notify.php';
 
 $slug = trim($_GET['slug'] ?? '');
 if (!$slug) redirect(SITE_URL . '/listings');
@@ -197,6 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $finalSpecial = $specialReqs ?: ($message ?: null);
 
         // Insert — handle new columns gracefully
+        $newBookingId = 0;
         try {
             db()->prepare("
                 INSERT INTO listing_bookings
@@ -211,6 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ($partySize > 0 ? $partySize : null),
                 ($specialReqs ?: null),
             ]);
+            $newBookingId = (int)db()->lastInsertId();
         } catch (Exception $e) {
             // Fallback: insert without user_id/new columns if migration not yet run
             db()->prepare("
@@ -222,37 +225,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $listing['id'], $ref, $name, $phone, $email ?: null,
                 $service ?: null, $date, $time, $finalSpecial,
             ]);
+            $newBookingId = (int)db()->lastInsertId();
         }
 
-        // ── Email to business ─────────────────────────────────────────
+        // ── Email to business (via Resend) ────────────────────────────
         if ($listing['email']) {
-            $sub  = "New " . ucfirst($bType) . " [{$ref}] — {$listing['title']}";
-            $body = "You have a new booking on 237Biz.\n\n";
-            $body .= "Type: " . ucfirst($bType) . "\n";
-            $body .= "Reference: {$ref}\nCustomer: {$name}\nPhone: {$phone}\n";
-            if ($email)      $body .= "Email: {$email}\n";
-            if ($service)    $body .= "Service: {$service}\n";
-            if ($partySize)  $body .= "Guests: {$partySize}\n";
-            $body .= "Date: {$date} at {$time}\n";
-            if ($specialReqs) $body .= "Special requests: {$specialReqs}\n";
-            elseif ($message) $body .= "Note: {$message}\n";
-            $body .= "\nManage this booking:\n" . SITE_URL . "/partner/bookings\n\n";
-            $body .= "— 237Biz.net\n" . SITE_URL . "/help";
-            @mail($listing['email'], $sub, $body, "From: 237Biz <noreply@237biz.net>\r\n");
+            $bSub  = "New " . ucfirst($bType) . " [{$ref}] — {$listing['title']}";
+            $bBody = "<strong>You have a new booking on 237Biz.</strong><br><br>";
+            $bBody .= "Type: " . ucfirst($bType) . "<br>";
+            $bBody .= "Reference: <strong>{$ref}</strong><br>Customer: {$name}<br>Phone: {$phone}<br>";
+            if ($email)      $bBody .= "Email: {$email}<br>";
+            if ($service)    $bBody .= "Service: {$service}<br>";
+            if ($partySize)  $bBody .= "Guests: {$partySize}<br>";
+            $bBody .= "Date: {$date} at {$time}<br>";
+            if ($specialReqs) $bBody .= "Special requests: {$specialReqs}<br>";
+            elseif ($message) $bBody .= "Note: {$message}<br>";
+            try {
+                if (function_exists('sendMail')) {
+                    $html = emailWrap($bSub, $listing['title'], $bBody, SITE_URL . '/partner/bookings');
+                    sendMail($listing['email'], $bSub, $html);
+                } else {
+                    @mail($listing['email'], $bSub, strip_tags($bBody), "From: 237Biz <noreply@237biz.net>\r\n");
+                }
+            } catch (Exception $mailEx) { /* non-critical */ }
         }
 
-        // ── Email to customer ─────────────────────────────────────────
+        // ── Email to customer (via Resend) ────────────────────────────
         if ($email) {
-            $sub  = ucfirst($bType) . " Received [{$ref}] — {$listing['title']}";
-            $body = "Thank you! Your booking request has been received.\n\n";
-            $body .= "Reference: {$ref}\nBusiness: {$listing['title']}\n";
-            if ($service)   $body .= "Service: {$service}\n";
-            if ($partySize) $body .= "Guests: {$partySize}\n";
-            $body .= "Date: {$date} at {$time}\n";
-            $body .= "Status: Pending confirmation — the business will confirm shortly.\n\n";
-            $body .= SITE_URL . "/listing/{$slug}\n\n";
-            $body .= "— 237Biz.net\n" . SITE_URL . "/help";
-            @mail($email, $sub, $body, "From: 237Biz <noreply@237biz.net>\r\n");
+            $cSub  = ucfirst($bType) . " Received [{$ref}] — {$listing['title']}";
+            $cBody = "Thank you! Your booking request has been received.<br><br>";
+            $cBody .= "Reference: <strong>{$ref}</strong><br>Business: {$listing['title']}<br>";
+            if ($service)   $cBody .= "Service: {$service}<br>";
+            if ($partySize) $cBody .= "Guests: {$partySize}<br>";
+            $cBody .= "Date: {$date} at {$time}<br>";
+            $cBody .= "Status: <em>Pending confirmation</em> — the business will confirm shortly.";
+            try {
+                if (function_exists('sendMail')) {
+                    $html = emailWrap($cSub, $name, $cBody, SITE_URL . '/customer-dashboard.php?tab=bookings');
+                    sendMail($email, $cSub, $html);
+                } else {
+                    @mail($email, $cSub, strip_tags($cBody), "From: 237Biz <noreply@237biz.net>\r\n");
+                }
+            } catch (Exception $mailEx) { /* non-critical */ }
+        }
+
+        // ── Bell notifications ────────────────────────────────────────
+        // Customer bell
+        dispatch_notification(
+            (int)$currentUser['id'], 'bell',
+            '📅 Booking Received',       '📅 Réservation reçue',
+            "Your {$bType} request <strong>[{$ref}]</strong> at <em>" . e($listing['title']) . "</em> on {$date} at {$time} has been received and is pending confirmation.",
+            "Votre demande de {$bType} <strong>[{$ref}]</strong> chez <em>" . e($listing['title']) . "</em> le {$date} à {$time} a été reçue et est en attente de confirmation.",
+            SITE_URL . '/customer-dashboard.php?tab=bookings', 'booking', $newBookingId, 'booking'
+        );
+        // Business owner bell
+        if (!empty($listing['user_id'])) {
+            dispatch_notification(
+                (int)$listing['user_id'], 'bell',
+                '📅 New Booking',           '📅 Nouvelle réservation',
+                "New {$bType} <strong>[{$ref}]</strong> from {$name} on {$date} at {$time}." . ($service ? " Service: {$service}." : ''),
+                "Nouvelle réservation <strong>[{$ref}]</strong> de {$name} le {$date} à {$time}." . ($service ? " Service : {$service}." : ''),
+                SITE_URL . '/partner/bookings', 'booking', $newBookingId, 'booking'
+            );
         }
 
         // ── WhatsApp notification ─────────────────────────────────────
