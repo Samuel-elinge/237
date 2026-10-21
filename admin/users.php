@@ -324,7 +324,8 @@ adminNav('users'); adminNavAssets();
     <div class="dash-stat"><strong style="color:#ff6b6b;"><?= $locked ?></strong><span>Locked</span></div>
   </div>
 
-  <!-- ADD USER FORM -->
+  <!-- ADD USER FORM — Super Admin only -->
+  <?php if (isSuperAdmin()): ?>
   <div class="listing-widget" style="margin-bottom:2rem;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
       <h4 style="margin-bottom:0;">+ Add New User</h4>
@@ -395,6 +396,7 @@ adminNav('users'); adminNavAssets();
       </form>
     </div>
   </div>
+  <?php endif; // isSuperAdmin — add user form ?>
 
   <!-- Search + Role Filter -->
   <form action="" method="GET" style="display:flex;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap;">
@@ -491,8 +493,8 @@ adminNav('users'); adminNavAssets();
                   </button>
                 </form>
 
-                <!-- Change role (not self) -->
-                <?php if ($u['id'] != $_SESSION['user_id']): ?>
+                <!-- Change role + Delete — Super Admin only, not self -->
+                <?php if (isSuperAdmin() && $u['id'] != $_SESSION['user_id']): ?>
                 <form method="POST" style="display:flex;gap:4px;">
                   <input type="hidden" name="csrf" value="<?= csrf() ?>">
                   <input type="hidden" name="action" value="change_role">
@@ -517,6 +519,12 @@ adminNav('users'); adminNavAssets();
                   <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
                   <button name="action" value="delete" class="btn btn-sm" style="width:100%;background:rgba(230,50,50,0.1);color:#ff6b6b;border:1px solid rgba(230,50,50,0.3);">✗ Delete</button>
                 </form>
+                <?php elseif (!isSuperAdmin() && $u['id'] != $_SESSION['user_id']): ?>
+                <!-- Ops admin: assign listing only -->
+                <button onclick="openAssignModal(<?= $u['id'] ?>, '<?= e(addslashes($u['name'])) ?>')"
+                        class="btn btn-outline btn-sm" style="width:100%;color:var(--yellow);border-color:rgba(245,200,66,0.3);">
+                  📋 Assign Listing
+                </button>
                 <?php endif; ?>
 
               </div>
