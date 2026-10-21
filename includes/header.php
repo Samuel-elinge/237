@@ -62,21 +62,23 @@ $cuRole = $cu['role'] ?? 'guest';
   display: flex; align-items: center;
   padding: 0 20px;
   gap: 0;
+  position: relative;
 }
 
 /* ── Brand ── */
 .nav-brand {
   text-decoration: none; flex-shrink: 0;
   display: flex; align-items: baseline; gap: 1px;
+  position: relative; z-index: 1;
 }
 .brand-num  { font-family:'Fraunces',serif; font-weight:900; font-size:1.45rem; color:#fcd116; }
 .brand-word { font-family:'Fraunces',serif; font-weight:900; font-size:1.45rem; color:#fff; }
 .brand-tld  { font-size:0.6rem; color:rgba(255,255,255,0.4); margin-left:1px; }
 
-/* ── Desktop nav (> 960px) ── */
+/* ── Desktop nav (> 960px) — centred ── */
 .nav-desktop {
   display: flex; align-items: center; gap: 2px;
-  flex: 1; margin-left: 28px;
+  position: absolute; left: 50%; transform: translateX(-50%);
 }
 
 .nav-item  { position: relative; }
@@ -127,7 +129,7 @@ $cuRole = $cu['role'] ?? 'guest';
 
 /* ── Desktop right utilities ── */
 .nav-utils {
-  display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto;
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; position: relative; z-index: 1;
 }
 .lang-toggle { display: flex; gap: 0; border-radius: 7px; overflow: hidden; border: 1px solid rgba(255,255,255,0.12); }
 .lang-btn {
