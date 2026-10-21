@@ -201,7 +201,7 @@ table.ops-table td{padding:0.6rem 0.75rem;border-bottom:1px solid rgba(255,255,2
       <tr><td style="color:var(--muted);padding:0.3rem 0">Submitted</td><td><?= date('d M Y H:i', strtotime($reviewReq['created_at'])) ?></td></tr>
     </table>
     <form method="POST" action="">
-      <?= csrf() ?>
+      <input type="hidden" name="csrf" value="<?= csrf() ?>">
       <input type="hidden" name="request_id" value="<?= $reviewReq['id'] ?>">
       <label style="display:block;color:var(--muted);font-size:0.83rem;margin-bottom:0.4rem">Review note (optional)</label>
       <textarea name="review_note" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--white);padding:0.6rem;font-size:0.85rem;box-sizing:border-box"></textarea>
@@ -227,7 +227,7 @@ table.ops-table td{padding:0.6rem 0.75rem;border-bottom:1px solid rgba(255,255,2
   <div class="modal-box">
     <h2 style="margin:0 0 1rem;font-size:1.1rem">Submit Restricted-Action Request</h2>
     <form method="POST" action="">
-      <?= csrf() ?>
+      <input type="hidden" name="csrf" value="<?= csrf() ?>">
       <input type="hidden" name="submit_request" value="1">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
         <div>
