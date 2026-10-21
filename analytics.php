@@ -273,6 +273,60 @@ if ($l) {
     } catch (Exception $e) {}
 }
 
+// ── Pre-calculated profile score (Phase 4: listing_profile_scores table) ───
+$dbProfileScore = null;
+if ($l) {
+    try {
+        $psq = db()->prepare("SELECT score_pct, missing_fields, last_calculated FROM listing_profile_scores WHERE listing_id=?");
+        $psq->execute([$lid]);
+        $dbProfileScore = $psq->fetch() ?: null;
+    } catch (Exception $e) {}
+}
+
+// ── Per-offer performance breakdown (Phase 4) ─────────────────────────────
+$offerPerformance = [];
+if ($l) {
+    try {
+        $ofq = db()->prepare("
+            SELECT o.id, o.title, o.discount_pct, o.status,
+                   o.expires_at,
+                   COUNT(CASE WHEN mi.event_subtype IS NULL OR mi.event_subtype='' THEN 1 END) AS impressions,
+                   COUNT(CASE WHEN mi.event_subtype='offer_click' THEN 1 END) AS clicks
+            FROM offers o
+            LEFT JOIN marketplace_impressions mi ON mi.entity_type='offer' AND mi.entity_id=o.id AND mi.created_at >= {$rangeSQL}
+            WHERE o.listing_id=?
+            GROUP BY o.id
+            ORDER BY impressions DESC
+            LIMIT 10
+        ");
+        $ofq->execute([$lid]);
+        $offerPerformance = $ofq->fetchAll();
+    } catch (Exception $e) {}
+}
+
+// ── Campaign performance (partner_campaigns) ──────────────────────────────
+$campaigns = [];
+if ($l) {
+    try {
+        $cpq = db()->prepare("
+            SELECT pc.id, pc.name, pc.campaign_type, pc.status,
+                   pc.budget_xaf, pc.spent_xaf, pc.starts_at, pc.ends_at,
+                   pc.created_at,
+                   COUNT(DISTINCT mi.id) AS impressions_in_period
+            FROM partner_campaigns pc
+            LEFT JOIN marketplace_impressions mi
+                ON mi.entity_type='campaign' AND mi.entity_id=pc.id
+                AND mi.created_at >= {$rangeSQL}
+            WHERE pc.listing_id=?
+            GROUP BY pc.id
+            ORDER BY pc.created_at DESC
+            LIMIT 5
+        ");
+        $cpq->execute([$lid]);
+        $campaigns = $cpq->fetchAll();
+    } catch (Exception $e) {}
+}
+
 $pageTitle = t('Analytics','Analytiques') . ' — 237Biz';
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -503,6 +557,98 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 <?php endif; ?>
 
+<!-- Phase 4: Per-Offer Performance Breakdown -->
+<?php if (!empty($offerPerformance)): ?>
+<div class="chart-card" style="margin-bottom:20px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+    <div style="font-size:14px;font-weight:700;">🏷️ <?= t('Offer Performance','Performance des offres') ?></div>
+    <a href="<?= SITE_URL ?>/partner/offers?listing_id=<?= $lid ?>" style="font-size:12px;color:var(--green);"><?= t('Manage Offers →','Gérer les offres →') ?></a>
+  </div>
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+      <thead>
+        <tr style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;">
+          <th style="text-align:left;padding:0 8px 8px 0;font-weight:600;"><?= t('Offer','Offre') ?></th>
+          <th style="text-align:right;padding:0 8px 8px;font-weight:600;"><?= t('Impr.','Impr.') ?></th>
+          <th style="text-align:right;padding:0 8px 8px;font-weight:600;"><?= t('Clicks','Clics') ?></th>
+          <th style="text-align:right;padding:0 0 8px;font-weight:600;"><?= t('CTR','CTR') ?></th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($offerPerformance as $op):
+          $ctr = $op['impressions'] > 0 ? round($op['clicks'] / $op['impressions'] * 100, 1) : 0;
+          $isExpired = $op['expires_at'] && strtotime($op['expires_at']) < time();
+          $isActive  = $op['status'] === 'active' && !$isExpired;
+        ?>
+        <tr style="border-top:1px solid rgba(255,255,255,0.05);">
+          <td style="padding:8px 8px 8px 0;max-width:180px;">
+            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:<?= $isActive ? 'rgba(255,255,255,0.85)' : 'var(--muted)' ?>;">
+              <?= e($op['title']) ?>
+            </div>
+            <?php if ($op['discount_pct']): ?><span style="font-size:10px;color:#fcd116;">-<?= (int)$op['discount_pct'] ?>%</span><?php endif; ?>
+            <?php if ($isExpired): ?><span style="font-size:10px;color:#e63946;margin-left:4px;"><?= t('Expired','Expiré') ?></span><?php endif; ?>
+          </td>
+          <td style="text-align:right;padding:8px;color:rgba(255,255,255,0.7);"><?= number_format($op['impressions']) ?></td>
+          <td style="text-align:right;padding:8px;color:rgba(255,255,255,0.7);"><?= number_format($op['clicks']) ?></td>
+          <td style="text-align:right;padding:8px 0 8px 8px;">
+            <span style="color:<?= $ctr >= 5 ? '#00A878' : ($ctr >= 2 ? '#fcd116' : 'var(--muted)') ?>;">
+              <?= $ctr ?>%
+            </span>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+<?php endif; ?>
+
+<!-- Phase 4: Campaign Performance -->
+<?php if (!empty($campaigns)): ?>
+<div class="chart-card" style="margin-bottom:20px;">
+  <div style="font-size:14px;font-weight:700;margin-bottom:14px;">📣 <?= t('Campaign Performance','Performance des campagnes') ?></div>
+  <?php
+  $campStatusColors = ['active'=>'#00A878','paused'=>'#fcd116','ended'=>'var(--muted)','draft'=>'rgba(255,255,255,0.3)'];
+  $campTypeLabels   = ['sponsored'=>t('Sponsored','Sponsorisé'),'email'=>t('Email','Email'),'sms'=>t('SMS','SMS'),'social'=>t('Social','Réseaux'),'banner'=>t('Banner','Bannière')];
+  foreach ($campaigns as $cp):
+    $sc = $campStatusColors[$cp['status']] ?? 'var(--muted)';
+    $isActive  = $cp['status'] === 'active';
+    $budgetPct = ($cp['budget_xaf'] > 0) ? min(100, round($cp['spent_xaf'] / $cp['budget_xaf'] * 100)) : 0;
+  ?>
+  <div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          <?= e($cp['name']) ?>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+          <?= $campTypeLabels[$cp['campaign_type']] ?? e($cp['campaign_type']) ?>
+          <?php if ($cp['starts_at']): ?> · <?= date('d M', strtotime($cp['starts_at'])) ?><?php endif; ?>
+          <?php if ($cp['ends_at']): ?> → <?= date('d M', strtotime($cp['ends_at'])) ?><?php endif; ?>
+        </div>
+      </div>
+      <span style="font-size:10.5px;font-weight:700;color:<?= $sc ?>;padding:2px 8px;border:1px solid <?= $sc ?>;border-radius:99px;flex-shrink:0;white-space:nowrap;">
+        <?= strtoupper($cp['status']) ?>
+      </span>
+    </div>
+    <div style="display:flex;gap:20px;font-size:12px;color:var(--muted);flex-wrap:wrap;">
+      <?php if ($cp['impressions_in_period'] > 0): ?>
+      <span>👁 <?= number_format($cp['impressions_in_period']) ?> <?= t('impr. this period','impr. cette période') ?></span>
+      <?php endif; ?>
+      <?php if ($cp['budget_xaf'] > 0): ?>
+      <span>💰 <?= number_format($cp['spent_xaf']) ?> / <?= number_format($cp['budget_xaf']) ?> XAF</span>
+      <?php endif; ?>
+    </div>
+    <?php if ($cp['budget_xaf'] > 0): ?>
+    <div style="margin-top:6px;height:4px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden;">
+      <div style="height:100%;width:<?= $budgetPct ?>%;background:<?= $budgetPct >= 90 ? '#e63946' : '#00A878' ?>;border-radius:99px;transition:width .4s;"></div>
+    </div>
+    <?php endif; ?>
+  </div>
+  <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
 <!-- Phase 4: Growth Recommendations -->
 <?php if (!empty($growthRecs)): ?>
 <div class="chart-card" style="margin-bottom:20px;">
@@ -530,10 +676,35 @@ require_once __DIR__ . '/includes/header.php';
     <div style="font-size:14px;font-weight:700;">🎯 <?= t('Profile Completion','Complétude du profil') ?></div>
     <a href="<?= SITE_URL ?>/edit-listing?id=<?= $lid ?>" style="font-size:12px;color:var(--green);"><?= t('Edit listing →','Modifier →') ?></a>
   </div>
+  <?php
+  // Use pre-calculated DB score if available (more authoritative), fall back to inline
+  $displayPct = $dbProfileScore ? (int)$dbProfileScore['score_pct'] : $profile['pct'];
+  $displayGrad = $displayPct >= 80
+    ? 'linear-gradient(90deg,#00A878,#6fcf97)'
+    : ($displayPct >= 50 ? 'linear-gradient(90deg,#B8860B,#fcd116)' : 'linear-gradient(90deg,#c0392b,#e63946)');
+  ?>
   <!-- Score bar -->
-  <div style="height:8px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden;margin-bottom:14px;">
-    <div style="height:100%;width:<?= $profile['pct'] ?>%;background:<?= $profile['pct']>=80?'linear-gradient(90deg,#00A878,#6fcf97)':($profile['pct']>=50?'linear-gradient(90deg,#B8860B,#fcd116)':'linear-gradient(90deg,#c0392b,#e63946)') ?>;border-radius:99px;transition:width .5s;"></div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+    <div style="font-size:1.5rem;font-weight:900;font-family:'Fraunces',serif;color:<?= $displayPct>=80?'#00A878':($displayPct>=50?'#fcd116':'#e63946') ?>;">
+      <?= $displayPct ?>%
+    </div>
+    <div style="flex:1;height:8px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden;">
+      <div style="height:100%;width:<?= $displayPct ?>%;background:<?= $displayGrad ?>;border-radius:99px;transition:width .5s;"></div>
+    </div>
   </div>
+  <?php if ($dbProfileScore && $dbProfileScore['last_calculated']): ?>
+  <div style="font-size:10.5px;color:var(--muted);margin-bottom:10px;">
+    <?= t('Last updated','Dernière mise à jour') ?>: <?= date('d M Y', strtotime($dbProfileScore['last_calculated'])) ?>
+    <?php if ($dbProfileScore['missing_fields']): ?>
+    · <?php
+      $missing = json_decode($dbProfileScore['missing_fields'], true) ?? [];
+      $missingLabels = array_map(fn($f) => ucwords(str_replace('_',' ',$f)), array_slice($missing, 0, 3));
+      echo implode(', ', $missingLabels);
+      if (count($missing) > 3) echo ' +' . (count($missing)-3) . ' ' . t('more','autres');
+    ?>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
   <?php foreach ($profile['checks'] as $label => $done): ?>
   <div class="profile-item">
     <span class="profile-icon"><?= $done ? '✅' : '○' ?></span>
