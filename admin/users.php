@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
-requireAdmin();
+require_once __DIR__ . '/../includes/ops-admin-helpers.php';
+requireAnyAdmin();
 
 // ── Helpers ───────────────────────────────────────────────
 function generateRefCode(string $name): string {
@@ -18,19 +19,21 @@ function generateRefCode(string $name): string {
 
 function roleBadgeStyle(string $role): string {
     $map = [
-        'admin'       => 'background:rgba(0,168,120,0.15);color:#00A878;border:1px solid rgba(0,168,120,0.3);',
-        'sales_staff' => 'background:rgba(138,180,248,0.15);color:#8ab4f8;border:1px solid rgba(138,180,248,0.3);',
-        'creator'     => 'background:rgba(245,130,245,0.15);color:#e07be0;border:1px solid rgba(245,130,245,0.3);',
+        'admin'              => 'background:rgba(0,168,120,0.15);color:#00A878;border:1px solid rgba(0,168,120,0.3);',
+        'operations_admin'   => 'background:rgba(138,92,246,0.15);color:#a78bfa;border:1px solid rgba(138,92,246,0.3);',
+        'sales_staff'        => 'background:rgba(138,180,248,0.15);color:#8ab4f8;border:1px solid rgba(138,180,248,0.3);',
+        'creator'            => 'background:rgba(245,130,245,0.15);color:#e07be0;border:1px solid rgba(245,130,245,0.3);',
     ];
     return $map[$role] ?? 'background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.1);';
 }
 
 function roleLabel(string $role): string {
     $map = [
-        'admin'          => '🔑 Admin',
-        'sales_staff'    => '👔 Agent',
-        'creator'        => '🎬 Creator',
-        'growth_partner' => '🤝 Partner',
+        'admin'              => '🔑 Admin',
+        'operations_admin'   => '🛠️ Ops Admin',
+        'sales_staff'        => '👔 Agent',
+        'creator'            => '🎬 Creator',
+        'growth_partner'     => '🤝 Partner',
     ];
     return $map[$role] ?? '👤 User';
 }
@@ -58,6 +61,16 @@ $action = $_POST['action'] ?? $_GET['action'] ?? '';
 $errors = [];
 
 // ── HANDLE ACTIONS ────────────────────────────────────────
+// Ops Admin: block all write actions except permitted ones
+$_opsWriteActions = ['reset_password','toggle_verified','unlock','send_reset_email'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isOpsAdmin()) {
+    $reqAction = $_POST['action'] ?? '';
+    if (!in_array($reqAction, $_opsWriteActions)) {
+        flash('error', 'You do not have permission to perform this action.');
+        redirect(SITE_URL . '/admin/users.php');
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $userId = (int)($_POST['user_id'] ?? 0);
@@ -97,12 +110,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', 'Verification status updated.');
     }
 
-    // Change role
+    // Change role — Super Admin only (ops admin is already blocked above)
     elseif ($action === 'change_role' && $userId) {
         $newRole = $_POST['new_role'] ?? 'user';
-        if (!in_array($newRole, ['user','admin','sales_staff','creator','growth_partner'])) $newRole = 'user';
+        $allowedRoles = ['user','admin','sales_staff','creator','growth_partner','operations_admin'];
+        if (!in_array($newRole, $allowedRoles)) $newRole = 'user';
         if ($userId != $_SESSION['user_id']) {
-            try { db()->prepare("UPDATE users SET role=? WHERE id=?")->execute([$newRole, $userId]); } catch (Exception $e) {}
+            try {
+                db()->prepare("UPDATE users SET role=? WHERE id=?")->execute([$newRole, $userId]);
+                opsAuditLog('user.change_role', 'user', $userId, "Role changed to: $newRole");
+            } catch (Exception $e) {}
             flash('success', 'Role updated to ' . $newRole . '.');
         }
     }
@@ -338,6 +355,7 @@ adminNav('users'); adminNavAssets();
               <option value="sales_staff">👔 Sales Agent</option>
               <option value="creator">🎬 Creator</option>
               <option value="growth_partner">🤝 Growth Partner</option>
+              <option value="operations_admin">🛠️ Operations Admin</option>
               <option value="admin">🔑 Admin</option>
             </select>
           </div>
@@ -384,10 +402,12 @@ adminNav('users'); adminNavAssets();
            style="flex:1;min-width:200px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--white);font-size:0.9rem;padding:0.7rem 1rem;">
     <select name="role" style="padding:0.7rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--white);font-size:0.9rem;">
       <option value="" <?= !$roleFilter?'selected':'' ?>>All roles</option>
-      <option value="user"        <?= $roleFilter==='user'       ?'selected':'' ?>>👤 Users</option>
-      <option value="sales_staff" <?= $roleFilter==='sales_staff'?'selected':'' ?>>👔 Agents</option>
-      <option value="creator"     <?= $roleFilter==='creator'    ?'selected':'' ?>>🎬 Creators</option>
-      <option value="admin"       <?= $roleFilter==='admin'      ?'selected':'' ?>>🔑 Admins</option>
+      <option value="user"              <?= $roleFilter==='user'             ?'selected':'' ?>>👤 Users</option>
+      <option value="sales_staff"       <?= $roleFilter==='sales_staff'      ?'selected':'' ?>>👔 Agents</option>
+      <option value="creator"           <?= $roleFilter==='creator'          ?'selected':'' ?>>🎬 Creators</option>
+      <option value="growth_partner"    <?= $roleFilter==='growth_partner'   ?'selected':'' ?>>🤝 Partners</option>
+      <option value="operations_admin"  <?= $roleFilter==='operations_admin' ?'selected':'' ?>>🛠️ Ops Admins</option>
+      <option value="admin"             <?= $roleFilter==='admin'            ?'selected':'' ?>>🔑 Admins</option>
     </select>
     <button type="submit" class="btn btn-primary">Search</button>
     <?php if ($search || $roleFilter): ?><a href="<?= SITE_URL ?>/admin/users.php" class="btn btn-outline">Clear</a><?php endif; ?>
@@ -478,7 +498,7 @@ adminNav('users'); adminNavAssets();
                   <input type="hidden" name="action" value="change_role">
                   <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
                   <select name="new_role" style="flex:1;padding:4px 6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:var(--white);font-size:12px;">
-                    <?php foreach (['user'=>'👤 User','sales_staff'=>'👔 Agent','creator'=>'🎬 Creator','growth_partner'=>'🤝 Partner','admin'=>'🔑 Admin'] as $rv=>$rl): ?>
+                    <?php foreach (['user'=>'👤 User','sales_staff'=>'👔 Agent','creator'=>'🎬 Creator','growth_partner'=>'🤝 Partner','operations_admin'=>'🛠️ Ops Admin','admin'=>'🔑 Admin'] as $rv=>$rl): ?>
                     <option value="<?= $rv ?>" <?= $u['role']===$rv?'selected':'' ?>><?= $rl ?></option>
                     <?php endforeach; ?>
                   </select>

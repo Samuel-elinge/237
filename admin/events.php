@@ -4,7 +4,8 @@
  * URL: /admin/events
  */
 require_once __DIR__ . '/../includes/config.php';
-requireAdmin();
+require_once __DIR__ . '/../includes/ops-admin-helpers.php';
+requireAnyAdmin();
 $isFr = lang() === 'fr';
 
 // ── Handle actions ────────────────────────────────────────────────────────

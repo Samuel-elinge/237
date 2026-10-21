@@ -3,7 +3,8 @@
  * admin/manage-growth-partners.php — Manage Growth Partners
  */
 require_once __DIR__ . '/../includes/config.php';
-requireAdmin();
+require_once __DIR__ . '/../includes/ops-admin-helpers.php';
+requireAnyAdmin();
 
 $pdo = db();
 $tab = $_GET['tab'] ?? 'partners';

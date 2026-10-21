@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
-requireAdmin();
+require_once __DIR__ . '/../includes/ops-admin-helpers.php';
+requireAnyAdmin();
 
 // ── POST handler ─────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

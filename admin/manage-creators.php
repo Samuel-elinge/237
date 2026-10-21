@@ -7,7 +7,8 @@ require_once __DIR__ . '/../includes/config.php';
 if (file_exists(__DIR__ . '/../includes/referral-helpers.php')) {
     require_once __DIR__ . '/../includes/referral-helpers.php';
 }
-requireAdmin();
+require_once __DIR__ . '/../includes/ops-admin-helpers.php';
+requireAnyAdmin();
 $pdo = db();
 
 if (!function_exists('formatXaf')) {
