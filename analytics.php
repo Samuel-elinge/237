@@ -9,20 +9,20 @@ requireLogin();
 
 $u = currentUser();
 
-// Load user's approved listings
-$myListings = db()->prepare("
-    SELECT id, title, slug, featured, logo, views,
-           tagline, description, keywords, services_json,
-           hours_json, whatsapp, phone, email, video_url, cta_url
-    FROM listings
-    WHERE user_id=? AND status='approved'
-    ORDER BY featured DESC, title ASC
-");
-$myListings->execute([$u['id']]);
-$myListings = $myListings->fetchAll();
-
-if (isAdmin() && empty($myListings)) {
-    $myListings = db()->query("SELECT id,title,slug,featured,logo,views,tagline,description,keywords,services_json,hours_json,whatsapp,phone,email,video_url,cta_url FROM listings WHERE status='approved' ORDER BY views DESC LIMIT 20")->fetchAll();
+// Load user's approved listings (admin sees all)
+if (isAdmin()) {
+    $myListings = db()->query("SELECT id,title,slug,featured,logo,views,tagline,description,keywords,services_json,hours_json,whatsapp,phone,email,video_url,cta_url FROM listings WHERE status='approved' ORDER BY title ASC")->fetchAll();
+} else {
+    $myListings = db()->prepare("
+        SELECT id, title, slug, featured, logo, views,
+               tagline, description, keywords, services_json,
+               hours_json, whatsapp, phone, email, video_url, cta_url
+        FROM listings
+        WHERE user_id=? AND status='approved'
+        ORDER BY featured DESC, title ASC
+    ");
+    $myListings->execute([$u['id']]);
+    $myListings = $myListings->fetchAll();
 }
 
 $lid = (int)($_GET['listing_id'] ?? ($myListings[0]['id'] ?? 0));
