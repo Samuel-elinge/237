@@ -11,13 +11,13 @@ requireLogin();
 $u = currentUser();
 
 // ── Load this user's approved listings ───────────────────────────────────
-$myListings = db()->prepare("SELECT id, title, slug FROM listings WHERE user_id=? AND status='approved' ORDER BY title ASC");
-$myListings->execute([$u['id']]);
-$myListings = $myListings->fetchAll();
-
-// Admins can see all
-if (isAdmin() && empty($myListings)) {
+if (isAdmin()) {
+    // Admins always see all approved listings
     $myListings = db()->query("SELECT id,title,slug FROM listings WHERE status='approved' ORDER BY title ASC")->fetchAll();
+} else {
+    $myListings = db()->prepare("SELECT id, title, slug FROM listings WHERE user_id=? AND status='approved' ORDER BY title ASC");
+    $myListings->execute([$u['id']]);
+    $myListings = $myListings->fetchAll();
 }
 
 if (empty($myListings)) {
