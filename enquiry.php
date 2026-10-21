@@ -37,7 +37,6 @@ if ($errors) {
 $ipHash = hash('sha256', $_SERVER['REMOTE_ADDR'] ?? '');
 try {
     db()->prepare("DELETE FROM enquiry_rate_limit WHERE submitted_at < DATE_SUB(NOW(), INTERVAL 1 HOUR)")->execute();
-    $rlCount = (int)db()->prepare("SELECT COUNT(*) FROM enquiry_rate_limit WHERE ip_hash=? AND listing_id=?")->execute([$ipHash, $listingId]) ? 0 : 0;
     $rlSt = db()->prepare("SELECT COUNT(*) FROM enquiry_rate_limit WHERE ip_hash=? AND listing_id=?");
     $rlSt->execute([$ipHash, $listingId]);
     $rlCount = (int)$rlSt->fetchColumn();
