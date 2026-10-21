@@ -116,6 +116,7 @@ RewriteRule ^admin/partner-applications/?$  admin/partner-applications.php  [L,Q
 RewriteRule ^admin/partner-matching/?$      admin/partner-matching.php      [L,QSA]
 
 # Utility
+RewriteRule ^my-enquiries/?$            my-enquiries.php             [L,QSA]
 RewriteRule ^enquiry/?$                 enquiry.php                  [L,QSA]
 RewriteRule ^subscribe/?$               subscribe.php                [L,QSA]
 RewriteRule ^unsubscribe/?$             unsubscribe.php              [L,QSA]
