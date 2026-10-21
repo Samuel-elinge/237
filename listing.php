@@ -117,9 +117,12 @@ $cu = currentUser();
 
 // Cheapest active paid package, for the "Upgrade from X XAF" upsell text —
 // pulled live so it never goes stale when prices change in admin/packages.php
-$cheapestPaidPkg = db()->query("
-    SELECT * FROM listing_packages WHERE active=1 AND price_xaf > 0 ORDER BY price_xaf ASC LIMIT 1
-")->fetch();
+$cheapestPaidPkg = null;
+try {
+    $cheapestPaidPkg = db()->query("
+        SELECT * FROM listing_packages WHERE active=1 AND price_xaf > 0 ORDER BY price_xaf ASC LIMIT 1
+    ")->fetch();
+} catch (Exception $e) { /* table may not exist or column missing */ }
 
 // Word limit helper
 function wordLimit(string $text, int $limit): array {
