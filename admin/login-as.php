@@ -16,8 +16,8 @@ if (isset($_GET['return'])) {
     if (!empty($_SESSION['admin_original_id'])) {
         // Restore original admin session
         $_SESSION['user_id']   = $_SESSION['admin_original_id'];
-        $_SESSION['user_role'] = 'admin';
-        unset($_SESSION['admin_original_id'], $_SESSION['impersonating']);
+        $_SESSION['user_role'] = $_SESSION['admin_original_role'] ?? 'admin';
+        unset($_SESSION['admin_original_id'], $_SESSION['admin_original_role'], $_SESSION['impersonating']);
         flash('success', 'Returned to your admin account.');
     }
     redirect(SITE_URL . '/admin/');
@@ -38,14 +38,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $st->execute([$targetId]);
     $target = $st->fetch();
 
-    if (!$target || !in_array($target['role'], ['sales_staff', 'creator', 'user', 'growth_partner'])) {
-        flash('error', 'You can only impersonate agents, creators, partners and standard users.');
+    if (!$target || !in_array($target['role'], ['sales_staff', 'creator', 'user', 'growth_partner', 'operations_admin'])) {
+        flash('error', 'You can only impersonate agents, creators, partners, standard users and ops admins.');
         redirect(SITE_URL . '/admin/');
     }
 
-    // Store the original admin ID so we can restore it
-    $_SESSION['admin_original_id'] = $_SESSION['user_id'];
-    $_SESSION['impersonating']     = $target['name'];
+    // Store the original admin ID and role so we can restore it
+    $_SESSION['admin_original_id']   = $_SESSION['user_id'];
+    $_SESSION['admin_original_role'] = $_SESSION['user_role'] ?? 'admin';
+    $_SESSION['impersonating']       = $target['name'];
 
     // Switch session to target user
     $_SESSION['user_id']   = $target['id'];
@@ -58,6 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $destination = SITE_URL . '/creator/dashboard';
     } elseif ($target['role'] === 'growth_partner') {
         $destination = SITE_URL . '/partner/dashboard';
+    } elseif ($target['role'] === 'operations_admin') {
+        $destination = SITE_URL . '/admin/ops-dashboard.php';
     } else {
         $destination = SITE_URL . '/dashboard';
     }
