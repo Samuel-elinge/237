@@ -32,8 +32,15 @@ $listing = $listingSt->fetch();
 if (!$listing) redirect(SITE_URL . '/partner/portfolio');
 
 $tab = $_GET['tab'] ?? 'overview';
-$validTabs = ['overview','growth_plan','tasks','leads','campaigns','content','reviews','activity','opportunities','reports','ai'];
+$validTabs = ['overview','growth_plan','tasks','leads','enquiries','campaigns','content','reviews','activity','opportunities','reports','ai'];
 if (!in_array($tab, $validTabs)) $tab = 'overview';
+
+// ── Phase 4: check assignment permission flags ─────────────────
+$assignSt = $pdo->prepare("SELECT can_view_enquiries, can_view_analytics FROM partner_business_assignments WHERE partner_id=? AND listing_id=? AND status='active'");
+$assignSt->execute([$partnerId, $listingId]);
+$assignRow = $assignSt->fetch() ?: [];
+$canViewEnquiries = !empty($assignRow['can_view_enquiries']);
+$canViewAnalytics = !empty($assignRow['can_view_analytics']) || true; // analytics on by default
 
 // ── POST handler ────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -314,13 +321,57 @@ $taskSumSt = $pdo->prepare("
 $taskSumSt->execute([$listingId, $partnerId]);
 $taskSummary = $taskSumSt->fetch();
 
+// Phase 4: profile quality score
+$profileScore = null;
+$profileMissing = [];
+try {
+    $psSt = $pdo->prepare("SELECT score_pct, missing_fields FROM listing_profile_scores WHERE listing_id=?");
+    $psSt->execute([$listingId]);
+    $psRow = $psSt->fetch();
+    if ($psRow) {
+        $profileScore   = (int)$psRow['score_pct'];
+        $profileMissing = json_decode($psRow['missing_fields'] ?? '[]', true) ?: [];
+    }
+} catch (Exception $e) {}
+
+// Phase 4: business-owner growth recommendations (open ones for this listing)
+$bizRecs = [];
+try {
+    $brSt = $pdo->prepare("SELECT * FROM growth_recommendations WHERE listing_id=? AND rec_status='open' ORDER BY priority ASC LIMIT 10");
+    $brSt->execute([$listingId]);
+    $bizRecs = $brSt->fetchAll();
+} catch (Exception $e) {}
+
 // Tab-specific data
-$leads = $tasks = $campaigns = $contents = $reviewCampaigns = $opportunities = $activityFeed = $aiHistory = [];
+$leads = $tasks = $campaigns = $contents = $reviewCampaigns = $opportunities = $activityFeed = $aiHistory = $enquiries = [];
 switch ($tab) {
     case 'leads':
         $st = $pdo->prepare("SELECT pl.*, la.activity_type AS last_act FROM partner_leads pl LEFT JOIN lead_activities la ON la.id=(SELECT id FROM lead_activities WHERE lead_id=pl.id ORDER BY created_at DESC LIMIT 1) WHERE pl.listing_id=? AND pl.partner_id=? ORDER BY FIELD(pl.status,'new','follow_up','contacted','qualified','converted','lost','closed'), pl.last_activity DESC");
         $st->execute([$listingId, $partnerId]);
         $leads = $st->fetchAll();
+        break;
+    case 'enquiries':
+        if ($canViewEnquiries) {
+            try {
+                $st = $pdo->prepare("
+                    SELECT id, ref, name, email,
+                           COALESCE(crm_status, IF(status='unread','new','contacted')) AS eff_status,
+                           subject, created_at, follow_up_at, won_at, lost_at, notes
+                    FROM listing_enquiries
+                    WHERE listing_id=?
+                    ORDER BY created_at DESC LIMIT 100
+                ");
+                $st->execute([$listingId]);
+                $enquiries = $st->fetchAll();
+            } catch (Exception $e) {
+                // Fallback: crm_status column not yet added
+                try {
+                    $st = $pdo->prepare("SELECT id, name, email, IF(status='unread','new','contacted') AS eff_status, created_at FROM listing_enquiries WHERE listing_id=? ORDER BY created_at DESC LIMIT 100");
+                    $st->execute([$listingId]);
+                    $enquiries = $st->fetchAll();
+                } catch (Exception $e2) {}
+            }
+        }
         break;
     case 'tasks':
         $st = $pdo->prepare("SELECT * FROM growth_tasks WHERE listing_id=? AND partner_id=? ORDER BY FIELD(status,'in_progress','todo','completed','cancelled'), priority DESC, due_date ASC");
@@ -512,6 +563,11 @@ function tabUrl(string $t, int $lid): string {
         'growth_plan' => '🎯 Growth Plan',
         'tasks'       => '✅ Tasks' . ($taskSummary['overdue'] > 0 ? ' <span style="color:#e63946">('.(int)$taskSummary['overdue'].')</span>' : ''),
         'leads'       => '💬 Leads' . (($leadSummary['new'] ?? 0) > 0 ? ' <span style="color:#fcd116">('.($leadSummary['new']).')</span>' : ''),
+    ];
+    if ($canViewEnquiries) {
+        $tabs['enquiries'] = '📬 Enquiries';
+    }
+    $tabs += [
         'campaigns'   => '📣 Campaigns',
         'content'     => '📝 Content',
         'reviews'     => '⭐ Reviews',
@@ -553,6 +609,52 @@ function tabUrl(string $t, int $lid): string {
           <?php endforeach; ?>
         </div>
       </div>
+
+      <!-- Phase 4: Profile Quality Score -->
+      <?php if ($profileScore !== null): ?>
+      <div class="ws-card">
+        <h3>Profile Quality</h3>
+        <?php
+        $scoreColor = $profileScore >= 80 ? '#00A878' : ($profileScore >= 50 ? '#fb8500' : '#e63946');
+        ?>
+        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:.75rem;">
+          <div style="font-size:2rem; font-weight:700; color:<?= $scoreColor ?>;"><?= $profileScore ?>%</div>
+          <div class="health-bar" style="flex:1;">
+            <div class="health-fill" style="width:<?= $profileScore ?>%; background:<?= $scoreColor ?>;"></div>
+          </div>
+        </div>
+        <?php if ($profileMissing): ?>
+        <div style="font-size:.78rem; color:var(--muted);">
+          <strong style="color:var(--text);">Missing fields:</strong>
+          <?= implode(', ', array_map(fn($f) => e(ucwords(str_replace('_',' ',$f))), $profileMissing)) ?>
+        </div>
+        <?php else: ?>
+        <div style="font-size:.78rem; color:#00A878;">✓ Profile complete</div>
+        <?php endif; ?>
+      </div>
+      <?php endif; ?>
+
+      <!-- Phase 4: Business Growth Recommendations -->
+      <?php if ($bizRecs): ?>
+      <div class="ws-card">
+        <h3>Growth Recommendations</h3>
+        <?php
+        $prioColors = ['high'=>'#e63946','medium'=>'#fb8500','low'=>'#3a86ff'];
+        foreach ($bizRecs as $br):
+          $pc = $prioColors[$br['priority']] ?? '#aaa';
+        ?>
+        <div style="padding:.6rem .75rem; margin-bottom:.5rem; border-left:3px solid <?= $pc ?>; background:var(--surface2,rgba(0,0,0,.03)); border-radius:0 6px 6px 0;">
+          <div style="font-size:.82rem; font-weight:600;"><?= e($br['title']) ?></div>
+          <?php if (!empty($br['body'])): ?>
+          <div style="font-size:.78rem; color:var(--muted); margin-top:.2rem;"><?= e(mb_strimwidth($br['body'],0,120,'…')) ?></div>
+          <?php endif; ?>
+          <div style="font-size:.7rem; color:<?= $pc ?>; margin-top:.25rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em;">
+            <?= ucfirst($br['priority']) ?> priority
+          </div>
+        </div>
+        <?php endforeach; ?>
+      </div>
+      <?php endif; ?>
 
       <!-- Growth Plan progress -->
       <?php if ($plan): ?>
@@ -900,6 +1002,162 @@ function tabUrl(string $t, int $lid): string {
       </div>
     </div>
   </div>
+
+  <?php // ═══ ENQUIRIES (Phase 4) ════════════════════════════════
+  elseif ($tab === 'enquiries'): ?>
+
+  <?php if (!$canViewEnquiries): ?>
+  <div class="ws-card" style="text-align:center; padding:2.5rem 1.5rem;">
+    <div style="font-size:2rem; margin-bottom:.75rem;">🔒</div>
+    <h3 style="margin-bottom:.5rem;">Access Not Granted</h3>
+    <p style="color:var(--muted); max-width:36ch; margin:0 auto;">
+      Enquiry visibility for this business has not been enabled for your partner account.
+      Contact the account owner or an admin to request access.
+    </p>
+  </div>
+
+  <?php else: ?>
+
+  <!-- Enquiry status summary bar -->
+  <?php
+  $enqCounts = ['new'=>0,'contacted'=>0,'quoted'=>0,'won'=>0,'lost'=>0,'other'=>0];
+  foreach ($enquiries as $eq) {
+    $s = $eq['eff_status'] ?? 'other';
+    if (isset($enqCounts[$s])) $enqCounts[$s]++;
+    else $enqCounts['other']++;
+  }
+  $statusColors = [
+    'new'       => '#3a86ff',
+    'contacted' => '#fb8500',
+    'quoted'    => '#8338ec',
+    'won'       => '#00A878',
+    'lost'      => '#e63946',
+    'other'     => '#aaa',
+  ];
+  $statusLabels = [
+    'new'=>'New','contacted'=>'Contacted','quoted'=>'Quoted','won'=>'Won','lost'=>'Lost','other'=>'Other',
+  ];
+  ?>
+  <div class="stat-row" style="margin-bottom:1.25rem;">
+    <?php foreach ($enqCounts as $sk => $sc): ?>
+    <div class="stat-box">
+      <div class="n" style="color:<?= $statusColors[$sk] ?>"><?= $sc ?></div>
+      <div class="l"><?= $statusLabels[$sk] ?></div>
+    </div>
+    <?php endforeach; ?>
+  </div>
+
+  <?php if (!$enquiries): ?>
+  <div class="ws-card" style="text-align:center; padding:2rem 1.5rem; color:var(--muted);">
+    No enquiries recorded for this business yet.
+  </div>
+
+  <?php else: ?>
+  <div class="ws-card" style="padding:0; overflow:hidden;">
+    <div style="padding:.85rem 1.1rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+      <strong style="font-size:.88rem;">Enquiries — Read-only view</strong>
+      <a href="<?= SITE_URL ?>/my-enquiries?listing_id=<?= $listingId ?>"
+         target="_blank"
+         style="font-size:.78rem; color:var(--primary); text-decoration:none;">
+        Open business inbox ↗
+      </a>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:.82rem;">
+        <thead>
+          <tr style="background:var(--surface2,rgba(0,0,0,.04)); text-align:left;">
+            <th style="padding:.6rem 1rem; font-weight:600; white-space:nowrap;">Ref</th>
+            <th style="padding:.6rem 1rem; font-weight:600;">Name</th>
+            <th style="padding:.6rem 1rem; font-weight:600;">Status</th>
+            <th style="padding:.6rem 1rem; font-weight:600;">Subject</th>
+            <th style="padding:.6rem 1rem; font-weight:600; white-space:nowrap;">Received</th>
+            <th style="padding:.6rem 1rem; font-weight:600; white-space:nowrap;">Follow-up</th>
+            <th style="padding:.6rem 1rem; font-weight:600;">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($enquiries as $eq):
+            $es = $eq['eff_status'] ?? 'other';
+            $ec = $statusColors[$es] ?? '#aaa';
+            $isOverdue = !empty($eq['follow_up_at'])
+                && strtotime($eq['follow_up_at']) < time()
+                && !in_array($es, ['won','lost']);
+          ?>
+          <tr style="border-top:1px solid var(--border); vertical-align:top;"
+              class="enq-row <?= $isOverdue ? 'enq-overdue' : '' ?>">
+            <td style="padding:.65rem 1rem; white-space:nowrap; color:var(--muted);">
+              <?= $eq['ref'] ? e($eq['ref']) : '#'.(int)$eq['id'] ?>
+            </td>
+            <td style="padding:.65rem 1rem;">
+              <div style="font-weight:500;"><?= e($eq['name'] ?? '—') ?></div>
+              <?php if (!empty($eq['email'])): ?>
+              <div style="color:var(--muted); font-size:.75rem;"><?= e($eq['email']) ?></div>
+              <?php endif; ?>
+            </td>
+            <td style="padding:.65rem 1rem; white-space:nowrap;">
+              <span style="
+                display:inline-block;
+                padding:.18rem .55rem;
+                border-radius:99px;
+                font-size:.72rem;
+                font-weight:600;
+                background:<?= $ec ?>22;
+                color:<?= $ec ?>;
+                border:1px solid <?= $ec ?>55;
+              "><?= $statusLabels[$es] ?></span>
+              <?php if ($isOverdue): ?>
+              <span style="
+                display:inline-block;
+                padding:.18rem .45rem;
+                border-radius:99px;
+                font-size:.7rem;
+                background:rgba(230,57,70,.1);
+                color:#e63946;
+                margin-left:.3rem;
+              ">Overdue</span>
+              <?php endif; ?>
+            </td>
+            <td style="padding:.65rem 1rem; max-width:180px;">
+              <?= $eq['subject'] ? e(mb_strimwidth($eq['subject'],0,60,'…')) : '<span style="color:var(--muted)">—</span>' ?>
+            </td>
+            <td style="padding:.65rem 1rem; white-space:nowrap; color:var(--muted);">
+              <?= date('j M Y', strtotime($eq['created_at'])) ?>
+            </td>
+            <td style="padding:.65rem 1rem; white-space:nowrap;">
+              <?php if (!empty($eq['follow_up_at'])): ?>
+              <span style="color:<?= $isOverdue ? '#e63946' : 'var(--muted)' ?>;">
+                📅 <?= date('j M Y', strtotime($eq['follow_up_at'])) ?>
+              </span>
+              <?php else: ?>
+              <span style="color:var(--muted);">—</span>
+              <?php endif; ?>
+            </td>
+            <td style="padding:.65rem 1rem; max-width:160px; color:var(--muted);">
+              <?= !empty($eq['notes']) ? e(mb_strimwidth($eq['notes'],0,80,'…')) : '—' ?>
+            </td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div><!-- /overflow-x -->
+
+    <?php if (count($enquiries) >= 100): ?>
+    <div style="padding:.7rem 1.1rem; border-top:1px solid var(--border); font-size:.78rem; color:var(--muted); text-align:center;">
+      Showing the 100 most recent enquiries.
+      <a href="<?= SITE_URL ?>/my-enquiries?listing_id=<?= $listingId ?>" target="_blank" style="color:var(--primary);">See all in business inbox ↗</a>
+    </div>
+    <?php endif; ?>
+  </div><!-- /ws-card table -->
+
+  <style>
+  .enq-row { transition: background .12s; }
+  .enq-row:hover { background: var(--surface2, rgba(0,0,0,.03)); }
+  .enq-overdue { background: rgba(230,57,70,.04); }
+  .enq-overdue:hover { background: rgba(230,57,70,.07); }
+  </style>
+  <?php endif; // enquiries list ?>
+  <?php endif; // canViewEnquiries ?>
 
   <?php // ═══ CAMPAIGNS ══════════════════════════════════════════
   elseif ($tab === 'campaigns'): ?>
