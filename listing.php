@@ -39,25 +39,40 @@ $images = $images->fetchAll();
 
 // Reviews (with vote tallies + user's own vote)
 $reviewUserId = isLoggedIn() ? (int)(currentUser()['id'] ?? 0) : 0;
-$reviews = db()->prepare("
-    SELECT
-        r.*,
-        COALESCE(vt.helpful,0)        AS helpful,
-        COALESCE(vt.not_helpful,0)    AS not_helpful,
-        COALESCE(uv.vote, 0)          AS user_vote
-    FROM reviews r
-    LEFT JOIN (
-        SELECT review_id,
-               SUM(vote= 1) AS helpful,
-               SUM(vote=-1) AS not_helpful
-        FROM review_votes GROUP BY review_id
-    ) vt ON vt.review_id = r.id
-    LEFT JOIN review_votes uv ON uv.review_id = r.id AND uv.user_id = ?
-    WHERE r.listing_id = ? AND r.status = 'approved'
-    ORDER BY r.created_at DESC
-");
-$reviews->execute([$reviewUserId, $l['id']]);
-$reviews = $reviews->fetchAll();
+$reviews = [];
+try {
+    $revQ = db()->prepare("
+        SELECT
+            r.*,
+            COALESCE(vt.helpful,0)        AS helpful,
+            COALESCE(vt.not_helpful,0)    AS not_helpful,
+            COALESCE(uv.vote, 0)          AS user_vote
+        FROM reviews r
+        LEFT JOIN (
+            SELECT review_id,
+                   SUM(vote= 1) AS helpful,
+                   SUM(vote=-1) AS not_helpful
+            FROM review_votes GROUP BY review_id
+        ) vt ON vt.review_id = r.id
+        LEFT JOIN review_votes uv ON uv.review_id = r.id AND uv.user_id = ?
+        WHERE r.listing_id = ? AND r.status = 'approved'
+        ORDER BY r.created_at DESC
+    ");
+    $revQ->execute([$reviewUserId, $l['id']]);
+    $reviews = $revQ->fetchAll();
+} catch (Exception $e) {
+    // review_votes table may not exist — fall back to simple reviews query
+    try {
+        $revQ2 = db()->prepare("
+            SELECT r.*, 0 AS helpful, 0 AS not_helpful, 0 AS user_vote
+            FROM reviews r
+            WHERE r.listing_id = ? AND r.status = 'approved'
+            ORDER BY r.created_at DESC
+        ");
+        $revQ2->execute([$l['id']]);
+        $reviews = $revQ2->fetchAll();
+    } catch (Exception $e2) { $reviews = []; }
+}
 
 // Products (featured listings only)
 $products = [];
