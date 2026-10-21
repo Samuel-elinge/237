@@ -48,6 +48,7 @@ function adminNav(string $activePage = ''): void {
             ['Newsletter',  '&#x1F4EC;', $base . '/admin/subscribers.php',         ['subscribers']],
             ['Notif. Subs', '&#x1F514;', $base . '/admin/notify-subscribers.php', ['notify-subscribers']],
             ['Notif. Camps','&#x1F4E3;', $base . '/admin/notify-campaigns.php',   ['notify-campaigns']],
+            ['Notif. Launch','&#x1F680;', $base . '/admin/notify-launch-checklist.php', ['notify-launch-checklist']],
             ['Emails',      '&#x2709;',  $base . '/admin/emails.php',             ['emails']],
             ['Blog',        '&#x1F4DD;', $base . '/admin/blog.php',            ['blog']],
         ]],
