@@ -154,6 +154,13 @@ require_once __DIR__ . '/includes/header.php';
                   'Vérifiez votre email et cliquez sur le lien de vérification pour activer votre compte.') ?>
       </div>
     <?php endif; ?>
+    <?php if (isset($_GET['pending_verify'])): ?>
+      <div class="flash flash-success" style="margin-bottom:1rem;">
+        📧 <?= t('Account created! Please check your email and verify your account before signing in.',
+                  'Compte créé ! Vérifiez votre email et activez votre compte avant de vous connecter.') ?>
+        <br><a href="<?= SITE_URL ?>/resend-verify.php" style="color:var(--green);font-size:0.85rem;"><?= t('Resend verification email','Renvoyer l\'email de vérification') ?></a>
+      </div>
+    <?php endif; ?>
     <?php if (isset($_GET['verified']) && $_GET['verified'] === 'ok'): ?>
       <div class="flash flash-success" style="margin-bottom:1rem;">
         ✅ <?= t('Email verified! You can now sign in.','Email vérifié ! Vous pouvez maintenant vous connecter.') ?>

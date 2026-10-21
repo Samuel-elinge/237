@@ -55,6 +55,115 @@ switch ($offer['offer_type']) {
     case 'bundle':      $badgeLabel = t('Bundle Deal','Offre Groupée'); $badgeClass = 'bundle'; break;
 }
 
+// ── Claim / discount code logic ──────────────────────────────────────────
+$claimUser      = isLoggedIn() ? currentUser() : null;
+$claimMessage   = '';   // feedback shown in sidebar
+$claimCode      = null; // the user's active/generated code
+$alreadyClaimed = false;
+$claimLimitHit  = false;  // total offer redemption cap
+$maxClaimsPerUser = (int)($offer['max_claims_per_user'] ?? 1);
+
+if ($claimUser && $isActive) {
+    try {
+        // Check if user already has a code for this offer
+        $cSt = db()->prepare("
+            SELECT dc.code, dc.status
+            FROM discount_codes dc
+            JOIN offer_claims oc ON oc.id = dc.claim_id
+            WHERE oc.offer_id = ? AND oc.user_id = ?
+            LIMIT 1
+        ");
+        $cSt->execute([$offer['id'], $claimUser['id']]);
+        $existingCode = $cSt->fetch();
+        if ($existingCode) {
+            $claimCode      = $existingCode['code'];
+            $alreadyClaimed = true;
+        }
+    } catch (Exception $e) { /* tables not yet created */ }
+}
+
+// POST: claim a code
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'claim_offer') {
+    verifyCsrf();
+    if (!$claimUser) {
+        $intendedUrl = SITE_URL . '/offer/' . $slug;
+        flash('info', t('Please sign in to claim this offer.','Connectez-vous pour obtenir ce bon de réduction.'));
+        redirect(SITE_URL . '/login.php?mode=login&next=' . urlencode($intendedUrl));
+        exit;
+    }
+    if (empty($claimUser['verified'])) {
+        flash('warning', t('Please verify your email before claiming an offer.','Vérifiez votre email pour obtenir une offre.'));
+        redirect(SITE_URL . '/resend-verify.php');
+        exit;
+    }
+    if (!$isActive) {
+        $claimMessage = t('This offer is no longer active.','Cette offre n\'est plus active.');
+    } elseif ($alreadyClaimed) {
+        $claimMessage = t('You already have a code for this offer.','Vous avez déjà un code pour cette offre.');
+    } else {
+        // Check global redemption cap
+        if ($offer['max_redemptions'] && (int)$offer['redemption_count'] >= (int)$offer['max_redemptions']) {
+            $claimLimitHit = true;
+            $claimMessage = t('Sorry, this offer has reached its maximum number of claims.','Désolé, cette offre a atteint le nombre maximum de réclamations.');
+        } else {
+            // Atomic insert into offer_claims + generate code
+            try {
+                db()->beginTransaction();
+
+                // Insert claim (UNIQUE KEY prevents duplicates)
+                $ins = db()->prepare("INSERT INTO offer_claims (offer_id, user_id) VALUES (?,?)");
+                $ins->execute([$offer['id'], $claimUser['id']]);
+                $claimId = (int)db()->lastInsertId();
+
+                // Generate unique code: 237-XXXXXX (6 hex chars upper)
+                $newCode = '';
+                do {
+                    $newCode = '237-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
+                    $chk = db()->prepare("SELECT COUNT(*) FROM discount_codes WHERE code=?");
+                    $chk->execute([$newCode]);
+                } while ((int)$chk->fetchColumn() > 0);
+
+                $dcIns = db()->prepare("
+                    INSERT INTO discount_codes (code, offer_id, claim_id, user_id, status)
+                    VALUES (?,?,?,?,'active')
+                ");
+                $dcIns->execute([$newCode, $offer['id'], $claimId, $claimUser['id']]);
+
+                // Increment redemption_count on offer
+                db()->prepare("UPDATE offers SET redemption_count = redemption_count + 1 WHERE id=?")
+                    ->execute([$offer['id']]);
+
+                db()->commit();
+
+                $claimCode      = $newCode;
+                $alreadyClaimed = true;
+                $claimMessage   = t('Your discount code is ready!','Votre code de réduction est prêt !');
+                // Refresh offer data
+                $offer['redemption_count'] = ($offer['redemption_count'] ?? 0) + 1;
+            } catch (Exception $e) {
+                if (db()->inTransaction()) db()->rollBack();
+                if (str_contains($e->getMessage(), 'Duplicate entry')) {
+                    // Race: another request claimed it
+                    $claimMessage = t('You already have a code for this offer.','Vous avez déjà un code pour cette offre.');
+                    // Fetch existing code
+                    try {
+                        $cSt2 = db()->prepare("
+                            SELECT dc.code FROM discount_codes dc
+                            JOIN offer_claims oc ON oc.id = dc.claim_id
+                            WHERE oc.offer_id = ? AND oc.user_id = ? LIMIT 1
+                        ");
+                        $cSt2->execute([$offer['id'], $claimUser['id']]);
+                        $row2 = $cSt2->fetch();
+                        if ($row2) { $claimCode = $row2['code']; $alreadyClaimed = true; }
+                    } catch (Exception $e2) {}
+                } else {
+                    $claimMessage = t('Something went wrong. Please try again.','Une erreur s\'est produite. Veuillez réessayer.');
+                }
+            }
+        }
+    }
+}
+
 // ── More offers from same business ───────────────────────────────────────
 $moreOffers = [];
 try {
@@ -254,7 +363,47 @@ require_once __DIR__ . '/includes/header.php';
 
     <!-- Right sidebar -->
     <div class="offer-sidebar">
-      <!-- Promo code -->
+      <!-- Discount code claim widget -->
+      <?php if ($isActive && !$claimLimitHit): ?>
+        <div style="background:rgba(0,168,120,0.07);border:1px solid rgba(0,168,120,0.25);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1rem;">
+          <?php if ($claimCode): ?>
+            <?php if ($claimMessage): ?><p style="color:#4ade80;font-size:0.82rem;margin:0 0 0.5rem;"><?= e($claimMessage) ?></p><?php endif; ?>
+            <p style="color:var(--muted);font-size:0.78rem;margin:0 0 0.35rem;"><?= t('Your discount code:','Votre code de réduction :') ?></p>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <span id="dcCode" style="font-family:monospace;font-size:1.1rem;font-weight:700;color:var(--yellow);letter-spacing:0.08em;background:rgba(245,200,66,0.1);padding:0.4rem 0.8rem;border-radius:6px;flex:1;text-align:center;"><?= e($claimCode) ?></span>
+              <button onclick="navigator.clipboard.writeText('<?= e($claimCode) ?>').then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='📋',1500)}).catch(()=>{document.getElementById('dcCode').style.userSelect='all'})" style="background:var(--green);color:#fff;border:none;border-radius:6px;padding:0.4rem 0.7rem;cursor:pointer;font-size:0.85rem;">📋</button>
+            </div>
+            <p style="color:var(--muted);font-size:0.73rem;margin:0.5rem 0 0;"><?= t('Show this code to the business when you visit.','Montrez ce code à l\'entreprise lors de votre visite.') ?></p>
+          <?php elseif ($claimUser): ?>
+            <?php if ($claimMessage): ?><p style="color:#f87171;font-size:0.82rem;margin:0 0 0.5rem;"><?= e($claimMessage) ?></p><?php endif; ?>
+            <form method="POST">
+              <input type="hidden" name="csrf" value="<?= csrf() ?>">
+              <input type="hidden" name="action" value="claim_offer">
+              <button type="submit" class="offer-action-btn primary" style="width:100%;margin-top:0;">
+                🎟️ <?= t('Get My Discount Code','Obtenir mon code de réduction') ?>
+              </button>
+            </form>
+            <p style="color:var(--muted);font-size:0.73rem;margin:0.5rem 0 0;"><?= t('Free — one unique code per person.','Gratuit — un code unique par personne.') ?></p>
+          <?php else: ?>
+            <p style="color:var(--muted);font-size:0.82rem;margin:0 0 0.6rem;"><?= t('Sign in to get your unique discount code.','Connectez-vous pour obtenir votre code de réduction.') ?></p>
+            <a href="<?= SITE_URL ?>/login.php?mode=login&next=<?= urlencode(SITE_URL.'/offer/'.$slug) ?>" class="offer-action-btn primary" style="display:block;text-align:center;margin-top:0;">
+              🎟️ <?= t('Sign In to Claim','Se connecter pour obtenir') ?>
+            </a>
+          <?php endif; ?>
+          <?php if ($offer['max_redemptions']): ?>
+            <p style="color:var(--muted-2);font-size:0.72rem;margin:0.4rem 0 0;text-align:center;">
+              <?= max(0, (int)$offer['max_redemptions'] - (int)$offer['redemption_count']) ?> <?= t('codes remaining','codes restants') ?>
+            </p>
+          <?php endif; ?>
+        </div>
+      <?php elseif ($claimLimitHit): ?>
+        <div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:10px;padding:1rem;margin-bottom:1rem;text-align:center;">
+          <span style="font-size:1.3rem;">😔</span>
+          <p style="color:#f87171;font-size:0.85rem;margin:0.25rem 0 0;"><?= t('All codes have been claimed.','Tous les codes ont été réclamés.') ?></p>
+        </div>
+      <?php endif; ?>
+
+      <!-- Legacy static promo code (if set by business) -->
       <?php if ($offer['promo_code']): ?>
         <div class="promo-code-box">
           <small><?= t('Use code at checkout:','Code à utiliser lors du paiement :') ?></small>

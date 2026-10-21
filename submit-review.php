@@ -11,6 +11,13 @@ $rating    = (int)($_POST['rating'] ?? 0);
 $comment   = trim($_POST['comment'] ?? '');
 $u         = currentUser();
 
+// Reviews require a verified account
+if (empty($u['verified'])) {
+    flash('warning', t('Please verify your email before submitting a review.','Veuillez vérifier votre email avant de soumettre un avis.'));
+    redirect(SITE_URL . '/resend-verify.php');
+    exit;
+}
+
 if ($listingId && $rating >= 1 && $rating <= 5) {
     $st = db()->prepare("INSERT INTO reviews (listing_id, user_id, name, rating, comment, status) VALUES (?,?,?,?,?,'pending')");
     $st->execute([$listingId, $u['id'], $u['name'], $rating, $comment]);

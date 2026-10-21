@@ -121,6 +121,22 @@ foreach ($days as $i => $day) {
     }
 }
 
+// ── Verified account gate ─────────────────────────────────────────────
+// Booking requires a verified account. Store intended URL so the user
+// is returned here after login/verification.
+$currentUser = isLoggedIn() ? currentUser() : null;
+if (!$currentUser) {
+    $intendedUrl = SITE_URL . '/booking?slug=' . urlencode($slug);
+    flash('info', t('Please sign in or create a verified account to book.','Connectez-vous ou créez un compte vérifié pour réserver.'));
+    redirect(SITE_URL . '/login.php?mode=login&next=' . urlencode($intendedUrl));
+    exit;
+}
+if (empty($currentUser['verified'])) {
+    flash('warning', t('Please verify your email before booking. Check your inbox or resend the link.','Veuillez vérifier votre email avant de réserver.'));
+    redirect(SITE_URL . '/resend-verify.php');
+    exit;
+}
+
 // ── POST handler ──────────────────────────────────────────────────────
 $success = false;
 $booking = null;
@@ -132,9 +148,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $bType   = $_POST['booking_type']    ?? 'appointment';
     if (!in_array($bType, $bookingTypes)) $bType = $bookingTypes[0];
 
-    $name        = trim($_POST['customer_name']    ?? '');
+    // Pre-fill from verified account if not submitted
+    $name        = trim($_POST['customer_name']    ?? $currentUser['name']  ?? '');
     $phone       = trim($_POST['customer_phone']   ?? '');
-    $email       = trim($_POST['customer_email']   ?? '');
+    $email       = trim($_POST['customer_email']   ?? $currentUser['email'] ?? '');
     $service     = trim($_POST['service_name']     ?? '');
     $date        = trim($_POST['preferred_date']   ?? '');
     $time        = trim($_POST['preferred_time']   ?? '');
@@ -183,19 +200,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             db()->prepare("
                 INSERT INTO listing_bookings
-                  (listing_id, reference, customer_name, customer_phone, customer_email,
+                  (listing_id, user_id, reference, customer_name, customer_phone, customer_email,
                    service_name, preferred_date, preferred_time, message,
                    booking_type, party_size, special_requests)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
             ")->execute([
-                $listing['id'], $ref, $name, $phone, $email ?: null,
+                $listing['id'], $currentUser['id'], $ref, $name, $phone, $email ?: null,
                 $service ?: null, $date, $time, $message ?: null,
                 $bType,
                 ($partySize > 0 ? $partySize : null),
                 ($specialReqs ?: null),
             ]);
         } catch (Exception $e) {
-            // Fallback: insert without new columns if migration not yet run
+            // Fallback: insert without user_id/new columns if migration not yet run
             db()->prepare("
                 INSERT INTO listing_bookings
                   (listing_id, reference, customer_name, customer_phone, customer_email,

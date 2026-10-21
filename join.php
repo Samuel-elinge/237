@@ -30,9 +30,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = t('Email already registered. Sign in instead.','Email déjà enregistré. Connectez-vous.');
         } else {
             $role = ['agent'=>'sales_staff','creator'=>'creator','list'=>'user','find'=>'user','growth_partner'=>'user'][$path];
-            $hash = password_hash($password, PASSWORD_BCRYPT);
-            db()->prepare("INSERT INTO users (name,email,password,role,verified) VALUES (?,?,?,?,1)")
-                ->execute([$name, $email, $hash, $role]);
+            $hash        = password_hash($password, PASSWORD_BCRYPT);
+            $verifyToken = bin2hex(random_bytes(32));
+            // Insert with verify_token_created_at if column exists, else without
+            try {
+                db()->prepare("INSERT INTO users (name,email,password,role,verified,verify_token,verify_token_created_at) VALUES (?,?,?,?,0,?,NOW())")
+                    ->execute([$name, $email, $hash, $role, $verifyToken]);
+            } catch (Exception $e) {
+                db()->prepare("INSERT INTO users (name,email,password,role,verified,verify_token) VALUES (?,?,?,?,0,?)")
+                    ->execute([$name, $email, $hash, $role, $verifyToken]);
+            }
             $uid = (int)db()->lastInsertId();
 
             // Role-specific setup
@@ -69,17 +76,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } catch(Exception $e) {}
             }
 
-            // Log them in
-            $_SESSION['user_id'] = $uid;
+            // Do NOT log them in — must verify email first
 
-            // Welcome email
-            $welcomeBody = '<h2 style="color:#fff;font-family:Georgia,serif;">'.t('Welcome to 237Biz!','Bienvenue sur 237Biz !').'</h2>
+            // Verification email (primary action)
+            $verifyUrl  = SITE_URL . '/verify.php?token=' . $verifyToken;
+            $verifyBody = '<h2 style="color:#fff;font-family:Georgia,serif;">'.t('Verify your email','Vérifiez votre email').'</h2>
               <p style="color:rgba(255,255,255,0.7);">'.t('Hi','Bonjour').' '.e($name).',</p>
-              <p style="color:rgba(255,255,255,0.7);">'.t('Your account has been created. You can now access your dashboard.','Votre compte a été créé.').'</p>
-              <a href="'.SITE_URL.'/dashboard" style="display:inline-block;margin:1rem 0;background:#00A878;color:#fff;padding:0.75rem 1.5rem;border-radius:5px;text-decoration:none;">'.t('Go to Dashboard →','Aller au Tableau de bord →').'</a>';
-            try { sendMail($email, t('Welcome to 237Biz','Bienvenue sur 237Biz'), $welcomeBody); } catch(Exception $e){}
+              <p style="color:rgba(255,255,255,0.7);">'.t('Thanks for joining 237Biz! Click below to verify your email and activate your account.','Merci d\'avoir rejoint 237Biz ! Cliquez ci-dessous pour vérifier votre email et activer votre compte.').'</p>
+              <a href="'.$verifyUrl.'" style="display:inline-block;margin:1.5rem 0;background:#00A878;color:#fff;padding:0.85rem 2rem;border-radius:5px;text-decoration:none;">'.t('Verify Email →','Vérifier Email →').'</a>
+              <p style="color:rgba(255,255,255,0.5);font-size:0.8rem;">'.t('This link expires in 48 hours.','Ce lien expire dans 48 heures.').'</p>';
+            try { sendMail($email, t('Verify your 237Biz account','Vérifiez votre compte 237Biz'), $verifyBody); } catch(Exception $e){}
 
-            // Redirect based on path
+            // Redirect to verification pending page (not dashboard)
+            flash('success', t('Account created! Please check your email and verify your account before signing in.','Compte créé ! Veuillez vérifier votre email et activer votre compte avant de vous connecter.'));
+            redirect(SITE_URL . '/login.php?mode=login&pending_verify=1');
+            exit;
+
+            // Redirect based on path (kept below for reference — unreachable until verify)
             $destinations = [
                 'agent'          => SITE_URL . '/agent/dashboard',
                 'creator'        => SITE_URL . '/creator/profile?setup=1',

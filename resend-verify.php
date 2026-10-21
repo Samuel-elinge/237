@@ -17,7 +17,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = $st->fetch();
         if ($user) {
             $token = bin2hex(random_bytes(32));
-            db()->prepare("UPDATE users SET verify_token=? WHERE id=?")->execute([$token, $user['id']]);
+            // Store token with timestamp; gracefully ignore if column does not exist yet
+            try {
+                db()->prepare("UPDATE users SET verify_token=?, verify_token_created_at=NOW() WHERE id=?")
+                    ->execute([$token, $user['id']]);
+            } catch (Exception $e) {
+                db()->prepare("UPDATE users SET verify_token=? WHERE id=?")->execute([$token, $user['id']]);
+            }
             $verifyUrl = SITE_URL . '/verify.php?token=' . $token;
             sendMail($email,
                 t('Verify your 237Biz account','Vérifiez votre compte 237Biz'),

@@ -7,7 +7,7 @@ $userId = (int)$u['id'];
 
 // Active tab
 $tab = $_GET['tab'] ?? 'bookings';
-$validTabs = ['bookings', 'events', 'favourites', 'reviews', 'follows', 'preferences'];
+$validTabs = ['bookings', 'events', 'favourites', 'reviews', 'follows', 'offers', 'preferences'];
 if (!in_array($tab, $validTabs)) $tab = 'bookings';
 
 // ── My Bookings ──────────────────────────────────────────────
@@ -169,6 +169,27 @@ if ($tab === 'preferences') {
         $notifPrefs = ['booking_email'=>1,'booking_bell'=>1,'event_email'=>1,'event_bell'=>1,
                        'follow_email'=>1,'follow_bell'=>1,'promo_email'=>0];
     }
+}
+
+// ── My Offers (discount codes) ───────────────────────────────
+$myOffers = [];
+if ($tab === 'offers') {
+    try {
+        $oq = db()->prepare("
+            SELECT dc.code, dc.status AS code_status, dc.created_at AS claimed_at, dc.redeemed_at,
+                   o.title, o.title_fr, o.slug AS offer_slug, o.offer_type, o.discount_value,
+                   o.expires_at, o.image AS offer_image,
+                   l.title AS biz_title, l.slug AS biz_slug
+            FROM discount_codes dc
+            JOIN offer_claims oc ON oc.id = dc.claim_id
+            JOIN offers o ON o.id = oc.offer_id
+            JOIN listings l ON l.id = o.listing_id
+            WHERE dc.user_id = ?
+            ORDER BY dc.created_at DESC
+        ");
+        $oq->execute([$userId]);
+        $myOffers = $oq->fetchAll();
+    } catch (Exception $e) { /* tables not yet created */ }
 }
 
 // ── My Reviews ───────────────────────────────────────────────
@@ -373,6 +394,7 @@ require_once __DIR__ . '/includes/header.php';
       <a href="?tab=favourites"   class="cdash-tab <?= $tab==='favourites'   ? 'active' : '' ?>">❤️ <?= t('Favourites','Favoris') ?></a>
       <a href="?tab=follows"      class="cdash-tab <?= $tab==='follows'      ? 'active' : '' ?>">🔔 <?= t('Following','Abonnements') ?></a>
       <a href="?tab=reviews"      class="cdash-tab <?= $tab==='reviews'      ? 'active' : '' ?>">⭐ <?= t('My Reviews','Mes Avis') ?></a>
+      <a href="?tab=offers"       class="cdash-tab <?= $tab==='offers'       ? 'active' : '' ?>">🎟️ <?= t('My Offers','Mes Offres') ?></a>
       <a href="?tab=preferences"  class="cdash-tab <?= $tab==='preferences'  ? 'active' : '' ?>">⚙️ <?= t('Preferences','Préférences') ?></a>
     </nav>
 
@@ -841,10 +863,97 @@ require_once __DIR__ . '/includes/header.php';
 
     <?php endif; ?>
 
+    <!-- ─── MY OFFERS ───────────────────────────── -->
+    <?php if ($tab === 'offers'): ?>
+
+      <div class="cdash-card">
+        <div class="cdash-card-header">
+          <h4>🎟️ <?= t('My Offers','Mes Offres') ?> <?php if ($myOffers): ?><span class="cdash-tab-badge"><?= count($myOffers) ?></span><?php endif; ?></h4>
+        </div>
+
+        <?php if ($myOffers): ?>
+        <div style="padding:.5rem 0;">
+          <?php foreach ($myOffers as $o):
+            $isActive   = $o['code_status'] === 'active';
+            $isRedeemed = $o['code_status'] === 'redeemed';
+            $isExpired  = $o['code_status'] === 'expired' || (!empty($o['expires_at']) && strtotime($o['expires_at']) < time());
+            $statusLabel = $isRedeemed ? t('Used','Utilisé') : ($isExpired ? t('Expired','Expiré') : t('Active','Actif'));
+            $statusClass = $isRedeemed ? 'pending' : ($isExpired ? 'rejected' : 'approved');
+            $offerTitle  = ($isFr && !empty($o['title_fr'])) ? $o['title_fr'] : $o['title'];
+          ?>
+          <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem;flex-wrap:wrap;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:.9rem;color:var(--white);margin-bottom:.2rem;">
+                  <?= e($offerTitle) ?>
+                </div>
+                <div style="font-size:.8rem;color:var(--muted-2);margin-bottom:.5rem;">
+                  <?= e($o['biz_title']) ?>
+                </div>
+                <!-- Discount code display -->
+                <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+                  <code id="code-<?= e($o['code']) ?>" style="background:rgba(0,168,120,.12);border:1px dashed rgba(0,168,120,.4);color:#00A878;padding:.3rem .6rem;border-radius:4px;font-size:.95rem;font-weight:700;letter-spacing:.05em;user-select:all;"><?= e($o['code']) ?></code>
+                  <?php if ($isActive): ?>
+                  <button onclick="copyCode('<?= e($o['code']) ?>')" title="<?= t('Copy code','Copier le code') ?>" style="background:none;border:1px solid rgba(0,168,120,.35);color:#00A878;border-radius:4px;padding:.25rem .55rem;font-size:.75rem;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='rgba(0,168,120,.12)'" onmouseout="this.style.background='none'">
+                    <?= t('Copy','Copier') ?>
+                  </button>
+                  <?php endif; ?>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.4rem;flex-shrink:0;">
+                <span class="badge badge-<?= $statusClass ?>"><?= $statusLabel ?></span>
+                <span style="font-size:.75rem;color:var(--muted-2);"><?= t('Claimed','Obtenu') ?> <?= date('d M Y', strtotime($o['claimed_at'])) ?></span>
+                <?php if ($isRedeemed && $o['redeemed_at']): ?>
+                <span style="font-size:.72rem;color:var(--muted-2);"><?= t('Used on','Utilisé le') ?> <?= date('d M Y', strtotime($o['redeemed_at'])) ?></span>
+                <?php endif; ?>
+                <?php if (!empty($o['expires_at']) && $isActive): ?>
+                <span style="font-size:.72rem;color:<?= strtotime($o['expires_at']) < (time()+86400*3) ? '#f5a623' : 'var(--muted-2)' ?>;">
+                  <?= t('Expires','Expire') ?> <?= date('d M Y', strtotime($o['expires_at'])) ?>
+                </span>
+                <?php endif; ?>
+                <a href="<?= SITE_URL ?>/offer/<?= e($o['offer_slug']) ?>" class="btn btn-outline btn-sm"><?= t('View Offer','Voir l\'offre') ?></a>
+              </div>
+            </div>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+        <div class="cdash-empty">
+          <div class="cdash-empty-icon">🎟️</div>
+          <h3><?= t('No offers claimed yet','Aucune offre réclamée') ?></h3>
+          <p><?= t('Browse businesses and claim discount codes from their offers page.','Parcourez les entreprises et réclamez des codes de réduction sur leur page d\'offres.') ?></p>
+          <a href="<?= SITE_URL ?>/listings" class="btn btn-primary btn-sm" style="margin-top:.75rem;"><?= t('Browse Businesses','Voir les entreprises') ?></a>
+        </div>
+        <?php endif; ?>
+      </div>
+
+    <?php endif; ?>
+
   </div>
 </section>
 
 <script>
+function copyCode(code) {
+  navigator.clipboard.writeText(code).then(function() {
+    // Briefly highlight the code element
+    var el = document.getElementById('code-' + code);
+    if (el) {
+      var orig = el.style.background;
+      el.style.background = 'rgba(0,168,120,.3)';
+      setTimeout(function(){ el.style.background = orig; }, 600);
+    }
+  }).catch(function() {
+    // Fallback: select the text
+    var el = document.getElementById('code-' + code);
+    if (el) {
+      var range = document.createRange();
+      range.selectNodeContents(el);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+    }
+  });
+}
+
 function unfollowBiz(rowId, listingId, btn) {
   if (!confirm('<?= t('Unfollow this business?','Ne plus suivre cette entreprise ?') ?>')) return;
   btn.disabled = true;
