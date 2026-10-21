@@ -182,7 +182,7 @@ require_once __DIR__ . '/includes/header.php';
       <?php endif; ?>
 
       <form method="POST" action="/notify-subscribe.php" novalidate>
-        <?= csrf() ?>
+        <?= csrfField() ?>
         <input type="hidden" name="lang"   value="<?= e($lang) ?>">
         <input type="hidden" name="source" value="<?= e($source) ?>">
 

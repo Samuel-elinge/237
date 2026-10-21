@@ -783,7 +783,7 @@ require_once __DIR__ . '/includes/header.php';
       <form method="POST" action="/notify-subscribe.php"
             style="display:flex;gap:0.6rem;flex-wrap:wrap;justify-content:center;margin-bottom:1rem"
             id="hp-notify-form">
-        <?= csrf() ?>
+        <?= csrfField() ?>
         <input type="hidden" name="lang"         value="<?= t('en', 'fr') ?>">
         <input type="hidden" name="source"       value="homepage">
         <input type="hidden" name="interests[]"  value="special_offers">
