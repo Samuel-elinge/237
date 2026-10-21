@@ -45,8 +45,10 @@ function adminNav(string $activePage = ''): void {
         ['Comms', '&#x1F4EC;', [
             ['Enquiries',   '&#x1F4EC;', $base . '/admin/enquiries.php',       ['enquiries']],
             ['Leads',       '&#x1F310;', $base . '/admin/leads.php',           ['leads']],
-            ['Newsletter',  '&#x1F4EC;', $base . '/admin/subscribers.php',     ['subscribers']],
-            ['Emails',      '&#x2709;',  $base . '/admin/emails.php',          ['emails']],
+            ['Newsletter',  '&#x1F4EC;', $base . '/admin/subscribers.php',         ['subscribers']],
+            ['Notif. Subs', '&#x1F514;', $base . '/admin/notify-subscribers.php', ['notify-subscribers']],
+            ['Notif. Camps','&#x1F4E3;', $base . '/admin/notify-campaigns.php',   ['notify-campaigns']],
+            ['Emails',      '&#x2709;',  $base . '/admin/emails.php',             ['emails']],
             ['Blog',        '&#x1F4DD;', $base . '/admin/blog.php',            ['blog']],
         ]],
         ['System', '&#x2699;', [
