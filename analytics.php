@@ -275,6 +275,7 @@ if ($l) {
 
 // ── Pre-calculated profile score (Phase 4: listing_profile_scores table) ───
 $dbProfileScore = null;
+$displayPct     = 0;
 if ($l) {
     try {
         $psq = db()->prepare("SELECT score_pct, missing_fields, last_calculated FROM listing_profile_scores WHERE listing_id=?");
@@ -282,6 +283,8 @@ if ($l) {
         $dbProfileScore = $psq->fetch() ?: null;
     } catch (Exception $e) {}
 }
+// Resolved display score — DB wins (12-field weighted), inline is fallback
+$displayPct = $dbProfileScore ? (int)$dbProfileScore['score_pct'] : ($l ? $profile['pct'] : 0);
 
 // ── Per-offer performance breakdown (Phase 4) ─────────────────────────────
 $offerPerformance = [];
@@ -434,7 +437,7 @@ require_once __DIR__ . '/includes/header.php';
   </div>
   <div class="stat-card">
     <div class="stat-label">📈 <?= t('Profile Score','Score profil') ?></div>
-    <div class="stat-main" style="color:<?= $profile['pct']>=80?'#00A878':($profile['pct']>=50?'var(--yellow)':'#e63946') ?>;"><?= $profile['pct'] ?>%</div>
+    <div class="stat-main" style="color:<?= $displayPct>=80?'#00A878':($displayPct>=50?'var(--yellow)':'#e63946') ?>;"><?= $displayPct ?>%</div>
     <div class="stat-sub"><?= $profile['score'] ?>/<?= $profile['total'] ?> <?= t('sections complete','sections complètes') ?></div>
   </div>
   <div class="stat-card">
@@ -677,8 +680,6 @@ require_once __DIR__ . '/includes/header.php';
     <a href="<?= SITE_URL ?>/edit-listing?id=<?= $lid ?>" style="font-size:12px;color:var(--green);"><?= t('Edit listing →','Modifier →') ?></a>
   </div>
   <?php
-  // Use pre-calculated DB score if available (more authoritative), fall back to inline
-  $displayPct = $dbProfileScore ? (int)$dbProfileScore['score_pct'] : $profile['pct'];
   $displayGrad = $displayPct >= 80
     ? 'linear-gradient(90deg,#00A878,#6fcf97)'
     : ($displayPct >= 50 ? 'linear-gradient(90deg,#B8860B,#fcd116)' : 'linear-gradient(90deg,#c0392b,#e63946)');
