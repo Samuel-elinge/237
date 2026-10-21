@@ -120,6 +120,39 @@ $similar = db()->prepare("
 $similar->execute([$l['category_id'], $l['id']]);
 $similar = $similar->fetchAll();
 
+// Booking — only show button when listing has booking_enabled = 1
+$bookingEnabled = !empty($l['booking_enabled']);
+
+// Active events linked to this listing
+$listingEvents = [];
+try {
+    $evQ = db()->prepare("
+        SELECT id, title, slug, start_date, end_date, cover_image, description
+        FROM events
+        WHERE listing_id = ? AND status = 'published'
+          AND (end_date IS NULL OR end_date >= CURDATE())
+        ORDER BY start_date ASC
+        LIMIT 5
+    ");
+    $evQ->execute([$l['id']]);
+    $listingEvents = $evQ->fetchAll();
+} catch (Exception $e) { /* table may not exist yet */ }
+
+// Active offers linked to this listing
+$listingOffers = [];
+try {
+    $ofQ = db()->prepare("
+        SELECT id, title, slug, expiry_date, cover_image, discount_label, description
+        FROM offers
+        WHERE listing_id = ? AND status = 'published'
+          AND (expiry_date IS NULL OR expiry_date >= CURDATE())
+        ORDER BY created_at DESC
+        LIMIT 5
+    ");
+    $ofQ->execute([$l['id']]);
+    $listingOffers = $ofQ->fetchAll();
+} catch (Exception $e) { /* table may not exist yet */ }
+
 // Enquiry table check
 $enquiryTableExists = false;
 try {
@@ -468,6 +501,84 @@ require_once __DIR__ . '/includes/header.php';
         </div>
         <?php endif; ?>
 
+        <!-- Active Events linked to this listing -->
+        <?php if ($listingEvents): ?>
+        <div class="listing-widget" id="listing-events">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.5rem;">
+            <h4 style="margin:0;">📅 <?= t('Upcoming Events','Événements à venir') ?> (<?= count($listingEvents) ?>)</h4>
+            <a href="<?= SITE_URL ?>/events?listing=<?= e($l['slug']) ?>" style="font-size:0.78rem;color:var(--green);"><?= t('See all →','Voir tout →') ?></a>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.75rem;">
+            <?php foreach ($listingEvents as $ev): ?>
+              <a href="<?= SITE_URL ?>/event/<?= e($ev['slug']) ?>"
+                 style="text-decoration:none;color:inherit;display:flex;gap:0.9rem;align-items:flex-start;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.85rem;transition:border-color 0.2s;"
+                 onmouseover="this.style.borderColor='rgba(0,168,120,0.4)'" onmouseout="this.style.borderColor='var(--border)'">
+                <?php if ($ev['cover_image']): ?>
+                  <div style="width:60px;height:60px;border-radius:8px;overflow:hidden;flex-shrink:0;">
+                    <img src="<?= e(UPLOAD_URL . $ev['cover_image']) ?>" alt="" style="width:100%;height:100%;object-fit:cover;">
+                  </div>
+                <?php else: ?>
+                  <div style="width:60px;height:60px;border-radius:8px;background:rgba(0,168,120,0.12);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;">📅</div>
+                <?php endif; ?>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-weight:600;font-size:0.88rem;color:var(--white);margin-bottom:0.2rem;line-height:1.3;"><?= e(mb_substr($ev['title'], 0, 70)) ?></div>
+                  <?php if ($ev['start_date']): ?>
+                    <div style="font-size:0.73rem;color:var(--green);font-weight:500;margin-bottom:0.2rem;">
+                      <?= date('j M Y', strtotime($ev['start_date'])) ?>
+                      <?php if ($ev['end_date'] && $ev['end_date'] !== $ev['start_date']): ?>
+                        — <?= date('j M Y', strtotime($ev['end_date'])) ?>
+                      <?php endif; ?>
+                    </div>
+                  <?php endif; ?>
+                  <?php if ($ev['description']): ?>
+                    <p style="font-size:0.78rem;color:var(--muted-2);margin:0;line-height:1.4;"><?= e(mb_substr($ev['description'], 0, 90)) ?><?= mb_strlen($ev['description']) > 90 ? '…' : '' ?></p>
+                  <?php endif; ?>
+                </div>
+                <span style="color:var(--green);font-size:0.8rem;flex-shrink:0;">→</span>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Active Offers linked to this listing -->
+        <?php if ($listingOffers): ?>
+        <div class="listing-widget" id="listing-offers">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.5rem;">
+            <h4 style="margin:0;">🏷️ <?= t('Current Offers','Offres en cours') ?> (<?= count($listingOffers) ?>)</h4>
+            <a href="<?= SITE_URL ?>/offers?listing=<?= e($l['slug']) ?>" style="font-size:0.78rem;color:var(--green);"><?= t('See all →','Voir tout →') ?></a>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.75rem;">
+            <?php foreach ($listingOffers as $of): ?>
+              <a href="<?= SITE_URL ?>/offer/<?= e($of['slug']) ?>"
+                 style="text-decoration:none;color:inherit;display:flex;gap:0.9rem;align-items:flex-start;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.85rem;transition:border-color 0.2s;"
+                 onmouseover="this.style.borderColor='rgba(245,200,66,0.4)'" onmouseout="this.style.borderColor='var(--border)'">
+                <?php if ($of['cover_image']): ?>
+                  <div style="width:60px;height:60px;border-radius:8px;overflow:hidden;flex-shrink:0;">
+                    <img src="<?= e(UPLOAD_URL . $of['cover_image']) ?>" alt="" style="width:100%;height:100%;object-fit:cover;">
+                  </div>
+                <?php else: ?>
+                  <div style="width:60px;height:60px;border-radius:8px;background:rgba(245,200,66,0.1);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;">🏷️</div>
+                <?php endif; ?>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-weight:600;font-size:0.88rem;color:var(--white);margin-bottom:0.2rem;line-height:1.3;"><?= e(mb_substr($of['title'], 0, 70)) ?></div>
+                  <?php if (!empty($of['discount_label'])): ?>
+                    <span style="display:inline-block;background:rgba(245,200,66,0.15);color:var(--yellow);font-size:0.68rem;font-weight:600;padding:0.1rem 0.5rem;border-radius:20px;margin-bottom:0.25rem;"><?= e($of['discount_label']) ?></span>
+                  <?php endif; ?>
+                  <?php if ($of['expiry_date']): ?>
+                    <div style="font-size:0.73rem;color:var(--muted-2);"><?= t('Expires','Expire') ?> <?= date('j M Y', strtotime($of['expiry_date'])) ?></div>
+                  <?php endif; ?>
+                  <?php if ($of['description']): ?>
+                    <p style="font-size:0.78rem;color:var(--muted-2);margin:0.2rem 0 0;line-height:1.4;"><?= e(mb_substr($of['description'], 0, 90)) ?><?= mb_strlen($of['description']) > 90 ? '…' : '' ?></p>
+                  <?php endif; ?>
+                </div>
+                <span style="color:var(--yellow);font-size:0.8rem;flex-shrink:0;">→</span>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Enquiry form -->
         <?php if ($enquiryTableExists && ($l['email'] || $l['user_id'])): ?>
         <div class="listing-widget" id="enquiry-form">
@@ -539,6 +650,20 @@ require_once __DIR__ . '/includes/header.php';
 
       <!-- ── SIDEBAR ── -->
       <aside>
+
+        <!-- Book Now CTA — paid listings with booking enabled -->
+        <?php if ($bookingEnabled): ?>
+        <div class="listing-widget" style="background:rgba(0,168,120,0.06);border-color:rgba(0,168,120,0.35);">
+          <a href="<?= SITE_URL ?>/booking?listing=<?= e($l['slug']) ?>"
+             class="btn btn-primary btn-full"
+             style="font-size:1rem;padding:0.85rem 1rem;font-weight:700;letter-spacing:0.02em;">
+            📅 <?= t('Book Now','Réserver maintenant') ?>
+          </a>
+          <p style="font-size:0.72rem;color:var(--muted-2);text-align:center;margin-top:0.5rem;margin-bottom:0;">
+            <?= t('Request an appointment or booking with this business.','Demandez un rendez-vous ou une réservation auprès de cette entreprise.') ?>
+          </p>
+        </div>
+        <?php endif; ?>
 
         <!-- Contact -->
         <div class="listing-widget">
