@@ -3,7 +3,7 @@
 require_once __DIR__ . '/includes/config.php';
 
 // Only allow from localhost or with a secret token
-if ($_GET['t'] ?? '' !== 'diag237') { http_response_code(403); die('Forbidden'); }
+if (($_GET['t'] ?? '') !== 'diag237') { http_response_code(403); die('Forbidden'); }
 
 header('Content-Type: text/plain');
 
