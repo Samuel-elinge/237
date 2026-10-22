@@ -2,6 +2,7 @@
 /**
  * Admin: Manually assign / override subscription plans for listings.
  * Monetisation → Assign Subscription
+ * v3
  */
 require_once __DIR__ . '/../includes/config.php';
 requireLogin();
