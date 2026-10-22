@@ -243,6 +243,15 @@ require_once __DIR__ . '/includes/header.php';
               <span class="feature-card-sub"><?= t('Views, enquiries & profile score','Vues, demandes & score profil') ?></span>
             </div>
           </a>
+          <?php if (!empty($ent['total_offers']) || !empty($ent['can_publish_offer'])): ?>
+          <a href="<?= SITE_URL ?>/partner/offers?listing_id=<?= $firstApprovedId ?>" class="feature-card">
+            <span class="feature-card-icon">🎟️</span>
+            <div class="feature-card-text">
+              <span class="feature-card-label"><?= t('Offers & Discounts','Offres & Réductions') ?></span>
+              <span class="feature-card-sub"><?= (!empty($ent['used_offers']) || !empty($ent['total_offers'])) ? ($ent['used_offers'] ?? 0).'/'.$ent['total_offers'].' '.t('offers used','offres utilisées') : t('Create discount codes','Créer des codes promo') ?></span>
+            </div>
+          </a>
+          <?php endif; ?>
           <a href="<?= SITE_URL ?>/manage-announcements?listing_id=<?= $firstApprovedId ?>" class="feature-card">
             <span class="feature-card-icon">📢</span>
             <div class="feature-card-text">
@@ -392,7 +401,7 @@ require_once __DIR__ . '/includes/header.php';
                       <span style="color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase;"><?= t('Limits','Limites') ?></span>
                       <?php
                       $usageDefs = [
-                          ['label' => t('Offers','Offres'),    'icon' => '🏷️', 'used' => $ent['used_offers'],    'total' => $ent['total_offers'],    'link' => SITE_URL.'/offers?listing_id='.$l['id']],
+                          ['label' => t('Offers','Offres'),    'icon' => '🏷️', 'used' => $ent['used_offers'],    'total' => $ent['total_offers'],    'link' => SITE_URL.'/partner/offers?listing_id='.$l['id']],
                           ['label' => t('Events','Événements'),'icon' => '📅', 'used' => $ent['used_events'],    'total' => $ent['total_events'],    'link' => SITE_URL.'/events?listing_id='.$l['id']],
                           ['label' => t('Products','Produits'),'icon' => '🛍️', 'used' => $ent['used_products'],  'total' => $ent['total_products'],  'link' => SITE_URL.'/manage-products?listing_id='.$l['id']],
                       ];
