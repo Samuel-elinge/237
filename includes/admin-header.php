@@ -13,6 +13,7 @@
  * The active nav item is auto-detected from the calling script's filename.
  */
 require_once __DIR__ . '/header.php';
+require_once __DIR__ . '/partner-helpers.php';
 require_once __DIR__ . '/../admin/includes/nav.php';
 
 // Derive active page key from the calling script's filename (no extension)
