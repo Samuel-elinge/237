@@ -5,6 +5,7 @@
  * v3
  */
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/partner-helpers.php';
 requireLogin();
 if (!isAdmin()) { http_response_code(403); exit('Forbidden'); }
 
