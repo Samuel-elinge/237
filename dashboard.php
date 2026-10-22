@@ -243,12 +243,17 @@ require_once __DIR__ . '/includes/header.php';
               <span class="feature-card-sub"><?= t('Views, enquiries & profile score','Vues, demandes & score profil') ?></span>
             </div>
           </a>
-          <?php if (!empty($ent['total_offers']) || !empty($ent['can_publish_offer'])): ?>
-          <a href="<?= SITE_URL ?>/partner/offers?listing_id=<?= $firstApprovedId ?>" class="feature-card">
+          <?php if ($firstApprovedId):
+          $_dashEnt = $firstFeaturedId && isset($listingEntitlements[$firstFeaturedId])
+              ? $listingEntitlements[$firstFeaturedId]
+              : ($firstApprovedId && isset($listingEntitlements[$firstApprovedId]) ? $listingEntitlements[$firstApprovedId] : []);
+          $_offersLid = $firstApprovedId;
+          ?>
+          <a href="<?= SITE_URL ?>/partner/offers?listing_id=<?= $_offersLid ?>" class="feature-card">
             <span class="feature-card-icon">🎟️</span>
             <div class="feature-card-text">
               <span class="feature-card-label"><?= t('Offers & Discounts','Offres & Réductions') ?></span>
-              <span class="feature-card-sub"><?= (!empty($ent['used_offers']) || !empty($ent['total_offers'])) ? ($ent['used_offers'] ?? 0).'/'.$ent['total_offers'].' '.t('offers used','offres utilisées') : t('Create discount codes','Créer des codes promo') ?></span>
+              <span class="feature-card-sub"><?= (!empty($_dashEnt['used_offers']) || !empty($_dashEnt['total_offers'])) ? ($_dashEnt['used_offers'] ?? 0).'/'.$_dashEnt['total_offers'].' '.t('offers used','offres utilisées') : t('Create discount codes','Créer des codes promo') ?></span>
             </div>
           </a>
           <?php endif; ?>
