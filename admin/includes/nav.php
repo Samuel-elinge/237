@@ -37,6 +37,7 @@ function adminNav(string $activePage = ''): void {
         ['Monetisation', '&#x1F4B8;', [
             ['Revenue Overview','&#x1F4CA;', $base . '/admin/revenue-overview.php',   ['revenue-overview']],
             ['Subscriptions',   '&#x2B50;',  $base . '/admin/subscriptions.php',      ['subscriptions']],
+            ['Assign Plan',     '&#x270F;',  $base . '/admin/assign-subscription.php', ['assign-subscription']],
             ['Promo Orders',    '&#x1F4E3;', $base . '/admin/promotion-orders.php',   ['promotion-orders']],
             ['Commissions',     '&#x1F4B0;', $base . '/admin/commissions.php',        ['commissions']],
             ['Sub Plans',       '&#x1F4CB;', $base . '/admin/subscription-plans.php', ['subscription-plans']],
