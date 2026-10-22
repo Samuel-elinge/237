@@ -52,12 +52,19 @@ $orderSQL = match ($sort) {
 
 // Listings
 $listSQL = "SELECT l.*, c.name_en AS cat_en, c.name_fr AS cat_fr, c.icon AS cat_icon,
-                   loc.name_en AS loc_en
+                   loc.name_en AS loc_en,
+                   COALESCE(sp.premium_star, 0)    AS premium_star,
+                   COALESCE(sp.search_priority, 0) AS search_priority
             FROM listings l
             JOIN categories c ON c.id = l.category_id
             JOIN locations loc ON loc.id = l.location_id
+            LEFT JOIN business_subscriptions bs
+                ON bs.listing_id = l.id
+                AND bs.status = 'active'
+                AND (bs.ends_at IS NULL OR bs.ends_at > NOW())
+            LEFT JOIN subscription_plans sp ON sp.id = bs.plan_id
             $whereSQL
-            ORDER BY $orderSQL
+            ORDER BY COALESCE(sp.search_priority, 0) DESC, $orderSQL
             LIMIT {$pg['perPage']} OFFSET {$pg['offset']}";
 $st = db()->prepare($listSQL);
 $st->execute($params);
@@ -314,9 +321,14 @@ require_once __DIR__ . '/includes/header.php';
                   <span class="listing-meta-item">📍 <?= e($l['loc_en']) ?></span>
                   <?php if ($l['phone']): ?><span class="listing-meta-item">📞 <?= e($l['phone']) ?></span><?php endif; ?>
                 </div>
-                <?php if ($l['verified']): ?>
-                  <span class="listing-verified">✓ <?= t('Verified', 'Vérifié') ?></span>
-                <?php endif; ?>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+                  <?php if ($l['premium_star']): ?>
+                    <span style="background:rgba(252,209,22,0.12);color:#fcd116;border:1px solid rgba(252,209,22,0.3);border-radius:99px;font-size:0.65rem;font-weight:700;padding:2px 8px;letter-spacing:.04em;white-space:nowrap;">⭐ Premium</span>
+                  <?php endif; ?>
+                  <?php if ($l['verified']): ?>
+                    <span class="listing-verified">✓ <?= t('Verified', 'Vérifié') ?></span>
+                  <?php endif; ?>
+                </div>
               </a>
             <?php endforeach; ?>
           </div>

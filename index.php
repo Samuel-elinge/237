@@ -27,12 +27,19 @@ $featured = db()->query("
     SELECT l.*, c.name_en AS cat_en, c.name_fr AS cat_fr, c.icon AS cat_icon,
            loc.name_en AS loc_en,
            (SELECT AVG(r.rating) FROM reviews r WHERE r.listing_id = l.id AND r.status = 'approved') AS avg_rating,
-           (SELECT COUNT(*) FROM reviews r WHERE r.listing_id = l.id AND r.status = 'approved') AS review_count
+           (SELECT COUNT(*) FROM reviews r WHERE r.listing_id = l.id AND r.status = 'approved') AS review_count,
+           COALESCE(sp.premium_star, 0)    AS premium_star,
+           COALESCE(sp.search_priority, 0) AS search_priority
     FROM listings l
     JOIN categories c   ON c.id  = l.category_id
     JOIN locations  loc ON loc.id = l.location_id
+    LEFT JOIN business_subscriptions bs
+        ON bs.listing_id = l.id
+        AND bs.status = 'active'
+        AND (bs.ends_at IS NULL OR bs.ends_at > NOW())
+    LEFT JOIN subscription_plans sp ON sp.id = bs.plan_id
     WHERE l.status = 'approved' AND l.featured = 1
-    ORDER BY l.views DESC
+    ORDER BY COALESCE(sp.search_priority, 0) DESC, l.views DESC
     LIMIT 6
 ")->fetchAll();
 
@@ -629,7 +636,11 @@ require_once __DIR__ . '/includes/header.php';
         </div>
         <div class="biz-card-body">
           <div style="display:flex;gap:5px;flex-wrap:wrap;">
-            <?php if ($biz['featured']): ?><span class="biz-badge badge-featured">⭐ <?= t('Featured', 'Vedette') ?></span><?php endif; ?>
+            <?php if ($biz['premium_star'] ?? false): ?>
+              <span style="background:rgba(252,209,22,0.12);color:#fcd116;border:1px solid rgba(252,209,22,0.3);border-radius:99px;font-size:0.65rem;font-weight:700;padding:2px 8px;letter-spacing:.04em;white-space:nowrap;">⭐ Premium</span>
+            <?php elseif ($biz['featured']): ?>
+              <span class="biz-badge badge-featured">⭐ <?= t('Featured', 'Vedette') ?></span>
+            <?php endif; ?>
             <?php if ($biz['verified'] ?? false): ?><span class="biz-badge badge-verified">✅ <?= t('Verified', 'Vérifiée') ?></span><?php endif; ?>
           </div>
           <div class="biz-card-name"><?= e($biz['title']) ?></div>

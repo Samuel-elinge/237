@@ -6,10 +6,16 @@ if (!$slug) redirect(SITE_URL . '/listings');
 
 $st = db()->prepare("
     SELECT l.*, c.name_en AS cat_en, c.name_fr AS cat_fr, c.icon AS cat_icon, c.slug AS cat_slug,
-           loc.name_en AS loc_en, loc.slug AS loc_slug
+           loc.name_en AS loc_en, loc.slug AS loc_slug,
+           COALESCE(sp.premium_star, 0) AS premium_star
     FROM listings l
     JOIN categories c ON c.id = l.category_id
     JOIN locations loc ON loc.id = l.location_id
+    LEFT JOIN business_subscriptions bs
+        ON bs.listing_id = l.id
+        AND bs.status = 'active'
+        AND (bs.ends_at IS NULL OR bs.ends_at > NOW())
+    LEFT JOIN subscription_plans sp ON sp.id = bs.plan_id
     WHERE l.slug = ? AND l.status = 'approved'
 ");
 $st->execute([$slug]);
@@ -102,7 +108,9 @@ $similar = db()->prepare("
            c.name_en AS cat_en, c.name_fr AS cat_fr, c.icon AS cat_icon,
            loc.name_en AS loc_en,
            COALESCE(rv.avg_rating, 0) AS avg_rating,
-           COALESCE(rv.review_count, 0) AS review_count
+           COALESCE(rv.review_count, 0) AS review_count,
+           COALESCE(sp.premium_star, 0)    AS premium_star,
+           COALESCE(sp.search_priority, 0) AS search_priority
     FROM listings l
     JOIN categories c   ON c.id   = l.category_id
     JOIN locations  loc ON loc.id = l.location_id
@@ -113,8 +121,13 @@ $similar = db()->prepare("
         FROM reviews WHERE status = 'approved'
         GROUP BY listing_id
     ) rv ON rv.listing_id = l.id
+    LEFT JOIN business_subscriptions bs
+        ON bs.listing_id = l.id
+        AND bs.status = 'active'
+        AND (bs.ends_at IS NULL OR bs.ends_at > NOW())
+    LEFT JOIN subscription_plans sp ON sp.id = bs.plan_id
     WHERE l.category_id = ? AND l.id != ? AND l.status = 'approved'
-    ORDER BY l.featured DESC, rv.avg_rating DESC, l.created_at DESC
+    ORDER BY COALESCE(sp.search_priority, 0) DESC, l.featured DESC, rv.avg_rating DESC, l.created_at DESC
     LIMIT 4
 ");
 $similar->execute([$l['category_id'], $l['id']]);
@@ -245,7 +258,9 @@ require_once __DIR__ . '/includes/header.php';
                 <span style="font-size:0.72rem;color:var(--green);font-weight:500;text-transform:uppercase;letter-spacing:0.08em;">
                   <?= e(lang()==='fr' ? $l['cat_fr'] : $l['cat_en']) ?>
                 </span>
-                <?php if ($l['featured']): ?>
+                <?php if ($l['premium_star']): ?>
+                  <span style="background:rgba(252,209,22,0.12);color:#fcd116;border:1px solid rgba(252,209,22,0.3);border-radius:99px;font-size:0.65rem;font-weight:700;padding:2px 9px;letter-spacing:.04em;white-space:nowrap;">⭐ Premium</span>
+                <?php elseif ($l['featured']): ?>
                   <span class="badge badge-approved">⭐ <?= t('Featured','En vedette') ?></span>
                 <?php endif; ?>
                 <?php if ($l['verified']): ?>
@@ -869,7 +884,9 @@ require_once __DIR__ . '/includes/header.php';
 
               <!-- Card body -->
               <div style="padding:<?= $s['logo'] ? '0.6rem 0.9rem 0.9rem 3.6rem' : '0.75rem 0.9rem 0.9rem' ?>;">
-                <?php if ($s['featured']): ?>
+                <?php if ($s['premium_star']): ?>
+                  <span style="font-size:0.62rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fcd116;display:block;margin-bottom:0.2rem;">⭐ Premium</span>
+                <?php elseif ($s['featured']): ?>
                   <span style="font-size:0.62rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--green);display:block;margin-bottom:0.2rem;"><?= t('Featured','Mis en avant') ?></span>
                 <?php endif; ?>
                 <a href="<?= SITE_URL ?>/listing/<?= e($s['slug']) ?>" style="text-decoration:none;">
