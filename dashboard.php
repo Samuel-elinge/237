@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/entitlement-helpers.php';
 requireLogin();
 
 $u = currentUser();
@@ -15,6 +16,15 @@ $myListings = db()->prepare("
 ");
 $myListings->execute([$u['id']]);
 $myListings = $myListings->fetchAll();
+
+// Pre-fetch entitlements for all listings (for usage indicators)
+$listingEntitlements = [];
+foreach ($myListings as $_ml) {
+    if ($_ml['featured']) {
+        try { $listingEntitlements[$_ml['id']] = getListingEntitlements($_ml['id']); } catch (Exception $e) {}
+    }
+}
+unset($_ml);
 
 $pendingPaymentsByListing = [];
 try {
@@ -375,6 +385,40 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                   </td>
                 </tr>
+                <?php if ((int)$l['featured'] === 1 && isset($listingEntitlements[$l['id']])): $ent = $listingEntitlements[$l['id']]; ?>
+                <tr>
+                  <td colspan="6" style="padding:0 0 0.6rem 1rem;border-top:none;">
+                    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;padding:0.5rem 0.75rem;background:rgba(0,168,120,0.04);border-radius:0 0 8px 8px;border:1px solid rgba(0,168,120,0.12);border-top:none;font-size:0.75rem;">
+                      <span style="color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase;"><?= t('Limits','Limites') ?></span>
+                      <?php
+                      $usageDefs = [
+                          ['label' => t('Offers','Offres'),    'icon' => '🏷️', 'used' => $ent['used_offers'],    'total' => $ent['total_offers'],    'link' => SITE_URL.'/offers?listing_id='.$l['id']],
+                          ['label' => t('Events','Événements'),'icon' => '📅', 'used' => $ent['used_events'],    'total' => $ent['total_events'],    'link' => SITE_URL.'/events?listing_id='.$l['id']],
+                          ['label' => t('Products','Produits'),'icon' => '🛍️', 'used' => $ent['used_products'],  'total' => $ent['total_products'],  'link' => SITE_URL.'/manage-products?listing_id='.$l['id']],
+                      ];
+                      foreach ($usageDefs as $ud):
+                          $pct   = ($ud['total'] > 0) ? min(100, (int)round($ud['used'] / $ud['total'] * 100)) : 0;
+                          $full  = ($ud['total'] > 0 && $ud['used'] >= $ud['total']);
+                          $color = $full ? '#ef4444' : 'var(--accent)';
+                      ?>
+                      <a href="<?= $ud['link'] ?>" style="text-decoration:none;display:flex;align-items:center;gap:0.35rem;color:<?= $full ? '#ef4444' : 'var(--fg)' ?>;" title="<?= $ud['label'] ?>">
+                        <span><?= $ud['icon'] ?></span>
+                        <span style="white-space:nowrap;"><?= $ud['used'] ?>/<?= $ud['total'] ?: '∞' ?></span>
+                        <?php if ($ud['total'] > 0): ?>
+                        <div style="width:48px;height:5px;border-radius:99px;background:rgba(255,255,255,0.1);overflow:hidden;">
+                          <div style="width:<?= $pct ?>%;height:100%;border-radius:99px;background:<?= $color ?>;"></div>
+                        </div>
+                        <?php endif; ?>
+                        <?php if ($full): ?><span style="color:#ef4444;font-size:.7rem;">⚠</span><?php endif; ?>
+                      </a>
+                      <?php endforeach; ?>
+                      <?php if ($ent['addon_eligible']): ?>
+                      <a href="<?= SITE_URL ?>/partner/buy-addon?listing_id=<?= $l['id'] ?>" style="margin-left:auto;font-size:0.72rem;color:var(--accent);text-decoration:none;white-space:nowrap;">+ <?= t('Add-ons','Extensions') ?></a>
+                      <?php endif; ?>
+                    </div>
+                  </td>
+                </tr>
+                <?php endif; ?>
                 <?php endforeach; ?>
               </tbody>
             </table>

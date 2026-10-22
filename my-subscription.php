@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/entitlement-helpers.php';
 requireLogin();
 
 $u = currentUser();
@@ -19,6 +20,32 @@ $listings = db()->prepare("SELECT l.id, l.title,
     ORDER BY l.title");
 $listings->execute([$u['id']]);
 $listings = $listings->fetchAll();
+
+// Entitlements per listing (usage indicators)
+$listingEnt = [];
+foreach ($listings as $_l) {
+    try { $listingEnt[$_l['id']] = getListingEntitlements($_l['id']); } catch (Exception $e) {}
+}
+unset($_l);
+
+// Active add-on entitlements per listing
+$activeAddons = [];
+try {
+    $aeSt = db()->prepare("
+        SELECT ae.*, pa.name_en, pa.name_fr, pa.addon_type,
+               ao.ref AS order_ref, ao.quantity AS units_bought
+        FROM addon_entitlements ae
+        JOIN addon_orders ao ON ao.id = ae.addon_order_id
+        JOIN plan_addons pa ON pa.id = ao.addon_id
+        WHERE ae.listing_id IN (SELECT id FROM listings WHERE user_id=?)
+          AND (ae.expires_at IS NULL OR ae.expires_at > NOW())
+        ORDER BY ae.addon_type, ae.activated_at DESC
+    ");
+    $aeSt->execute([$u['id']]);
+    foreach ($aeSt->fetchAll() as $ae) {
+        $activeAddons[$ae['listing_id']][] = $ae;
+    }
+} catch (Exception $e) {}
 
 // Subscription history (all orders)
 $history = db()->prepare("SELECT mo.ref, mo.amount_xaf, mo.payment_status, mo.created_at,
@@ -117,6 +144,77 @@ require_once __DIR__ . '/includes/header.php';
     foreach (array_filter($features) as $feat): ?>
     <span style="color:var(--muted);">✅ <?= e($feat) ?></span>
     <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
+
+  <?php if (isset($listingEnt[$l['id']])): $ent = $listingEnt[$l['id']]; ?>
+  <!-- Usage indicators -->
+  <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+    <p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 .6rem;"><?= t('Current usage','Utilisation actuelle') ?></p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;">
+      <?php
+      $usageDefs = [
+          ['key' => 'offers',   'label' => t('Offers','Offres'),    'icon' => '🏷️', 'link' => SITE_URL.'/offers?listing_id='.$l['id']],
+          ['key' => 'events',   'label' => t('Events','Événements'),'icon' => '📅', 'link' => SITE_URL.'/events?listing_id='.$l['id']],
+          ['key' => 'products', 'label' => t('Products','Produits'),'icon' => '🛍️', 'link' => SITE_URL.'/manage-products?listing_id='.$l['id']],
+      ];
+      foreach ($usageDefs as $ud):
+          $used  = $ent['used_'  . $ud['key']];
+          $total = $ent['total_' . $ud['key']];
+          $pct   = ($total > 0) ? min(100, (int)round($used / $total * 100)) : 0;
+          $full  = ($total > 0 && $used >= $total);
+          $addonCap = $ent['addon_' . $ud['key']];
+      ?>
+      <a href="<?= $ud['link'] ?>" style="text-decoration:none;background:rgba(255,255,255,.02);border:1px solid <?= $full ? 'rgba(239,68,68,.3)' : 'var(--border)' ?>;border-radius:8px;padding:.6rem .75rem;display:block;">
+        <div style="font-size:.73rem;color:var(--muted);margin-bottom:.2rem;"><?= $ud['icon'] ?> <?= $ud['label'] ?></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem;">
+          <span style="font-size:.9rem;font-weight:700;color:<?= $full ? '#ef4444' : 'var(--fg)' ?>;"><?= $used ?></span>
+          <span style="font-size:.72rem;color:var(--muted);">/ <?= $total ?: '∞' ?></span>
+        </div>
+        <?php if ($total > 0): ?>
+        <div style="height:4px;border-radius:99px;background:rgba(255,255,255,.08);">
+          <div style="width:<?= $pct ?>%;height:100%;border-radius:99px;background:<?= $full ? '#ef4444' : 'var(--accent)' ?>;transition:width .3s;"></div>
+        </div>
+        <?php endif; ?>
+        <?php if ($addonCap > 0): ?>
+        <div style="font-size:.65rem;color:var(--accent);margin-top:.2rem;">+<?= $addonCap ?> <?= t('add-on','ext.') ?></div>
+        <?php endif; ?>
+      </a>
+      <?php endforeach; ?>
+    </div>
+
+    <?php if ($ent['addon_eligible']): ?>
+    <div style="margin-top:.6rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+      <span style="font-size:.73rem;color:var(--muted);"><?= t('Need more capacity?','Besoin de plus de capacité ?') ?></span>
+      <a href="<?= SITE_URL ?>/partner/buy-addon?listing_id=<?= $l['id'] ?>" class="btn btn-sm btn-outline" style="font-size:.75rem;">
+        🛒 <?= t('Buy Add-ons','Acheter des extensions') ?>
+      </a>
+    </div>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
+
+  <?php if (!empty($activeAddons[$l['id']])): ?>
+  <!-- Active add-ons -->
+  <div style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--border);">
+    <p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 .5rem;"><?= t('Active add-ons','Extensions actives') ?></p>
+    <div style="display:flex;flex-direction:column;gap:.35rem;">
+      <?php foreach ($activeAddons[$l['id']] as $ae):
+          $addonName = $isFr ? ($ae['name_fr'] ?: $ae['name_en']) : $ae['name_en'];
+          $expiresStr = $ae['expires_at']
+              ? t('Expires', 'Expire le') . ' ' . date('d M Y', strtotime($ae['expires_at']))
+              : t('Never expires', 'N\'expire jamais');
+          $daysLeft2 = $ae['expires_at'] ? max(0,(int)ceil((strtotime($ae['expires_at'])-time())/86400)) : null;
+      ?>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;font-size:.78rem;background:rgba(0,168,120,.04);border:1px solid rgba(0,168,120,.12);border-radius:6px;padding:.35rem .65rem;">
+        <span>✅ <strong><?= e($addonName) ?></strong> <span style="color:var(--muted);">(+<?= (int)$ae['capacity'] ?> <?= t($ae['addon_type'],$ae['addon_type']) ?>)</span></span>
+        <span style="color:<?= ($daysLeft2 !== null && $daysLeft2 <= 7) ? '#ef4444' : 'var(--muted)' ?>;white-space:nowrap;">
+          <?= $expiresStr ?>
+          <?php if ($daysLeft2 !== null): ?> · <?= $daysLeft2 ?> <?= t('days','j') ?><?php endif; ?>
+        </span>
+      </div>
+      <?php endforeach; ?>
+    </div>
   </div>
   <?php endif; ?>
 </div>
