@@ -96,7 +96,7 @@ function getListingEntitlements(int $listingId): array
     $oSt->execute([$listingId]);
     $usedOffers = (int)$oSt->fetchColumn();
 
-    $eSt = $db->prepare("SELECT COUNT(*) FROM events WHERE listing_id = ? AND status IN ('active','upcoming','ongoing') AND (end_date IS NULL OR end_date >= CURDATE())");
+    $eSt = $db->prepare("SELECT COUNT(*) FROM events WHERE listing_id = ? AND status IN ('active','upcoming','ongoing') AND (ends_at IS NULL OR ends_at >= CURDATE())");
     $eSt->execute([$listingId]);
     $usedEvents = (int)$eSt->fetchColumn();
 
@@ -145,7 +145,7 @@ function checkEntitlement(int $listingId, string $type, int $excludeId = 0): boo
     // If editing an existing record it already occupies a slot — don't double-count
     if ($excludeId > 0) {
         $typeTable = ['offers' => 'offers', 'events' => 'events', 'products' => 'listing_products'][$type] ?? $type;
-        $statusCol = ['offers' => "status IN ('active','scheduled','paused')", 'events' => "status IN ('active','upcoming','ongoing') AND (end_date IS NULL OR end_date >= CURDATE())", 'products' => "1=1"][$type];
+        $statusCol = ['offers' => "status IN ('active','scheduled','paused')", 'events' => "status IN ('active','upcoming','ongoing') AND (ends_at IS NULL OR ends_at >= CURDATE())", 'products' => "1=1"][$type];
         $chk = db()->prepare("SELECT COUNT(*) FROM {$typeTable} WHERE id = ? AND listing_id = ? AND {$statusCol}");
         $chk->execute([$excludeId, $listingId]);
         if ((int)$chk->fetchColumn() > 0) {

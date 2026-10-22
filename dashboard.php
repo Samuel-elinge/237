@@ -295,7 +295,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="feature-card-text">
               <span class="feature-card-label"><?= t('My Subscription','Mon Abonnement') ?></span>
               <span class="feature-card-sub"><?php
-                if ($subStatus === 'active')       echo '<span style="color:#00A878;">● </span>' . e($subPlanName) . ' ' . t('active','actif');
+                if ($subStatus === 'active')       echo '<span style="color:#00A878;">● </span>' . e($subPlanName) . ' — <span style="text-decoration:underline;">' . t('Upgrade / Downgrade','Changer de plan') . '</span>';
                 elseif ($subStatus === 'pending_payment') echo t('Payment under review','Paiement en cours de vérification');
                 elseif ($subStatus === 'pending')  echo t('Awaiting activation','En attente d\'activation');
                 else                               echo t('Free — upgrade for more visibility','Gratuit — améliorez votre visibilité');
@@ -319,7 +319,7 @@ require_once __DIR__ . '/includes/header.php';
             <span class="feature-card-icon">🚀</span>
             <div class="feature-card-text">
               <span class="feature-card-label"><?= t('Promote a Listing','Promouvoir une Annonce') ?></span>
-              <span class="feature-card-sub"><?= t('Featured, event & offer slots','Emplacements vedette, événement & offre') ?></span>
+              <span class="feature-card-sub"><?= t('Featured & sponsored slots','Emplacements vedette & sponsorisés') ?></span>
             </div>
           </a>
           <?php if (!$subStatus || $subStatus === 'expired' || $subStatus === 'cancelled'): ?>

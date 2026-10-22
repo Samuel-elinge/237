@@ -15,8 +15,6 @@
  *  - Shared code generated server-side on create; unique codes batch-queued
  */
 require_once __DIR__ . '/../includes/config.php';
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 require_once __DIR__ . '/../includes/entitlement-helpers.php';
 requireLogin();
 
