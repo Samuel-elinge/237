@@ -44,7 +44,7 @@ function runSql(PDO $db, string $sql, string $label, array &$log, array &$errors
     }
 }
 
-$db->exec("SET foreign_key_checks = 0");
+try { $db->exec("SET foreign_key_checks = 0"); } catch (PDOException $e) { /* non-fatal */ }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 1. Expand `offers` status ENUM
@@ -372,45 +372,57 @@ runSql($db, "
 //    create a shared-type discount_code row so the new system can serve it.
 //    The original promo_code column is kept for rollback safety.
 // ══════════════════════════════════════════════════════════════════════════════
-$migrateStmt = $db->prepare("
-    SELECT o.id AS offer_id, o.promo_code, o.listing_id, l.user_id AS business_id
-    FROM offers o
-    JOIN listings l ON l.id = o.listing_id
-    WHERE o.promo_code IS NOT NULL
-      AND o.promo_code != ''
-      AND NOT EXISTS (
-          SELECT 1 FROM discount_codes dc
-          WHERE dc.offer_id = o.id
-            AND dc.code_type = 'shared'
-            AND dc.code = o.promo_code
-      )
-");
-$migrateStmt->execute();
-$toMigrate = $migrateStmt->fetchAll(PDO::FETCH_ASSOC);
+$toMigrate = [];
+try {
+    $migrateStmt = $db->prepare("
+        SELECT o.id AS offer_id, o.promo_code, o.listing_id, l.user_id AS business_id,
+               COALESCE(o.redemption_count, 0) AS usage_count
+        FROM offers o
+        JOIN listings l ON l.id = o.listing_id
+        WHERE o.promo_code IS NOT NULL
+          AND o.promo_code != ''
+          AND NOT EXISTS (
+              SELECT 1 FROM discount_codes dc
+              WHERE dc.offer_id = o.id
+                AND dc.code_type = 'shared'
+                AND dc.code = o.promo_code
+          )
+    ");
+    $migrateStmt->execute();
+    $toMigrate = $migrateStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $errors[] = "⚠ Could not fetch legacy promo_codes to migrate: " . $e->getMessage();
+}
 
-$insertCode = $db->prepare("
-    INSERT INTO discount_codes
-        (code, offer_id, business_id, code_type, usage_limit, usage_count,
-         claim_id, user_id, status, created_at)
-    VALUES
-        (?, ?, ?, 'shared', 0, COALESCE(
-            (SELECT redemption_count FROM offers WHERE id = ?), 0
-        ), NULL, NULL, 'active', NOW())
-    ON DUPLICATE KEY UPDATE business_id = VALUES(business_id), code_type = 'shared'
-");
+// Note: subqueries inside VALUES() are not portable; usage_count is fetched in the SELECT above.
+$insertCode = null;
+try {
+    $insertCode = $db->prepare("
+        INSERT INTO discount_codes
+            (code, offer_id, business_id, code_type, usage_limit, usage_count,
+             claim_id, user_id, status, created_at)
+        VALUES
+            (?, ?, ?, 'shared', 0, ?, NULL, NULL, 'active', NOW())
+        ON DUPLICATE KEY UPDATE business_id = VALUES(business_id), code_type = 'shared'
+    ");
+} catch (PDOException $e) {
+    $errors[] = "⚠ Could not prepare discount_codes insert: " . $e->getMessage();
+}
 
 $migrated = 0;
-foreach ($toMigrate as $row) {
-    try {
-        $insertCode->execute([
-            strtoupper($row['promo_code']),
-            $row['offer_id'],
-            $row['business_id'],
-            $row['offer_id'],   // for the COALESCE subquery
-        ]);
-        $migrated++;
-    } catch (PDOException $e) {
-        $errors[] = "⚠ Could not migrate promo_code for offer #{$row['offer_id']}: " . $e->getMessage();
+if ($insertCode) {
+    foreach ($toMigrate as $row) {
+        try {
+            $insertCode->execute([
+                strtoupper($row['promo_code']),
+                $row['offer_id'],
+                $row['business_id'],
+                (int)$row['usage_count'],
+            ]);
+            $migrated++;
+        } catch (PDOException $e) {
+            $errors[] = "⚠ Could not migrate promo_code for offer #{$row['offer_id']}: " . $e->getMessage();
+        }
     }
 }
 $log[] = "✅ Migrated $migrated legacy promo_code values → discount_codes (shared type)";
@@ -449,7 +461,7 @@ runSql($db, "
 $log[] = "ℹ️  ACTION REQUIRED: Update entitlement-helpers.php line 94 — add 'paused' to slot-counting statuses";
 $log[] = "ℹ️  ACTION REQUIRED: Update entitlement-helpers.php line 148 — add 'paused' to checkEntitlement status guard";
 
-$db->exec("SET foreign_key_checks = 1");
+try { $db->exec("SET foreign_key_checks = 1"); } catch (PDOException $e) { /* non-fatal */ }
 
 // ── Log this migration run ───────────────────────────────────────────────────
 try {
