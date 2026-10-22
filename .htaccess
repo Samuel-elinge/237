@@ -177,6 +177,7 @@ RewriteRule ^admin/partner-performance/?$  admin/partner-performance.php  [L,QSA
 RewriteRule ^admin/quality-monitoring/?$   admin/quality-monitoring.php   [L,QSA]
 RewriteRule ^admin/strategic-partners/?$   admin/strategic-partners.php   [L,QSA]
 RewriteRule ^admin/offers/?$               admin/offers.php               [L,QSA]
+RewriteRule ^admin/diag-500/?$             admin/diag-500.php             [L,QSA]
 RewriteRule ^admin/events/?$               admin/events.php               [L,QSA]
 RewriteRule ^partner-request/?$          partner-request.php          [L,QSA]
 
