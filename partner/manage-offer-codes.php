@@ -152,9 +152,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($row['code_type'] === 'unique') {
                     $pdo->prepare("
                         UPDATE discount_codes
-                        SET status='redeemed', redeemed_at=NOW(), redeemed_by=?
+                        SET status='redeemed', redeemed_at=NOW()
                         WHERE id=? AND status='active'
-                    ")->execute([$userId, $dcId]);
+                    ")->execute([$dcId]);
                 }
 
                 // Log redemption
