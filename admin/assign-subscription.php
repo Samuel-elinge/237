@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'assign' && $listingId && $planId) {
         // Fetch listing owner
-        $lst = db()->prepare("SELECT id, user_id, business_name FROM listings WHERE id = ?");
+        $lst = db()->prepare("SELECT id, user_id, title AS business_name FROM listings WHERE id = ?");
         $lst->execute([$listingId]);
         $listing = $lst->fetch();
 
@@ -90,7 +90,7 @@ $plans = db()->query("SELECT * FROM subscription_plans WHERE active = 1 ORDER BY
 
 // ── Fetch listings with their current active sub ─────────────────────────────
 $listings = db()->query("
-    SELECT l.id, l.business_name, l.status AS listing_status,
+    SELECT l.id, l.title AS business_name, l.status AS listing_status,
            u.email AS owner_email,
            bs.id   AS sub_id,
            bs.status AS sub_status,
