@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/partner-helpers.php';
 requireAdmin();
 
 $action = $_POST['action'] ?? '';
@@ -130,7 +131,7 @@ if (isset($_GET['edit']) && (int)$_GET['edit']) {
 }
 
 $pageTitle = 'Subscription Plans — Admin';
-require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/admin-header.php';
 ?>
 <style>
 .plan-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
