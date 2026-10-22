@@ -257,8 +257,7 @@ tr:hover td{background:rgba(255,255,255,.025);}
             <input type="hidden" name="months"     value="12">
             <input type="hidden" name="admin_note" value="Quick-assigned by admin">
             <button type="submit" class="quick-assign-btn"
-              style="<?= $p['highlight_color'] ? 'color:'.e($p['highlight_color']).';border-color:'.e($p['highlight_color']).'44;background:'.e($p['highlight_color']).'11;' : '' ?>"
-              onclick="return confirm('Assign <?= e($p['name_en']) ?> to <?= e(addslashes($l['business_name'])) ?>?')">
+              style="<?= $p['highlight_color'] ? 'color:'.e($p['highlight_color']).';border-color:'.e($p['highlight_color']).'44;background:'.e($p['highlight_color']).'11;' : '' ?>">
               <?= e($p['name_en']) ?>
             </button>
           </form>
@@ -270,8 +269,7 @@ tr:hover td{background:rgba(255,255,255,.025);}
             <input type="hidden" name="listing_id" value="<?= $l['id'] ?>">
             <input type="hidden" name="admin_note" value="Cancelled by admin">
             <button type="submit" class="quick-assign-btn"
-              style="color:#ef4444;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08);"
-              onclick="return confirm('Cancel subscription for <?= e(addslashes($l['business_name'])) ?>?')">
+              style="color:#ef4444;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08);">
               Cancel
             </button>
           </form>
