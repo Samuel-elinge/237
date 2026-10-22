@@ -7,7 +7,7 @@ $id     = (int)($_POST['id'] ?? $_GET['id'] ?? 0);
 
 /* ── WRITE ACTIONS ─────────────────────────────────────────── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    verifyCsrfOrDie();
+    verifyCsrf();
 
     if ($action === 'save') {
         $slug            = trim($_POST['slug'] ?? '');

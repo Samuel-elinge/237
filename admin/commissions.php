@@ -13,7 +13,7 @@ $action = $_POST['action'] ?? '';
 
 /* ── POST ACTIONS ─────────────────────────────────────────── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    verifyCsrfOrDie();
+    verifyCsrf();
 
     /* ── Approve single commission ── */
     if ($action === 'approve') {

@@ -14,7 +14,7 @@ $success = '';
 
 // ── Handle form submission ───────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    verifyCsrfOrDie();
+    verifyCsrf();
 
     $action     = $_POST['action']      ?? '';
     $listingId  = (int)($_POST['listing_id'] ?? 0);

@@ -6,7 +6,7 @@ $action = $_POST['action'] ?? '';
 
 /* ── POST ACTIONS ─────────────────────────────────────────── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    verifyCsrfOrDie();
+    verifyCsrf();
 
     $orderId = (int)($_POST['order_id'] ?? 0);
 
