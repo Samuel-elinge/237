@@ -109,17 +109,18 @@ $subPlanName = '';
 $activePromos = 0;
 $pendingPromos = 0;
 try {
-    // Latest active/pending subscription for this user
+    // Latest active/pending subscription for this user (via their listings)
     $sq = db()->prepare("
-        SELECT bs.status, sp.name_en AS plan_name
+        SELECT bs.status, sp.name_en AS plan_name, sp.name_fr AS plan_name_fr
         FROM business_subscriptions bs
         JOIN subscription_plans sp ON sp.id = bs.plan_id
-        WHERE bs.user_id = ? AND bs.status NOT IN ('cancelled','expired')
-        ORDER BY bs.created_at DESC LIMIT 1
+        JOIN listings l ON l.id = bs.listing_id
+        WHERE l.user_id = ? AND bs.status NOT IN ('cancelled','expired')
+        ORDER BY sp.search_priority DESC, bs.created_at DESC LIMIT 1
     ");
     $sq->execute([$u['id']]);
     $subRow = $sq->fetch();
-    if ($subRow) { $subStatus = $subRow['status']; $subPlanName = $subRow['plan_name']; }
+    if ($subRow) { $subStatus = $subRow['status']; $subPlanName = $isFr ? ($subRow['plan_name_fr'] ?: $subRow['plan_name']) : $subRow['plan_name']; }
 } catch (Exception $e) {}
 try {
     $pq = db()->prepare("
