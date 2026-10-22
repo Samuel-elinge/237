@@ -2,9 +2,9 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 echo "Step 1: PHP works<br>\n";
-require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/../includes/config.php';
 echo "Step 2: config.php OK<br>\n";
-require_once __DIR__ . '/includes/entitlement-helpers.php';
+require_once __DIR__ . '/../includes/entitlement-helpers.php';
 echo "Step 3: entitlement-helpers.php OK<br>\n";
 $pdo = db();
 echo "Step 4: db() OK<br>\n";
