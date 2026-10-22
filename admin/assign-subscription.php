@@ -2,7 +2,7 @@
 /**
  * Admin: Manually assign / override subscription plans for listings.
  * Monetisation → Assign Subscription
- * v3
+ * v4 — partner-helpers fix
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
