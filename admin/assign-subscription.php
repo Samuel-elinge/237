@@ -86,10 +86,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ── Fetch all plans ──────────────────────────────────────────────────────────
-$plans = db()->query("SELECT * FROM subscription_plans WHERE active = 1 ORDER BY sort_order ASC")->fetchAll();
+$plansResult = db()->query("SELECT * FROM subscription_plans WHERE active = 1 ORDER BY sort_order ASC, id ASC");
+$plans = $plansResult ? $plansResult->fetchAll() : [];
 
 // ── Fetch listings with their current active sub ─────────────────────────────
-$listings = db()->query("
+$listingsResult = db()->query("
     SELECT l.id, l.title AS business_name, l.status AS listing_status,
            u.email AS owner_email,
            bs.id   AS sub_id,
@@ -99,17 +100,23 @@ $listings = db()->query("
            sp.slug    AS plan_slug,
            sp.highlight_color AS plan_color
     FROM listings l
-    JOIN users u ON u.id = l.user_id
+    LEFT JOIN users u ON u.id = l.user_id
     LEFT JOIN business_subscriptions bs
           ON bs.listing_id = l.id
          AND bs.status = 'active'
          AND (bs.ends_at IS NULL OR bs.ends_at > NOW())
     LEFT JOIN subscription_plans sp ON sp.id = bs.plan_id
     ORDER BY l.id ASC
-")->fetchAll();
+");
+$listings = $listingsResult ? $listingsResult->fetchAll() : [];
 
 $planMap = [];
 foreach ($plans as $p) { $planMap[$p['id']] = $p; }
+
+// Debug: capture query errors to display as admin notices
+$_dbErrors = [];
+if (!$plansResult)   { $_dbErrors[] = 'Plans query failed: ' . implode(' ', db()->errorInfo()); }
+if (!$listingsResult){ $_dbErrors[] = 'Listings query failed: ' . implode(' ', db()->errorInfo()); }
 
 $pageTitle = 'Assign Subscription — Admin';
 require_once __DIR__ . '/../includes/admin-header.php';
@@ -152,6 +159,9 @@ tr:hover td{background:rgba(255,255,255,.025);}
   <?php endif; ?>
   <?php foreach ($errors as $err): ?>
   <div class="alert-error"><?= e($err) ?></div>
+  <?php endforeach; ?>
+  <?php foreach ($_dbErrors as $dbErr): ?>
+  <div class="alert-error">⚠️ DB: <?= e($dbErr) ?></div>
   <?php endforeach; ?>
 
   <!-- Manual assignment form -->
