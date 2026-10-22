@@ -540,9 +540,11 @@ $discTypeLabels = [
     <?php if (!$ent['can_publish_offer'] && $ent['total_offers'] > 0): ?>
       <span class="slot-warn">— <?= t('Limit reached. Archive a paused/expired offer to free a slot.','Limite atteinte. Archivez une offre en pause/expirée pour libérer un créneau.') ?></span>
     <?php endif; ?>
-    <a href="<?= SITE_URL ?>/partner/manage-offer-codes?listing_id=<?= $lid ?>" style="margin-left:auto;font-size:0.78rem;color:#00A878;">
-      🏪 <?= t('In-Store Redemption','Rachat en Boutique') ?>
-    </a>
+    <span style="margin-left:auto;display:flex;gap:0.85rem;align-items:center;">
+      <a href="<?= SITE_URL ?>/partner/manage-offer-codes?listing_id=<?= $lid ?>" style="font-size:0.78rem;color:#00A878;">
+        🏪 <?= t('In-Store Redemption','Rachat en Boutique') ?>
+      </a>
+    </span>
   </div>
 
   <!-- Listing switcher -->
@@ -825,6 +827,8 @@ $discTypeLabels = [
                 <a href="<?= SITE_URL ?>/offer/<?= htmlspecialchars($o['slug'], ENT_QUOTES, 'UTF-8') ?>"
                    target="_blank" class="act-view">👁 <?= t('View','Voir') ?></a>
               <?php endif; ?>
+
+              <a href="<?= SITE_URL ?>/partner/offer-analytics?id=<?= $o['id'] ?>" class="act-view" style="color:#8db8a8;">📊 <?= t('Analytics','Stats') ?></a>
 
               <?php if ($canEdit): ?>
                 <a href="?listing_id=<?= $lid ?>&edit=<?= $o['id'] ?>" class="act-edit">✏ <?= t('Edit','Modifier') ?></a>

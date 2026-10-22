@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/ops-admin-helpers.php';
+require_once __DIR__ . '/../includes/notify.php';
 requireAnyAdmin();
 
 $isFr = lang() === 'fr';
@@ -16,6 +17,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action']  ?? '';
     $oid    = (int)($_POST['offer_id'] ?? 0);
     $note   = trim($_POST['admin_notes'] ?? '');
+
+    // Fetch offer + business owner for notifications before any status change
+    $offerForNotif = null;
+    if ($oid && in_array($action, ['approve','reject','suspend','unsuspend'])) {
+        try {
+            $nSt = $pdo->prepare("
+                SELECT o.title, o.title_fr, o.slug, l.user_id AS owner_id
+                FROM offers o JOIN listings l ON l.id = o.listing_id
+                WHERE o.id = ?
+            ");
+            $nSt->execute([$oid]);
+            $offerForNotif = $nSt->fetch();
+        } catch (Exception $e) {}
+    }
 
     if ($oid) {
         switch ($action) {
@@ -32,6 +47,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     WHERE id = ? AND status = 'pending'
                 ")->execute([$note ?: null, $oid]);
                 flash('success', t('Offer approved.', 'Offre approuvée.'));
+                // Notify business owner
+                if ($offerForNotif && $offerForNotif['owner_id']) {
+                    $oTitle = $offerForNotif['title'];
+                    $oTitleFr = $offerForNotif['title_fr'] ?: $oTitle;
+                    $oLink  = SITE_URL . '/partner/offers';
+                    dispatch_notification(
+                        (int)$offerForNotif['owner_id'], 'bell',
+                        '✅ Offer Approved', 'Offre approuvée',
+                        "Your offer \"{$oTitle}\" has been approved and is now live.",
+                        "Votre offre \"{$oTitleFr}\" a été approuvée et est maintenant en ligne.",
+                        $oLink, 'offer', $oid, null
+                    );
+                    dispatch_notification(
+                        (int)$offerForNotif['owner_id'], 'email',
+                        "✅ Your Offer Has Been Approved — {$oTitle}",
+                        "✅ Votre Offre a Été Approuvée — {$oTitleFr}",
+                        "Great news! Your offer <strong>\"{$oTitle}\"</strong> has been reviewed and approved. It is now visible to customers on 237Biz.",
+                        "Bonne nouvelle ! Votre offre <strong>\"{$oTitleFr}\"</strong> a été examinée et approuvée. Elle est maintenant visible par les clients sur 237Biz.",
+                        $oLink, 'offer', $oid, null
+                    );
+                }
                 break;
 
             case 'reject':
@@ -41,6 +77,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     WHERE id=? AND status='pending'
                 ")->execute([$note, $oid]);
                 flash('success', t('Offer rejected.', 'Offre rejetée.'));
+                // Notify business owner with rejection reason
+                if ($offerForNotif && $offerForNotif['owner_id']) {
+                    $oTitle = $offerForNotif['title'];
+                    $oTitleFr = $offerForNotif['title_fr'] ?: $oTitle;
+                    $oLink  = SITE_URL . '/partner/offers';
+                    dispatch_notification(
+                        (int)$offerForNotif['owner_id'], 'bell',
+                        '❌ Offer Not Approved', 'Offre non approuvée',
+                        "Your offer \"{$oTitle}\" was not approved. Reason: {$note}",
+                        "Votre offre \"{$oTitleFr}\" n'a pas été approuvée. Motif : {$note}",
+                        $oLink, 'offer', $oid, null
+                    );
+                    dispatch_notification(
+                        (int)$offerForNotif['owner_id'], 'email',
+                        "❌ Offer Update — {$oTitle}",
+                        "❌ Mise à Jour Offre — {$oTitleFr}",
+                        "Unfortunately, your offer <strong>\"{$oTitle}\"</strong> was not approved for the following reason:<br><br><em>{$note}</em><br><br>Please review your offer and resubmit if appropriate.",
+                        "Malheureusement, votre offre <strong>\"{$oTitleFr}\"</strong> n'a pas été approuvée pour la raison suivante :<br><br><em>{$note}</em><br><br>Veuillez réviser votre offre et la resoumettre si nécessaire.",
+                        $oLink, 'offer', $oid, null
+                    );
+                }
                 break;
 
             case 'suspend':
@@ -49,6 +106,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     WHERE id=? AND status NOT IN ('archived','rejected')
                 ")->execute([$note ?: null, $oid]);
                 flash('success', t('Offer suspended.', 'Offre suspendue.'));
+                // Notify business owner
+                if ($offerForNotif && $offerForNotif['owner_id'] && $note) {
+                    $oTitle = $offerForNotif['title'];
+                    $oTitleFr = $offerForNotif['title_fr'] ?: $oTitle;
+                    $oLink  = SITE_URL . '/partner/offers';
+                    dispatch_notification(
+                        (int)$offerForNotif['owner_id'], 'bell',
+                        '🚫 Offer Suspended', 'Offre suspendue',
+                        "Your offer \"{$oTitle}\" has been suspended. Reason: {$note}",
+                        "Votre offre \"{$oTitleFr}\" a été suspendue. Motif : {$note}",
+                        $oLink, 'offer', $oid, null
+                    );
+                }
                 break;
 
             case 'unsuspend':
@@ -440,7 +510,7 @@ adminNav(''); adminNavAssets();
 
                 <?php if ($o['status'] === 'pending'): ?>
                   <form method="POST" style="display:inline">
-                    <?= csrf() ?>
+                    <?= csrfField() ?>
                     <input type="hidden" name="action"   value="approve">
                     <input type="hidden" name="offer_id" value="<?= $o['id'] ?>">
                     <button class="ao-btn ao-btn-approve">✓ <?= t('Approve','Approuver') ?></button>
@@ -452,7 +522,7 @@ adminNav(''); adminNavAssets();
 
                 <?php if ($o['status'] === 'suspended_admin'): ?>
                   <form method="POST" style="display:inline">
-                    <?= csrf() ?>
+                    <?= csrfField() ?>
                     <input type="hidden" name="action"   value="unsuspend">
                     <input type="hidden" name="offer_id" value="<?= $o['id'] ?>">
                     <button class="ao-btn ao-btn-unsuspend">↑ <?= t('Reinstate','Rétablir') ?></button>
@@ -465,7 +535,7 @@ adminNav(''); adminNavAssets();
 
                 <?php if (in_array($o['status'], ['active','scheduled','paused'])): ?>
                   <form method="POST" style="display:inline" onsubmit="return confirm('<?= t('Expire this offer?','Expirer cette offre ?') ?>')">
-                    <?= csrf() ?>
+                    <?= csrfField() ?>
                     <input type="hidden" name="action"   value="expire">
                     <input type="hidden" name="offer_id" value="<?= $o['id'] ?>">
                     <button class="ao-btn ao-btn-expire"><?= t('Expire','Expirer') ?></button>
@@ -474,7 +544,7 @@ adminNav(''); adminNavAssets();
 
                 <?php if ($o['status'] === 'expired'): ?>
                   <form method="POST" style="display:inline">
-                    <?= csrf() ?>
+                    <?= csrfField() ?>
                     <input type="hidden" name="action"   value="reactivate">
                     <input type="hidden" name="offer_id" value="<?= $o['id'] ?>">
                     <button class="ao-btn ao-btn-reactive"><?= t('Reactivate','Réactiver') ?></button>
@@ -483,7 +553,7 @@ adminNav(''); adminNavAssets();
 
                 <?php if (!in_array($o['status'], ['pending','archived'])): ?>
                   <form method="POST" style="display:inline" onsubmit="return confirm('<?= t('Archive this offer?','Archiver cette offre ?') ?>')">
-                    <?= csrf() ?>
+                    <?= csrfField() ?>
                     <input type="hidden" name="action"   value="archive">
                     <input type="hidden" name="offer_id" value="<?= $o['id'] ?>">
                     <button class="ao-btn ao-btn-archive">📦</button>
@@ -491,7 +561,7 @@ adminNav(''); adminNavAssets();
                 <?php endif; ?>
 
                 <form method="POST" style="display:inline" onsubmit="return confirm('<?= t('Permanently delete?','Supprimer définitivement ?') ?>')">
-                  <?= csrf() ?>
+                  <?= csrfField() ?>
                   <input type="hidden" name="action"   value="delete">
                   <input type="hidden" name="offer_id" value="<?= $o['id'] ?>">
                   <button class="ao-btn ao-btn-danger">🗑</button>
@@ -506,7 +576,7 @@ adminNav(''); adminNavAssets();
             <tr id="row-mod-<?= $o['id'] ?>" style="display:none">
               <td colspan="6">
                 <form method="POST" class="ao-mod-inner">
-                  <?= csrf() ?>
+                  <?= csrfField() ?>
                   <input type="hidden" name="action"   value="reject">
                   <input type="hidden" name="offer_id" value="<?= $o['id'] ?>">
                   <textarea name="admin_notes" class="ao-mod-textarea" required
@@ -526,7 +596,7 @@ adminNav(''); adminNavAssets();
             <tr id="row-susp-<?= $o['id'] ?>" class="ao-suspend-row" style="display:none">
               <td colspan="6">
                 <form method="POST" class="ao-mod-inner">
-                  <?= csrf() ?>
+                  <?= csrfField() ?>
                   <input type="hidden" name="action"   value="suspend">
                   <input type="hidden" name="offer_id" value="<?= $o['id'] ?>">
                   <textarea name="admin_notes" class="ao-mod-textarea"

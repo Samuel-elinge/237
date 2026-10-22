@@ -9,6 +9,7 @@
  * URL: /partner/manage-offer-codes?listing_id=N
  */
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/notify.php';
 requireLogin();
 
 $isFr   = lang() === 'fr';
@@ -182,6 +183,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->commit();
                 $ok  = true;
                 $msg = t('✅ Code redeemed successfully!', '✅ Code utilisé avec succès !');
+
+                // Notify the business owner that a customer redeemed their code
+                try {
+                    $nSt = $pdo->prepare("
+                        SELECT o.title, o.title_fr, o.slug, l.user_id AS owner_id
+                        FROM offers o JOIN listings l ON l.id = o.listing_id
+                        WHERE o.id = ?
+                    ");
+                    $nSt->execute([$offerId]);
+                    $offerRow = $nSt->fetch();
+                    if ($offerRow && $offerRow['owner_id'] && (int)$offerRow['owner_id'] !== $userId) {
+                        $oTitle   = $offerRow['title'];
+                        $oTitleFr = $offerRow['title_fr'] ?: $oTitle;
+                        $oLink    = SITE_URL . '/partner/offer-analytics?id=' . $offerId;
+                        dispatch_notification(
+                            (int)$offerRow['owner_id'], 'bell',
+                            '🎉 Code Redeemed',
+                            '🎉 Code Utilisé',
+                            "A customer just redeemed a code for your offer \"{$oTitle}\". Check your analytics for details.",
+                            "Un client vient d'utiliser un code pour votre offre \"{$oTitleFr}\". Consultez vos statistiques pour les détails.",
+                            $oLink, 'offer', $offerId, 'promo'
+                        );
+                    }
+                } catch (Exception $ne) { /* non-fatal */ }
 
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
