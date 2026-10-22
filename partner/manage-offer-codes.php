@@ -19,7 +19,7 @@ $pdo    = db();
 $myListings = $pdo->prepare("
     SELECT id, title, slug
     FROM listings
-    WHERE user_id = ? AND status = 'approved'
+    WHERE user_id = ? AND status IN ('approved','published')
     ORDER BY title
 ");
 $myListings->execute([$userId]);
@@ -160,9 +160,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Log redemption
                 $pdo->prepare("
                     INSERT INTO offer_redemptions
-                        (offer_id, discount_code_id, listing_id, redeemed_by, status, redeemed_at)
+                        (offer_id, discount_code_id, business_id, staff_user_id, status, redeemed_at)
                     VALUES (?, ?, ?, ?, 'confirmed', NOW())
-                ")->execute([$offerId, $dcId, $lid, $userId]);
+                ")->execute([$offerId, $dcId, $userId, $userId]);
 
                 // Increment counter
                 $pdo->prepare("
@@ -206,10 +206,10 @@ $todayLog = $pdo->prepare("
            o.title, o.title_fr, o.discount_type, o.discount_value,
            u.name AS redeemed_by_name
     FROM offer_redemptions r
-    JOIN offers o        ON o.id  = r.offer_id
-    JOIN discount_codes dc ON dc.id = r.discount_code_id
-    LEFT JOIN users u    ON u.id  = r.redeemed_by
-    WHERE r.listing_id = ?
+    JOIN offers o          ON o.id  = r.offer_id
+    LEFT JOIN discount_codes dc ON dc.id = r.discount_code_id
+    LEFT JOIN users u      ON u.id  = r.staff_user_id
+    WHERE o.listing_id = ?
       AND DATE(r.redeemed_at) = CURDATE()
       AND r.status = 'confirmed'
     ORDER BY r.redeemed_at DESC
