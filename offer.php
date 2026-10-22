@@ -57,14 +57,34 @@ switch ($offer['offer_type']) {
 }
 
 // ── Claim / discount code logic ──────────────────────────────────────────
+$codeType       = $offer['code_type'] ?? 'unique'; // 'shared' (Type A) or 'unique' (Type B)
 $claimUser      = isLoggedIn() ? currentUser() : null;
 $claimMessage   = '';   // feedback shown in sidebar
-$claimCode      = null; // the user's active/generated code
+$claimCode      = null; // the code to display
 $alreadyClaimed = false;
 $claimLimitHit  = false;  // total offer redemption cap
 $maxClaimsPerUser = (int)($offer['max_claims_per_user'] ?? 1);
+$sharedCode     = null;   // Type A: the one shared code for this offer
 
-if ($claimUser && $isActive) {
+// Type A (shared): load the single shared code — visible to everyone, no claim needed
+if ($codeType === 'shared' && $isActive) {
+    try {
+        $scSt = db()->prepare("
+            SELECT code FROM discount_codes
+            WHERE offer_id = ? AND code_type = 'shared' AND status = 'active'
+            LIMIT 1
+        ");
+        $scSt->execute([$offer['id']]);
+        $row = $scSt->fetch();
+        if ($row) {
+            $sharedCode = $row['code'];
+            $claimCode  = $sharedCode;
+        }
+    } catch (Exception $e) { /* table may not exist */ }
+}
+
+// Type B (unique): check if this logged-in user already claimed a code
+if ($codeType === 'unique' && $claimUser && $isActive) {
     try {
         // Check if user already has a code for this offer
         $cSt = db()->prepare("
@@ -83,8 +103,8 @@ if ($claimUser && $isActive) {
     } catch (Exception $e) { /* tables not yet created */ }
 }
 
-// POST: claim a code
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'claim_offer') {
+// POST: claim a code (Type B / unique only — shared codes need no claim action)
+if ($codeType === 'unique' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'claim_offer') {
     verifyCsrf();
     if (!$claimUser) {
         $intendedUrl = SITE_URL . '/offer/' . $slug;
@@ -383,45 +403,74 @@ require_once __DIR__ . '/includes/header.php';
 
     <!-- Right sidebar -->
     <div class="offer-sidebar">
-      <!-- Discount code claim widget -->
-      <?php if ($isActive && !$claimLimitHit): ?>
-        <div style="background:rgba(0,168,120,0.07);border:1px solid rgba(0,168,120,0.25);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1rem;">
-          <?php if ($claimCode): ?>
-            <?php if ($claimMessage): ?><p style="color:#4ade80;font-size:0.82rem;margin:0 0 0.5rem;"><?= e($claimMessage) ?></p><?php endif; ?>
-            <p style="color:var(--muted);font-size:0.78rem;margin:0 0 0.35rem;"><?= t('Your discount code:','Votre code de réduction :') ?></p>
-            <div style="display:flex;align-items:center;gap:0.5rem;">
-              <span id="dcCode" style="font-family:monospace;font-size:1.1rem;font-weight:700;color:var(--yellow);letter-spacing:0.08em;background:rgba(245,200,66,0.1);padding:0.4rem 0.8rem;border-radius:6px;flex:1;text-align:center;"><?= e($claimCode) ?></span>
-              <button onclick="navigator.clipboard.writeText('<?= e($claimCode) ?>').then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='📋',1500)}).catch(()=>{document.getElementById('dcCode').style.userSelect='all'})" style="background:var(--green);color:#fff;border:none;border-radius:6px;padding:0.4rem 0.7rem;cursor:pointer;font-size:0.85rem;">📋</button>
-            </div>
-            <p style="color:var(--muted);font-size:0.73rem;margin:0.5rem 0 0;"><?= t('Show this code to the business when you visit.','Montrez ce code à l\'entreprise lors de votre visite.') ?></p>
-          <?php elseif ($claimUser): ?>
-            <?php if ($claimMessage): ?><p style="color:#f87171;font-size:0.82rem;margin:0 0 0.5rem;"><?= e($claimMessage) ?></p><?php endif; ?>
-            <form method="POST">
-              <input type="hidden" name="csrf" value="<?= csrf() ?>">
-              <input type="hidden" name="action" value="claim_offer">
-              <button type="submit" class="offer-action-btn primary" style="width:100%;margin-top:0;">
-                🎟️ <?= t('Get My Discount Code','Obtenir mon code de réduction') ?>
-              </button>
-            </form>
-            <p style="color:var(--muted);font-size:0.73rem;margin:0.5rem 0 0;"><?= t('Free — one unique code per person.','Gratuit — un code unique par personne.') ?></p>
-          <?php else: ?>
-            <p style="color:var(--muted);font-size:0.82rem;margin:0 0 0.6rem;"><?= t('Sign in to get your unique discount code.','Connectez-vous pour obtenir votre code de réduction.') ?></p>
-            <a href="<?= SITE_URL ?>/login.php?mode=login&next=<?= urlencode(SITE_URL.'/offer/'.$slug) ?>" class="offer-action-btn primary" style="display:block;text-align:center;margin-top:0;">
-              🎟️ <?= t('Sign In to Claim','Se connecter pour obtenir') ?>
-            </a>
-          <?php endif; ?>
-          <?php if ($offer['max_redemptions']): ?>
-            <p style="color:var(--muted-2);font-size:0.72rem;margin:0.4rem 0 0;text-align:center;">
-              <?= max(0, (int)$offer['max_redemptions'] - (int)$offer['redemption_count']) ?> <?= t('codes remaining','codes restants') ?>
-            </p>
-          <?php endif; ?>
-        </div>
-      <?php elseif ($claimLimitHit): ?>
-        <div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:10px;padding:1rem;margin-bottom:1rem;text-align:center;">
-          <span style="font-size:1.3rem;">😔</span>
-          <p style="color:#f87171;font-size:0.85rem;margin:0.25rem 0 0;"><?= t('All codes have been claimed.','Tous les codes ont été réclamés.') ?></p>
-        </div>
-      <?php endif; ?>
+      <!-- Discount code widget — Type A (shared) vs Type B (unique) -->
+      <?php if ($isActive): ?>
+
+        <?php if ($codeType === 'shared'): ?>
+          <!-- ── Type A: Shared code — visible to all, no sign-in needed ── -->
+          <div style="background:rgba(0,168,120,0.07);border:1px solid rgba(0,168,120,0.25);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1rem;">
+            <?php if ($sharedCode): ?>
+              <p style="color:var(--muted);font-size:0.78rem;margin:0 0 0.35rem;font-weight:600;">🏷️ <?= t('Discount Code:','Code de réduction :') ?></p>
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+                <span id="dcCode" style="font-family:monospace;font-size:1.15rem;font-weight:800;color:#00A878;letter-spacing:0.1em;background:rgba(0,168,120,0.1);padding:0.45rem 0.9rem;border-radius:6px;flex:1;text-align:center;"><?= e($sharedCode) ?></span>
+                <button id="copyBtn" onclick="navigator.clipboard.writeText('<?= e($sharedCode) ?>').then(()=>{this.textContent='✓ Copied';this.style.background='#4ade80';setTimeout(()=>{this.textContent='📋 Copy';this.style.background=''},2000)}).catch(()=>{var el=document.getElementById('dcCode');el.style.userSelect='all';el.focus()})" style="background:#00A878;color:#fff;border:none;border-radius:6px;padding:0.45rem 0.75rem;cursor:pointer;font-size:0.82rem;white-space:nowrap;font-weight:700;">📋 <?= t('Copy','Copier') ?></button>
+              </div>
+              <p style="color:var(--muted);font-size:0.73rem;margin:0;"><?= t('Show this code to the business when you visit.','Montrez ce code à l\'entreprise lors de votre visite.') ?></p>
+            <?php else: ?>
+              <p style="color:#5a8878;font-size:0.85rem;margin:0;text-align:center;">
+                <?= t('Code coming soon — check back shortly.','Code bientôt disponible.') ?>
+              </p>
+            <?php endif; ?>
+            <?php if ($offer['max_redemptions']): ?>
+              <p style="color:var(--muted-2);font-size:0.72rem;margin:0.5rem 0 0;text-align:center;">
+                <?= max(0, (int)$offer['max_redemptions'] - (int)$offer['redemption_count']) ?> <?= t('uses remaining','utilisations restantes') ?>
+              </p>
+            <?php endif; ?>
+          </div>
+
+        <?php elseif (!$claimLimitHit): ?>
+          <!-- ── Type B: Unique per-user claim ── -->
+          <div style="background:rgba(0,168,120,0.07);border:1px solid rgba(0,168,120,0.25);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1rem;">
+            <?php if ($claimCode): ?>
+              <?php if ($claimMessage): ?><p style="color:#4ade80;font-size:0.82rem;margin:0 0 0.5rem;"><?= e($claimMessage) ?></p><?php endif; ?>
+              <p style="color:var(--muted);font-size:0.78rem;margin:0 0 0.35rem;"><?= t('Your discount code:','Votre code de réduction :') ?></p>
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <span id="dcCode" style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#00A878;letter-spacing:0.08em;background:rgba(0,168,120,0.1);padding:0.4rem 0.8rem;border-radius:6px;flex:1;text-align:center;"><?= e($claimCode) ?></span>
+                <button onclick="navigator.clipboard.writeText('<?= e($claimCode) ?>').then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='📋',1500)}).catch(()=>{document.getElementById('dcCode').style.userSelect='all'})" style="background:#00A878;color:#fff;border:none;border-radius:6px;padding:0.4rem 0.7rem;cursor:pointer;font-size:0.85rem;">📋</button>
+              </div>
+              <p style="color:var(--muted);font-size:0.73rem;margin:0.5rem 0 0;"><?= t('Show this code to the business when you visit.','Montrez ce code à l\'entreprise lors de votre visite.') ?></p>
+            <?php elseif ($claimUser): ?>
+              <?php if ($claimMessage): ?><p style="color:#f87171;font-size:0.82rem;margin:0 0 0.5rem;"><?= e($claimMessage) ?></p><?php endif; ?>
+              <form method="POST">
+                <?= csrfField() ?>
+                <input type="hidden" name="action" value="claim_offer">
+                <button type="submit" class="offer-action-btn primary" style="width:100%;margin-top:0;">
+                  🎟️ <?= t('Get My Discount Code','Obtenir mon code de réduction') ?>
+                </button>
+              </form>
+              <p style="color:var(--muted);font-size:0.73rem;margin:0.5rem 0 0;"><?= t('Free — one unique code per person.','Gratuit — un code unique par personne.') ?></p>
+            <?php else: ?>
+              <p style="color:var(--muted);font-size:0.82rem;margin:0 0 0.6rem;"><?= t('Sign in to get your unique discount code.','Connectez-vous pour obtenir votre code de réduction.') ?></p>
+              <a href="<?= SITE_URL ?>/login?mode=login&next=<?= urlencode(SITE_URL.'/offer/'.$slug) ?>" class="offer-action-btn primary" style="display:block;text-align:center;margin-top:0;">
+                🎟️ <?= t('Sign In to Claim','Se connecter pour obtenir') ?>
+              </a>
+            <?php endif; ?>
+            <?php if ($offer['max_redemptions']): ?>
+              <p style="color:var(--muted-2);font-size:0.72rem;margin:0.4rem 0 0;text-align:center;">
+                <?= max(0, (int)$offer['max_redemptions'] - (int)$offer['redemption_count']) ?> <?= t('codes remaining','codes restants') ?>
+              </p>
+            <?php endif; ?>
+          </div>
+
+        <?php else: ?>
+          <!-- Unique claim cap hit -->
+          <div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:10px;padding:1rem;margin-bottom:1rem;text-align:center;">
+            <span style="font-size:1.3rem;">😔</span>
+            <p style="color:#f87171;font-size:0.85rem;margin:0.25rem 0 0;"><?= t('All codes have been claimed.','Tous les codes ont été réclamés.') ?></p>
+          </div>
+        <?php endif; ?>
+
+      <?php endif; // $isActive ?>
 
       <!-- Legacy static promo code (if set by business) -->
       <?php if ($offer['promo_code']): ?>
