@@ -104,4 +104,28 @@ try {
     echo "EXCEPTION: " . $e->getMessage() . "\n";
 }
 
+// NEW: test what happens when we include admin-header
+echo "\n--- testing admin-header include ---\n";
+echo "About to require admin-header.php...\n";
+flush();
+
+$pageTitle = 'Debug Test';
+ob_start();
+try {
+    require_once __DIR__ . '/../includes/admin-header.php';
+    $headerOutput = ob_get_clean();
+    echo "admin-header.php loaded OK, output length: " . strlen($headerOutput) . " bytes\n";
+} catch (Throwable $e) {
+    ob_end_clean();
+    echo "EXCEPTION in admin-header: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine() . "\n";
+}
+
+echo "\n--- testing csrfField() ---\n";
+try {
+    $csrf = csrfField();
+    echo "csrfField() returned " . strlen($csrf) . " bytes\n";
+} catch (Throwable $e) {
+    echo "EXCEPTION: " . $e->getMessage() . "\n";
+}
+
 echo "\nDone.\n";
