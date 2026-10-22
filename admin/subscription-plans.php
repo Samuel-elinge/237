@@ -219,14 +219,14 @@ require_once __DIR__ . '/../includes/admin-header.php';
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem;">
         <a href="?edit=<?= $p['id'] ?>" class="btn btn-secondary" style="font-size:.82rem;padding:.35rem .8rem;">Edit</a>
         <form method="post" style="display:inline;">
-          <?= csrf() ?>
+          <?= csrfField() ?>
           <input type="hidden" name="action" value="toggle">
           <input type="hidden" name="id" value="<?= $p['id'] ?>">
           <button class="btn btn-secondary" style="font-size:.82rem;padding:.35rem .8rem;"><?= $p['active'] ? 'Deactivate' : 'Activate' ?></button>
         </form>
         <?php if ($p['active_subs'] == 0): ?>
         <form method="post" style="display:inline;" onsubmit="return confirm('Delete this plan?');">
-          <?= csrf() ?>
+          <?= csrfField() ?>
           <input type="hidden" name="action" value="delete">
           <input type="hidden" name="id" value="<?= $p['id'] ?>">
           <button class="btn" style="font-size:.82rem;padding:.35rem .8rem;background:#fee2e2;color:#b91c1c;border:none;">Delete</button>
@@ -248,7 +248,7 @@ require_once __DIR__ . '/../includes/admin-header.php';
 <div class="form-section">
   <h3><?= $editing ? 'Edit Plan: ' . e($editing['name_en']) : 'Create New Plan' ?></h3>
   <form method="post">
-    <?= csrf() ?>
+    <?= csrfField() ?>
     <input type="hidden" name="action" value="save">
     <?php if ($editing): ?><input type="hidden" name="id" value="<?= $editing['id'] ?>"><?php endif; ?>
 
