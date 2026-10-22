@@ -90,8 +90,9 @@ function getListingEntitlements(int $listingId): array
     $totalProducts = (int)$plan['max_products'] + $addons['products'];
 
     // ── Current usage ────────────────────────────────────────────────
-    // Active/scheduled offers (not expired/cancelled/archived)
-    $oSt = $db->prepare("SELECT COUNT(*) FROM offers WHERE listing_id = ? AND status IN ('active','scheduled')");
+    // Active/scheduled/paused offers count toward the slot limit.
+    // Paused is included per spec §3 to prevent bypass-by-pause.
+    $oSt = $db->prepare("SELECT COUNT(*) FROM offers WHERE listing_id = ? AND status IN ('active','scheduled','paused')");
     $oSt->execute([$listingId]);
     $usedOffers = (int)$oSt->fetchColumn();
 
@@ -144,7 +145,7 @@ function checkEntitlement(int $listingId, string $type, int $excludeId = 0): boo
     // If editing an existing record it already occupies a slot — don't double-count
     if ($excludeId > 0) {
         $typeTable = ['offers' => 'offers', 'events' => 'events', 'products' => 'listing_products'][$type] ?? $type;
-        $statusCol = ['offers' => "status IN ('active','scheduled')", 'events' => "status IN ('active','upcoming','ongoing') AND (end_date IS NULL OR end_date >= CURDATE())", 'products' => "1=1"][$type];
+        $statusCol = ['offers' => "status IN ('active','scheduled','paused')", 'events' => "status IN ('active','upcoming','ongoing') AND (end_date IS NULL OR end_date >= CURDATE())", 'products' => "1=1"][$type];
         $chk = db()->prepare("SELECT COUNT(*) FROM {$typeTable} WHERE id = ? AND listing_id = ? AND {$statusCol}");
         $chk->execute([$excludeId, $listingId]);
         if ((int)$chk->fetchColumn() > 0) {
