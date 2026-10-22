@@ -162,7 +162,40 @@ runSql($db, "
 // 3. Expand `discount_codes` table
 //    Existing: id, code, offer_id, claim_id, user_id, status, redeemed_at,
 //              redeemed_by, created_at
+//    Note: if discount-codes-001.php was never run, create the base table first.
 // ══════════════════════════════════════════════════════════════════════════════
+
+// Ensure base table exists (idempotent if discount-codes-001.php was already run)
+runSql($db, "
+    CREATE TABLE IF NOT EXISTS discount_codes (
+        id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        code          VARCHAR(20)     NOT NULL,
+        offer_id      INT UNSIGNED    NOT NULL,
+        claim_id      BIGINT UNSIGNED NULL,
+        user_id       INT UNSIGNED    NULL,
+        status        ENUM('active','redeemed','expired','cancelled')
+                                      NOT NULL DEFAULT 'active',
+        redeemed_at   DATETIME        NULL,
+        redeemed_by   INT UNSIGNED    NULL COMMENT 'listing user_id who redeemed',
+        created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_code       (code),
+        INDEX idx_offer          (offer_id),
+        INDEX idx_status_offer   (status, offer_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+", "discount_codes: ensure base table exists", $log, $errors);
+
+// Also ensure offer_claims exists (dependency of discount-codes-001.php)
+runSql($db, "
+    CREATE TABLE IF NOT EXISTS offer_claims (
+        id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        offer_id      INT UNSIGNED    NOT NULL,
+        user_id       INT UNSIGNED    NOT NULL,
+        claimed_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_offer_user (offer_id, user_id),
+        INDEX idx_user  (user_id),
+        INDEX idx_offer (offer_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+", "offer_claims: ensure base table exists", $log, $errors);
 
 // business_id — denormalised for fast tenant isolation checks
 runSql($db, "
@@ -286,18 +319,19 @@ runSql($db, "
 ", "CREATE offer_entitlements", $log, $errors);
 
 // Seed offer_entitlements from existing addon_entitlements for offers type
+// addon_entitlements actual columns: listing_id, addon_order_id, addon_type, capacity, activated_at, expires_at
 runSql($db, "
     INSERT IGNORE INTO offer_entitlements
         (listing_id, source_type, source_reference, quantity, status, starts_at, ends_at, created_at)
     SELECT
         ae.listing_id,
         'addon',
-        CONCAT('addon_entitlements:', ae.id),
+        CONCAT('addon_entitlements:', ae.addon_order_id),
         ae.capacity,
         CASE WHEN (ae.expires_at IS NULL OR ae.expires_at > NOW()) THEN 'active' ELSE 'expired' END,
-        ae.created_at,
+        ae.activated_at,
         ae.expires_at,
-        ae.created_at
+        COALESCE(ae.activated_at, NOW())
     FROM addon_entitlements ae
     WHERE ae.addon_type = 'offers'
 ", "offer_entitlements: seed from addon_entitlements", $log, $errors);
