@@ -184,6 +184,7 @@ require_once __DIR__ . '/includes/header.php';
           <a href="<?= SITE_URL ?>/analytics?listing_id=<?= $firstApprovedId ?>">📊 <?= t('Analytics','Analytiques') ?></a>
           <a href="<?= SITE_URL ?>/my-enquiries?listing_id=<?= $firstApprovedId ?>">📬 <?= t('Enquiries','Demandes') ?></a>
           <a href="<?= SITE_URL ?>/manage-announcements?listing_id=<?= $firstApprovedId ?>">📢 <?= t('Announcements','Annonces') ?><?php if ($activeAnnouncements): ?> <span style="background:#00A878;color:#0A1A0F;border-radius:99px;font-size:10px;padding:1px 7px;font-weight:700;margin-left:4px;"><?= $activeAnnouncements ?></span><?php endif; ?></a>
+          <a href="<?= SITE_URL ?>/partner/offers?listing_id=<?= $firstApprovedId ?>">🎟️ <?= t('Offers & Discounts','Offres & Réductions') ?></a>
           <?php endif; ?>
           <?php if ($hasFeatured): ?>
           <a href="<?= SITE_URL ?>/manage-bookings?listing_id=<?= $firstFeaturedId ?>">📅 <?= t('Bookings','Réservations') ?><?php if ($pendingBookings): ?> <span style="background:#e63946;color:#fff;border-radius:99px;font-size:10px;padding:1px 7px;font-weight:700;margin-left:4px;"><?= $pendingBookings ?></span><?php endif; ?></a>

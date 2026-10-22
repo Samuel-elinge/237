@@ -318,19 +318,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ── Load current offers for this listing ──────────────────────────────────────
-$offers = $pdo->prepare("
-    SELECT o.*,
-           (SELECT dc.code FROM discount_codes dc WHERE dc.offer_id = o.id AND dc.code_type='shared' LIMIT 1) AS shared_code,
-           (SELECT COUNT(*) FROM discount_codes dc WHERE dc.offer_id = o.id AND dc.code_type='unique') AS unique_codes_issued,
-           (SELECT COUNT(*) FROM offer_redemptions r WHERE r.offer_id = o.id AND r.status='confirmed') AS confirmed_redemptions
-    FROM offers o
-    WHERE o.listing_id = ?
-    ORDER BY
-        FIELD(o.status,'active','scheduled','paused','pending','draft','expired','rejected','archived','suspended_admin'),
-        o.created_at DESC
-");
-$offers->execute([$lid]);
-$offers = $offers->fetchAll();
+// Note: subqueries reference v2 columns (discount_codes.code_type, offer_redemptions.*).
+// If the v2 migration hasn't been run yet, fall back to a bare query so the page
+// doesn't 500 — the missing data simply won't appear in the UI.
+try {
+    $offers = $pdo->prepare("
+        SELECT o.*,
+               (SELECT dc.code FROM discount_codes dc WHERE dc.offer_id = o.id AND dc.code_type='shared' LIMIT 1) AS shared_code,
+               (SELECT COUNT(*) FROM discount_codes dc WHERE dc.offer_id = o.id AND dc.code_type='unique') AS unique_codes_issued,
+               (SELECT COUNT(*) FROM offer_redemptions r WHERE r.offer_id = o.id AND r.status='confirmed') AS confirmed_redemptions
+        FROM offers o
+        WHERE o.listing_id = ?
+        ORDER BY
+            FIELD(o.status,'active','scheduled','paused','pending','draft','expired','rejected','archived','suspended_admin'),
+            o.created_at DESC
+    ");
+    $offers->execute([$lid]);
+    $offers = $offers->fetchAll();
+} catch (PDOException $e) {
+    // Migration not yet run — fall back to bare query
+    $offers = $pdo->prepare("
+        SELECT o.*, NULL AS shared_code, 0 AS unique_codes_issued, 0 AS confirmed_redemptions
+        FROM offers o
+        WHERE o.listing_id = ?
+        ORDER BY o.created_at DESC
+    ");
+    $offers->execute([$lid]);
+    $offers = $offers->fetchAll();
+}
 
 // Editing a specific offer?
 $editing = null;
