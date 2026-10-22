@@ -4,6 +4,7 @@
  * URL: /partner/offers (or /partner/offers?listing_id=N)
  */
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/entitlement-helpers.php';
 requireLogin();
 
 $isFr   = lang() === 'fr';
@@ -93,6 +94,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             try {
                 if ($action === 'create') {
+                    // ── Entitlement check ────────────────────────────────────
+                    if (!checkEntitlement($lid, 'offers')) {
+                        $ent = getListingEntitlements($lid);
+                        flash('error', t(
+                            'You have reached your active offer limit (' . $ent['total_offers'] . '). Purchase additional offer capacity or upgrade your plan.',
+                            'Vous avez atteint votre limite d\'offres actives (' . $ent['total_offers'] . '). Achetez de la capacité supplémentaire ou passez à un plan supérieur.'
+                        ));
+                        redirect(SITE_URL . '/partner/offers?listing_id=' . $lid);
+                    }
                     $st = $pdo->prepare("
                         INSERT INTO offers
                             (listing_id, title, title_fr, slug, description, description_fr,

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/entitlement-helpers.php';
 requireLogin();
 
 $cu = currentUser();
@@ -70,6 +71,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      ->execute([$name, $description ?: null, $catTag ?: null, $price, $salePrice, $imagePath, $inStock, $sortOrder, $prodId, $listingId]);
                 flash('success', t('Product updated.','Produit mis à jour.'));
             } else {
+                // Entitlement check: enforce product limit before creating a new product
+                if (!checkEntitlement($listingId, 'products')) {
+                    $ent = getListingEntitlements($listingId);
+                    flash('error', t(
+                        'You have reached your product limit (' . $ent['total_products'] . '). Purchase additional product capacity or upgrade your plan.',
+                        'Vous avez atteint votre limite de produits (' . $ent['total_products'] . '). Achetez de la capacité supplémentaire ou passez à un plan supérieur.'
+                    ));
+                    redirect(SITE_URL . '/manage-products?listing_id=' . $listingId);
+                }
                 db()->prepare("INSERT INTO listing_products (listing_id,name,description,category_tag,price,sale_price,image,in_stock,sort_order) VALUES (?,?,?,?,?,?,?,?,?)")
                      ->execute([$listingId, $name, $description ?: null, $catTag ?: null, $price, $salePrice, $imagePath, $inStock, $sortOrder]);
                 flash('success', t('Product added.','Produit ajouté.'));

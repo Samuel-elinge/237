@@ -4,6 +4,7 @@
  * URL: /partner/events
  */
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/entitlement-helpers.php';
 requireLogin();
 $isFr = lang() === 'fr';
 $uid  = currentUser()['id'];
@@ -72,6 +73,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $slug = preg_replace('/[^a-z0-9]+/', '-', strtolower($title)) . '-' . substr(md5(uniqid()), 0, 6);
+
+        // ── Entitlement check ─────────────────────────────────────────────
+        if (!checkEntitlement($postLid, 'events')) {
+            $ent = getListingEntitlements($postLid);
+            flash('error', t(
+                'You have reached your active event limit (' . $ent['total_events'] . '). Purchase additional event capacity or upgrade your plan.',
+                'Vous avez atteint votre limite d\'événements actifs (' . $ent['total_events'] . '). Achetez de la capacité supplémentaire ou passez à un plan supérieur.'
+            ));
+            redirect(SITE_URL . '/partner/events?lid=' . $postLid);
+        }
 
         try {
             db()->prepare("

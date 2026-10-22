@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $duration        = max(0, (int)($_POST['duration_days'] ?? 30));
         $max_offers      = max(0, (int)($_POST['max_offers'] ?? 2));
         $max_events      = max(0, (int)($_POST['max_events'] ?? 1));
+        $max_products    = max(0, (int)($_POST['max_products'] ?? 0));
         $analytics       = $_POST['analytics_level'] ?? 'basic';
         $sort            = (int)($_POST['sort_order'] ?? 0);
         $highlight       = trim($_POST['highlight_color'] ?? '') ?: null;
@@ -31,35 +32,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $promo_eligible  = isset($_POST['promotions_eligible']) ? 1 : 0;
         $verified_badge  = isset($_POST['verified_badge']) ? 1 : 0;
         $prio_support    = isset($_POST['priority_support']) ? 1 : 0;
+        $premium_star    = isset($_POST['premium_star']) ? 1 : 0;
+        $search_priority = max(0, (int)($_POST['search_priority'] ?? 0));
+        $addon_eligible  = isset($_POST['addon_eligible']) ? 1 : 0;
 
         if (!$slug || !$name_en || !$name_fr) {
             flash('error', 'Slug, English name and French name are required.');
         } else {
+            $adminId = currentUser()['id'];
             if ($id) {
+                // Fetch current values for audit log
+                $old = db()->prepare("SELECT * FROM subscription_plans WHERE id=?");
+                $old->execute([$id]);
+                $oldPlan = $old->fetch();
+
                 $st = db()->prepare("UPDATE subscription_plans SET
                     slug=?, name_en=?, name_fr=?, description_en=?, description_fr=?,
                     price_xaf=?, billing_interval=?, duration_days=?,
-                    max_offers=?, max_events=?, analytics_level=?,
+                    max_offers=?, max_events=?, max_products=?, analytics_level=?,
                     featured_eligible=?, promotions_eligible=?, verified_badge=?, priority_support=?,
+                    premium_star=?, search_priority=?, addon_eligible=?,
                     is_free=?, active=?, sort_order=?, highlight_color=?,
                     badge_label_en=?, badge_label_fr=?
                     WHERE id=?");
                 $st->execute([$slug, $name_en, $name_fr, $desc_en, $desc_fr,
-                    $price_xaf, $interval, $duration, $max_offers, $max_events, $analytics,
+                    $price_xaf, $interval, $duration, $max_offers, $max_events, $max_products, $analytics,
                     $feat_eligible, $promo_eligible, $verified_badge, $prio_support,
+                    $premium_star, $search_priority, $addon_eligible,
                     $is_free, $active, $sort, $highlight, $badge_en, $badge_fr, $id]);
+
+                // Audit log for financially/entitlement-sensitive fields
+                $auditFields = [
+                    'price_xaf','max_offers','max_events','max_products',
+                    'search_priority','premium_star','addon_eligible','active'
+                ];
+                $newVals = compact('price_xaf','max_offers','max_events','max_products',
+                    'search_priority','premium_star','addon_eligible','active');
+                $logSt = db()->prepare("INSERT INTO plan_audit_log (plan_id,admin_id,field_name,old_value,new_value) VALUES (?,?,?,?,?)");
+                foreach ($auditFields as $f) {
+                    if ((string)($oldPlan[$f] ?? '') !== (string)($newVals[$f] ?? '')) {
+                        $logSt->execute([$id, $adminId, $f, $oldPlan[$f], $newVals[$f]]);
+                    }
+                }
+
                 flash('success', 'Plan updated.');
             } else {
                 $st = db()->prepare("INSERT INTO subscription_plans
                     (slug, name_en, name_fr, description_en, description_fr,
                      price_xaf, billing_interval, duration_days,
-                     max_offers, max_events, analytics_level,
+                     max_offers, max_events, max_products, analytics_level,
                      featured_eligible, promotions_eligible, verified_badge, priority_support,
+                     premium_star, search_priority, addon_eligible,
                      is_free, active, sort_order, highlight_color, badge_label_en, badge_label_fr)
-                    VALUES (?,?,?,?,?, ?,?,?, ?,?,?, ?,?,?,?, ?,?,?,?,?,?)");
+                    VALUES (?,?,?,?,?, ?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?,?,?,?)");
                 $st->execute([$slug, $name_en, $name_fr, $desc_en, $desc_fr,
-                    $price_xaf, $interval, $duration, $max_offers, $max_events, $analytics,
+                    $price_xaf, $interval, $duration, $max_offers, $max_events, $max_products, $analytics,
                     $feat_eligible, $promo_eligible, $verified_badge, $prio_support,
+                    $premium_star, $search_priority, $addon_eligible,
                     $is_free, $active, $sort, $highlight, $badge_en, $badge_fr]);
                 flash('success', 'Plan created.');
             }
@@ -168,17 +197,21 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="spec-item">Duration: <strong><?= $p['duration_days'] ?: '∞' ?> days</strong></div>
         <div class="spec-item">Offers: <strong><?= $p['max_offers'] ?></strong></div>
         <div class="spec-item">Events: <strong><?= $p['max_events'] ?></strong></div>
+        <div class="spec-item">Products: <strong><?= $p['max_products'] ?? 0 ?></strong></div>
         <div class="spec-item">Analytics: <strong><?= e($p['analytics_level']) ?></strong></div>
+        <div class="spec-item">Search priority: <strong><?= $p['search_priority'] ?? 0 ?></strong></div>
         <div class="spec-item">Active subs: <strong><?= $p['active_subs'] ?></strong></div>
         <div class="spec-item">Sort: <strong><?= $p['sort_order'] ?></strong></div>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin:.75rem 0;">
         <?php
         $flags = [];
-        if ($p['featured_eligible'])   $flags[] = '⭐ Featured eligible';
+        if ($p['premium_star'] ?? 0)    $flags[] = '⭐ Premium star';
+        if ($p['featured_eligible'])   $flags[] = '🔝 Featured eligible';
         if ($p['promotions_eligible']) $flags[] = '📣 Promos eligible';
         if ($p['verified_badge'])      $flags[] = '✓ Verified badge';
         if ($p['priority_support'])    $flags[] = '🎧 Priority support';
+        if ($p['addon_eligible'] ?? 0) $flags[] = '🛒 Add-ons allowed';
         foreach ($flags as $f):
         ?><span style="font-size:.78rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px 8px;"><?= $f ?></span><?php endforeach; ?>
       </div>
@@ -278,11 +311,21 @@ require_once __DIR__ . '/../includes/header.php';
       <div>
         <label>Max Active Offers</label>
         <input type="number" name="max_offers" class="form-input" min="0" value="<?= $editing['max_offers'] ?? 2 ?>">
+        <small style="color:var(--muted);">0 = unlimited</small>
       </div>
       <div>
         <label>Max Active Events</label>
         <input type="number" name="max_events" class="form-input" min="0" value="<?= $editing['max_events'] ?? 1 ?>">
+        <small style="color:var(--muted);">0 = unlimited</small>
       </div>
+      <div>
+        <label>Max Published Products</label>
+        <input type="number" name="max_products" class="form-input" min="0" value="<?= $editing['max_products'] ?? 0 ?>">
+        <small style="color:var(--muted);">0 = unlimited</small>
+      </div>
+    </div>
+
+    <div class="form-row form-row-3">
       <div>
         <label>Analytics Level</label>
         <select name="analytics_level" class="form-input">
@@ -290,6 +333,14 @@ require_once __DIR__ . '/../includes/header.php';
           <option value="<?= $opt ?>" <?= ($editing['analytics_level'] ?? 'basic') === $opt ? 'selected' : '' ?>><?= ucfirst($opt) ?></option>
           <?php endforeach; ?>
         </select>
+      </div>
+      <div>
+        <label>Search Priority Weight</label>
+        <input type="number" name="search_priority" class="form-input" min="0" value="<?= $editing['search_priority'] ?? 0 ?>">
+        <small style="color:var(--muted);">Higher = appears first (Free=0, Growth=1, Premium=2)</small>
+      </div>
+      <div style="display:flex;align-items:center;padding-top:1.4rem;">
+        <!-- spacer -->
       </div>
     </div>
 
@@ -309,6 +360,8 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 
     <div class="check-row" style="margin-bottom:1.25rem;">
+      <label class="check-item"><input type="checkbox" name="premium_star" <?= ($editing['premium_star'] ?? 0) ? 'checked' : '' ?>> ⭐ Golden Premium star badge</label>
+      <label class="check-item"><input type="checkbox" name="addon_eligible" <?= ($editing['addon_eligible'] ?? 0) ? 'checked' : '' ?>> 🛒 Add-ons available</label>
       <label class="check-item"><input type="checkbox" name="is_free" <?= ($editing['is_free'] ?? 0) ? 'checked' : '' ?>> Is free plan</label>
       <label class="check-item"><input type="checkbox" name="featured_eligible" <?= ($editing['featured_eligible'] ?? 0) ? 'checked' : '' ?>> Featured listing eligible</label>
       <label class="check-item"><input type="checkbox" name="promotions_eligible" <?= ($editing['promotions_eligible'] ?? 0) ? 'checked' : '' ?>> Promotions eligible</label>
