@@ -170,7 +170,7 @@ tr:hover td{background:rgba(255,255,255,.025);}
   <div class="assign-form">
     <h3>Assign / Override Plan</h3>
     <form method="POST">
-      <?= csrfField() ?>
+      <input type="hidden" name="csrf" value="<?= csrf() ?>">
       <input type="hidden" name="action" value="assign">
       <div class="form-row">
         <div class="form-group" style="flex:2;min-width:220px;">
@@ -250,7 +250,7 @@ tr:hover td{background:rgba(255,255,255,.025);}
         <td>
           <?php foreach ($plans as $p): if ($p['is_free']) continue; ?>
           <form method="POST" style="display:inline;">
-            <?= csrfField() ?>
+            <input type="hidden" name="csrf" value="<?= csrf() ?>">
             <input type="hidden" name="action"     value="assign">
             <input type="hidden" name="listing_id" value="<?= $l['id'] ?>">
             <input type="hidden" name="plan_id"    value="<?= $p['id'] ?>">
@@ -264,7 +264,7 @@ tr:hover td{background:rgba(255,255,255,.025);}
           <?php endforeach; ?>
           <?php if ($l['sub_id']): ?>
           <form method="POST" style="display:inline;margin-left:.25rem;">
-            <?= csrfField() ?>
+            <input type="hidden" name="csrf" value="<?= csrf() ?>">
             <input type="hidden" name="action"     value="cancel">
             <input type="hidden" name="listing_id" value="<?= $l['id'] ?>">
             <input type="hidden" name="admin_note" value="Cancelled by admin">
