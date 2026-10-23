@@ -315,10 +315,11 @@ require_once __DIR__ . '/includes/header.php';
           <?php
           $desc = $l['description'] ?? '';
           if ($l['featured']): ?>
-            <p style="color:var(--muted);font-size:0.9rem;line-height:1.8;"><?= nl2br(e($desc)) ?></p>
+            <div style="color:var(--muted);font-size:0.9rem;line-height:1.8;"><?= $desc ?></div>
           <?php else:
-              $wl = wordLimit($desc, 30); ?>
-            <p style="color:var(--muted);font-size:0.9rem;line-height:1.8;"><?= nl2br(e($wl['text'])) ?><?= $wl['truncated'] ? '...' : '' ?></p>
+              $plainDesc = strip_tags($desc);
+              $wl = wordLimit($plainDesc, 30); ?>
+            <p style="color:var(--muted);font-size:0.9rem;line-height:1.8;"><?= e($wl['text']) ?><?= $wl['truncated'] ? '...' : '' ?></p>
             <?php if ($wl['truncated']): ?>
               <div style="background:linear-gradient(135deg,#0D2E1A,#1A3A26);border:1px solid rgba(245,200,66,0.25);border-radius:10px;padding:1rem 1.25rem;margin-top:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
                 <div>
