@@ -9,6 +9,16 @@ if (!isAdmin()) { exit('Forbidden'); }
 
 header('Content-Type: text/plain; charset=utf-8');
 
+echo "=== SESSION CSRF keys ===\n";
+echo "All session keys: " . implode(', ', array_keys($_SESSION)) . "\n";
+foreach ($_SESSION as $k => $v) {
+    if (stripos($k, 'csrf') !== false || stripos($k, 'token') !== false) {
+        echo "  $k => " . (is_string($v) ? $v : json_encode($v)) . "\n";
+    }
+}
+echo "\n=== csrfField() output ===\n";
+echo csrfField() . "\n\n";
+
 echo "=== POST handler diagnostics ===\n\n";
 
 // 1. Check business_subscriptions columns
