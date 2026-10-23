@@ -37,12 +37,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* ── Create payout batch ── */
     if ($action === 'create_batch') {
-        // Find all approved commissions not in a batch
-        $toGroup = db()->query("SELECT pc.user_id, SUM(pc.commission_amount_xaf) AS total_xaf,
+        // Find all approved commissions not in a batch, grouped by partner
+        $toGroup = db()->query("SELECT pc.partner_id, SUM(pc.amount) AS total_xaf,
             COUNT(*) AS commission_count
             FROM partner_commissions pc
             WHERE pc.status='approved' AND pc.payout_batch_id IS NULL AND pc.reversed_at IS NULL
-            GROUP BY pc.user_id
+            GROUP BY pc.partner_id
             HAVING total_xaf > 0")->fetchAll();
 
         if (!$toGroup) {
@@ -53,18 +53,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $batchRef = 'BATCH-' . strtoupper(substr(md5(uniqid()), 0, 8));
         $adminId  = currentUser()['id'];
 
-        // Create one batch per partner (or could do all in one — one per partner is cleaner)
         $batchCount = 0;
         foreach ($toGroup as $row) {
-            db()->prepare("INSERT INTO partner_payout_batches (ref, created_by, partner_id, total_xaf, commission_count, status)
-                VALUES (?,?,?,?,?,'pending')")
-                ->execute([$batchRef . '-U' . $row['user_id'], $adminId, $row['user_id'],
-                            $row['total_xaf'], $row['commission_count']]);
+            db()->prepare("INSERT INTO partner_payout_batches (ref, created_by, partner_id, total_xaf, status)
+                VALUES (?,?,?,?,'pending')")
+                ->execute([$batchRef . '-U' . $row['partner_id'], $adminId, $row['partner_id'], $row['total_xaf']]);
             $batchId = db()->lastInsertId();
 
             db()->prepare("UPDATE partner_commissions SET payout_batch_id=?, status='in_batch'
-                WHERE user_id=? AND status='approved' AND payout_batch_id IS NULL")
-                ->execute([$batchId, $row['user_id']]);
+                WHERE partner_id=? AND status='approved' AND payout_batch_id IS NULL")
+                ->execute([$batchId, $row['partner_id']]);
             $batchCount++;
         }
 
@@ -77,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $batchId = (int)$_POST['batch_id'];
         $paidRef = trim($_POST['paid_ref'] ?? '');
 
-        db()->prepare("UPDATE partner_payout_batches SET status='paid', paid_at=NOW(), paid_ref=? WHERE id=?")
+        db()->prepare("UPDATE partner_payout_batches SET status='paid', paid_at=NOW(), payout_ref=? WHERE id=?")
             ->execute([$paidRef, $batchId]);
         db()->prepare("UPDATE partner_commissions SET status='paid' WHERE payout_batch_id=?")
             ->execute([$batchId]);
@@ -117,9 +115,9 @@ $tab = $_GET['tab'] ?? 'commissions';
 
 // Summary stats
 $summaryStats = db()->query("SELECT
-    SUM(CASE WHEN status='pending' THEN commission_amount_xaf ELSE 0 END) AS pending_xaf,
-    SUM(CASE WHEN status='approved' THEN commission_amount_xaf ELSE 0 END) AS approved_xaf,
-    SUM(CASE WHEN status='paid' THEN commission_amount_xaf ELSE 0 END) AS paid_xaf,
+    SUM(CASE WHEN status='pending' THEN amount ELSE 0 END) AS pending_xaf,
+    SUM(CASE WHEN status='approved' THEN amount ELSE 0 END) AS approved_xaf,
+    SUM(CASE WHEN status='paid' THEN amount ELSE 0 END) AS paid_xaf,
     COUNT(CASE WHEN status='pending' THEN 1 END) AS pending_count,
     COUNT(CASE WHEN status='approved' THEN 1 END) AS approved_count
     FROM partner_commissions
@@ -140,9 +138,9 @@ $cfTotal = db()->query("SELECT COUNT(*) FROM partner_commissions pc WHERE $cfWhe
 $commissions = db()->query("SELECT pc.*,
     u.name AS partner_name, u.email AS partner_email,
     l.title AS listing_title,
-    mo.ref AS order_ref
+    mo.ref AS order_ref, mo.net_xaf AS gross_amount_xaf
     FROM partner_commissions pc
-    JOIN users u ON u.id = pc.user_id
+    JOIN users u ON u.id = pc.partner_id
     LEFT JOIN listings l ON l.id = pc.listing_id
     LEFT JOIN monetisation_orders mo ON mo.id = pc.order_id
     WHERE $cfWhere
@@ -151,10 +149,13 @@ $commissions = db()->query("SELECT pc.*,
 
 // Payout batches
 $batches = db()->query("SELECT ppb.*, u.name AS partner_name, u.email AS partner_email,
-    creator.name AS created_by_name
+    creator.name AS created_by_name,
+    COUNT(pc.id) AS commission_count
     FROM partner_payout_batches ppb
     JOIN users u ON u.id = ppb.partner_id
     LEFT JOIN users creator ON creator.id = ppb.created_by
+    LEFT JOIN partner_commissions pc ON pc.payout_batch_id = ppb.id
+    GROUP BY ppb.id
     ORDER BY ppb.created_at DESC LIMIT 50")->fetchAll();
 
 $pageTitle = 'Commissions — Admin';
@@ -228,8 +229,7 @@ require_once __DIR__ . '/../includes/admin-header.php';
         <th>Order Ref</th>
         <th>Listing</th>
         <th style="text-align:right;">Order Amt</th>
-        <th style="text-align:right;">Rate</th>
-        <th style="text-align:right;">Commission</th>
+        <th style="text-align:right;" colspan="2">Commission</th>
         <th>Status</th>
         <th>Date</th>
         <th></th>
@@ -250,9 +250,8 @@ require_once __DIR__ . '/../includes/admin-header.php';
       <td><span style="display:inline-block;padding:.2rem .55rem;border-radius:5px;font-size:.72rem;font-weight:600;background:<?= $tc['bg'] ?>;color:<?= $tc['c'] ?>;"><?= ucfirst($c['order_type']) ?></span></td>
       <td><code style="font-size:.75rem;"><?= e($c['order_ref'] ?? '—') ?></code></td>
       <td style="max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= e($c['listing_title'] ?? '—') ?></td>
-      <td style="text-align:right;white-space:nowrap;"><?= number_format($c['gross_amount_xaf']) ?></td>
-      <td style="text-align:right;"><?= number_format($c['commission_rate'], 1) ?>%</td>
-      <td style="text-align:right;font-weight:700;color:var(--accent);white-space:nowrap;"><?= number_format($c['commission_amount_xaf']) ?> XAF</td>
+      <td style="text-align:right;white-space:nowrap;"><?= $c['gross_amount_xaf'] ? number_format($c['gross_amount_xaf']) . ' XAF' : '—' ?></td>
+      <td style="text-align:right;font-weight:700;color:var(--accent);white-space:nowrap;" colspan="2"><?= number_format($c['amount']) ?> <?= e($c['currency'] ?? 'XAF') ?></td>
       <td><span style="display:inline-block;padding:.2rem .55rem;border-radius:5px;font-size:.72rem;font-weight:600;background:<?= $sc['bg'] ?>;color:<?= $sc['c'] ?>;"><?= ucfirst(str_replace('_',' ',$c['status'])) ?></span></td>
       <td style="white-space:nowrap;color:var(--muted);"><?= date('d M Y', strtotime($c['created_at'])) ?></td>
       <td>
