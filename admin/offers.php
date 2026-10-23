@@ -160,8 +160,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
 
             case 'delete':
-                $pdo->prepare("DELETE FROM offers WHERE id=?")->execute([$oid]);
-                flash('success', t('Offer deleted.', 'Offre supprimée.'));
+                try {
+                    $pdo->beginTransaction();
+                    // Remove child rows first to avoid orphans (no FK cascade defined)
+                    $pdo->prepare("DELETE FROM offer_redemptions WHERE discount_code_id IN (SELECT id FROM discount_codes WHERE offer_id=?)")->execute([$oid]);
+                    $pdo->prepare("DELETE FROM discount_codes  WHERE offer_id=?")->execute([$oid]);
+                    $pdo->prepare("DELETE FROM offer_claims    WHERE offer_id=?")->execute([$oid]);
+                    $pdo->prepare("DELETE FROM offer_audit_logs WHERE entity_type='offer' AND entity_id=?")->execute([$oid]);
+                    $pdo->prepare("DELETE FROM offers          WHERE id=?")->execute([$oid]);
+                    $pdo->commit();
+                    flash('success', t('Offer deleted.', 'Offre supprimée.'));
+                } catch (Exception $e) {
+                    $pdo->rollBack();
+                    flash('error', t('Delete failed — please try again.', 'Suppression échouée — veuillez réessayer.'));
+                }
                 break;
         }
 
