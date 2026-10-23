@@ -197,7 +197,7 @@ function wordLimit(string $text, int $limit): array {
 }
 
 $pageTitle = e($l['title']) . ' — 237Biz';
-$pageDesc  = e(mb_substr($l['description'] ?? '', 0, 155));
+$pageDesc  = e(mb_substr(strip_tags($l['description'] ?? ''), 0, 155));
 // og:image: prefer cover image, fall back to logo, then site default
 if (!empty($l['cover_image'])) {
     $pageImage = UPLOAD_URL . $l['cover_image'];
