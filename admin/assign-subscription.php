@@ -191,7 +191,7 @@ tr:hover td{background:rgba(255,255,255,.025);}
           <select name="plan_id" required>
             <option value="">— select plan —</option>
             <?php foreach ($plans as $p): ?>
-            <option value="<?= $p['id'] ?>"><?= e($p['name_en']) ?> (<?= $p['price_xaf'] ? number_format($p['price_xaf']) . ' XAF/mo' : 'Free' ?>)</option>
+            <option value="<?= $p['id'] ?>"><?= e($p['name_en']) ?> (<?= $p['price_xaf'] ? number_format($p['price_xaf']) . ' XAF/' . ($p['billing_interval'] === 'annual' ? 'yr' : ($p['billing_interval'] === 'one_off' ? 'once' : 'mo')) : 'Free' ?>)</option>
             <?php endforeach; ?>
           </select>
         </div>
