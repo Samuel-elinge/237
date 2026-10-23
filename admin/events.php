@@ -15,27 +15,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $eid    = (int)($_POST['event_id'] ?? 0);
     if (!$eid) { redirect(SITE_URL . '/admin/events'); }
 
+    requirePermission('event.manage');
     switch ($action) {
         case 'approve':
             db()->prepare("UPDATE events SET status='approved', rejection_note=NULL WHERE id=?")->execute([$eid]);
+            opsAuditLog('event.approve', 'event', $eid);
             flash('success', t('Event approved.','Événement approuvé.'));
             break;
         case 'reject':
             $note = trim($_POST['rejection_note'] ?? '');
             if (!$note) { flash('error', t('Please provide a rejection reason.','Veuillez indiquer un motif de refus.')); break; }
             db()->prepare("UPDATE events SET status='rejected', rejection_note=? WHERE id=?")->execute([$note, $eid]);
+            opsAuditLog('event.reject', 'event', $eid, $note);
             flash('success', t('Event rejected.','Événement refusé.'));
             break;
         case 'cancel':
             db()->prepare("UPDATE events SET status='cancelled' WHERE id=?")->execute([$eid]);
+            opsAuditLog('event.cancel', 'event', $eid);
             flash('success', t('Event cancelled.','Événement annulé.'));
             break;
         case 'feature':
             db()->prepare("UPDATE events SET featured=IF(featured,0,1) WHERE id=?")->execute([$eid]);
+            opsAuditLog('event.toggle_featured', 'event', $eid);
             flash('success', t('Featured status toggled.','Statut "à la une" modifié.'));
             break;
         case 'delete':
+            requireAnyAdmin('super'); // delete is super-admin-only
             db()->prepare("DELETE FROM events WHERE id=?")->execute([$eid]);
+            opsAuditLog('event.delete', 'event', $eid);
             flash('success', t('Event deleted.','Événement supprimé.'));
             break;
     }
@@ -365,6 +372,7 @@ table.ae-table { width:100%; border-collapse:collapse; font-size:0.82rem; }
                     </form>
                   <?php endif; ?>
 
+                  <?php if (isSuperAdmin()): ?>
                   <form method="POST" style="display:inline;">
                     <?= csrf() ?>
                     <input type="hidden" name="action" value="delete">
@@ -374,6 +382,7 @@ table.ae-table { width:100%; border-collapse:collapse; font-size:0.82rem; }
                       🗑
                     </button>
                   </form>
+                  <?php endif; ?>
                 </div>
               </td>
             </tr>

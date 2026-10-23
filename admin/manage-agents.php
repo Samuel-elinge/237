@@ -40,8 +40,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $action = $_POST['action'] ?? '';
 
+    requirePermission('agent.manage');
+
     // Create agent account
     if ($action === 'create_agent') {
+        requireAnyAdmin('super'); // creating user accounts is super-admin-only
         $name     = trim($_POST['name']     ?? '');
         $email    = trim($_POST['email']    ?? '');
         $password = trim($_POST['password'] ?? '');
@@ -67,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare("INSERT INTO referral_links (user_id,programme_id,code) VALUES (?,1,?)")
                     ->execute([$uid, $code]);
 
+                opsAuditLog('agent.create', 'user', $uid, "Created agent {$name} ({$email}), code: {$code}");
                 flash('success', "Agent {$name} created. Referral code: {$code}");
                 redirect(SITE_URL . '/admin/manage-agents.php?tab=agents');
             }
@@ -93,6 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Switch role: agent → creator
     if ($action === 'switch_to_creator') {
+        requireAnyAdmin('super'); // role changes are super-admin-only
         $uid = (int)($_POST['user_id'] ?? 0);
         if ($uid) {
             try {
@@ -103,6 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$chk->fetch()) {
                     $pdo->prepare("INSERT INTO creator_profiles (user_id,status) VALUES (?,'pending')")->execute([$uid]);
                 }
+                opsAuditLog('agent.switch_to_creator', 'user', $uid);
                 flash('success', 'Agent converted to Creator (pending approval).');
             } catch (Exception $e) { flash('error', 'Could not switch role.'); }
         }
@@ -203,11 +209,11 @@ adminNav('manage-agents'); adminNavAssets();
   <div class="filter-tabs" style="margin-bottom:1.5rem;flex-wrap:wrap;">
     <a href="?tab=agents" class="filter-tab <?= $tab==='agents'?'active':'' ?>">👔 Agents (<?= count($agents) ?>)</a>
     <a href="?tab=leads"  class="filter-tab <?= $tab==='leads' ?'active':'' ?>">📋 Lead Assignments</a>
-    <a href="?tab=create" class="filter-tab <?= $tab==='create'?'active':'' ?>">+ New Agent</a>
+    <?php if (isSuperAdmin()): ?><a href="?tab=create" class="filter-tab <?= $tab==='create'?'active':'' ?>">+ New Agent</a><?php endif; ?>
   </div>
 
-  <?php if ($tab === 'create'): ?>
-  <!-- Create agent form -->
+  <?php if ($tab === 'create' && isSuperAdmin()): ?>
+  <!-- Create agent form (super admin only) -->
   <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:24px;max-width:520px;">
     <h3 style="margin-top:0;font-size:1.05rem;">+ New Sales Agent</h3>
     <form method="POST">
@@ -340,12 +346,14 @@ adminNav('manage-agents'); adminNavAssets();
       <input type="hidden" name="user_id" value="<?= $a['id'] ?>">
       <button type="submit" style="background:rgba(138,180,248,0.12);border:1px solid rgba(138,180,248,0.3);color:#8ab4f8;border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:inherit;" title="View portal as this agent">👁 Login as</button>
     </form>
+    <?php if (isSuperAdmin()): ?>
     <form method="POST" style="display:inline;">
       <input type="hidden" name="csrf" value="<?= csrf() ?>">
       <input type="hidden" name="action" value="switch_to_creator">
       <input type="hidden" name="user_id" value="<?= $a['id'] ?>">
       <button type="submit" style="background:rgba(245,130,245,0.08);border:1px solid rgba(245,130,245,0.2);color:#e07be0;border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:inherit;" onclick="adminConfirm('Convert ' + '<?= e($a["name"]) ?>' + ' to Creator? They will lose their Agent role.', this.closest('form')); return false;">🎬 Switch to Creator</button>
     </form>
+    <?php endif; ?>
   </div>
   <?php endforeach; ?>
   <?php endif; ?>

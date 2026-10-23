@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {}
     }
 
+    requirePermission('offer.moderate');
     if ($oid) {
         switch ($action) {
 
@@ -46,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         admin_notes = ?, updated_at = NOW()
                     WHERE id = ? AND status = 'pending'
                 ")->execute([$note ?: null, $oid]);
+                opsAuditLog('offer.approve', 'offer', $oid, $note);
                 flash('success', t('Offer approved.', 'Offre approuvée.'));
                 // Notify business owner
                 if ($offerForNotif && $offerForNotif['owner_id']) {
@@ -76,7 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     UPDATE offers SET status='rejected', admin_notes=?, updated_at=NOW()
                     WHERE id=? AND status='pending'
                 ")->execute([$note, $oid]);
-                flash('success', t('Offer rejected.', 'Offre rejetée.'));
+                opsAuditLog('offer.reject', 'offer', $oid, $note);
+                flash('success', t('Offre rejetée.', 'Offer rejected.'));
                 // Notify business owner with rejection reason
                 if ($offerForNotif && $offerForNotif['owner_id']) {
                     $oTitle = $offerForNotif['title'];
@@ -105,6 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     UPDATE offers SET status='suspended_admin', admin_notes=?, updated_at=NOW()
                     WHERE id=? AND status NOT IN ('archived','rejected')
                 ")->execute([$note ?: null, $oid]);
+                opsAuditLog('offer.suspend', 'offer', $oid, $note);
                 flash('success', t('Offer suspended.', 'Offre suspendue.'));
                 // Notify business owner
                 if ($offerForNotif && $offerForNotif['owner_id'] && $note) {
@@ -132,6 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         admin_notes = NULL, updated_at = NOW()
                     WHERE id=? AND status='suspended_admin'
                 ")->execute([$oid]);
+                opsAuditLog('offer.unsuspend', 'offer', $oid);
                 flash('success', t('Offer reinstated.', 'Offre rétablie.'));
                 break;
 
@@ -160,6 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
 
             case 'delete':
+                requireAnyAdmin('super'); // hard delete is super-admin-only
                 try {
                     $pdo->beginTransaction();
                     // Remove child rows first to avoid orphans (no FK cascade defined)
@@ -572,12 +578,14 @@ adminNav(''); adminNavAssets();
                   </form>
                 <?php endif; ?>
 
+                <?php if (isSuperAdmin()): ?>
                 <form method="POST" style="display:inline" onsubmit="return confirm('<?= t('Permanently delete?','Supprimer définitivement ?') ?>')">
                   <?= csrfField() ?>
                   <input type="hidden" name="action"   value="delete">
                   <input type="hidden" name="offer_id" value="<?= $o['id'] ?>">
                   <button class="ao-btn ao-btn-danger">🗑</button>
                 </form>
+                <?php endif; ?>
 
               </div>
             </td>

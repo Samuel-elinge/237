@@ -14,6 +14,7 @@ $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $action = $_POST['action'] ?? '';
+    requirePermission('partner.manage');
 
     if ($action === 'approve_partner') {
         $pid = (int)$_POST['partner_id'];
@@ -22,18 +23,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Also update user role
         $pdo->prepare("UPDATE users u JOIN partner_profiles pp ON pp.user_id=u.id SET u.role='growth_partner' WHERE pp.id=?")
             ->execute([$pid]);
+        opsAuditLog('partner.approve', 'partner_profile', $pid);
         $msg = 'Partner approved successfully.';
     }
 
     if ($action === 'suspend_partner') {
         $pid = (int)$_POST['partner_id'];
         $pdo->prepare("UPDATE partner_profiles SET status='suspended' WHERE id=?")->execute([$pid]);
+        opsAuditLog('partner.suspend', 'partner_profile', $pid);
         $msg = 'Partner suspended.';
     }
 
     if ($action === 'reactivate_partner') {
         $pid = (int)$_POST['partner_id'];
         $pdo->prepare("UPDATE partner_profiles SET status='active' WHERE id=?")->execute([$pid]);
+        opsAuditLog('partner.reactivate', 'partner_profile', $pid);
         $msg = 'Partner reactivated.';
     }
 

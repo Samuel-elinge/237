@@ -45,8 +45,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $u = currentUser();
 
+    requirePermission('creator.manage');
+
     // ── Create creator account ──────────────────────────────────────────
     if ($action === 'create_creator') {
+        requireAnyAdmin('super'); // creating user accounts is super-admin-only
         $name     = trim($_POST['name']            ?? '');
         $email    = strtolower(trim($_POST['email'] ?? ''));
         $password = trim($_POST['custom_password'] ?? '');
@@ -95,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ── Switch role: creator → sales_staff ─────────────────────────────
     if ($action === 'switch_to_agent') {
+        requireAnyAdmin('super'); // role changes are super-admin-only
         $uid = (int)($_POST['user_id'] ?? 0);
         if ($uid) {
             try {
@@ -138,6 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->prepare("INSERT INTO referral_links (user_id,programme_id,code) VALUES (?,1,?)")
                         ->execute([$uid, $code]);
                 }
+                opsAuditLog('creator.approve', 'user', $uid);
                 flash('success', 'Creator approved and referral link created.');
             } catch (Exception $e) { flash('error', 'Could not approve creator: ' . $e->getMessage()); }
         }
@@ -148,7 +153,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'suspend_creator') {
         $uid = (int)($_POST['user_id'] ?? 0);
         if ($uid) {
-            try { $pdo->prepare("UPDATE creator_profiles SET status='suspended' WHERE user_id=?")->execute([$uid]); } catch (Exception $e) {}
+            try {
+                $pdo->prepare("UPDATE creator_profiles SET status='suspended' WHERE user_id=?")->execute([$uid]);
+                opsAuditLog('creator.suspend', 'user', $uid);
+            } catch (Exception $e) {}
             flash('success', 'Creator suspended.');
         }
         redirect(SITE_URL . '/admin/manage-creators.php?tab=creators');
@@ -248,7 +256,7 @@ adminNav('manage-creators'); adminNavAssets();
   <div class="filter-tabs" style="margin-bottom:1.5rem;flex-wrap:wrap;">
     <a href="?tab=creators"    class="filter-tab <?= $tab==='creators'   ?'active':'' ?>">🎬 Creators (<?= count($creators) ?>)</a>
     <a href="?tab=submissions" class="filter-tab <?= $tab==='submissions'?'active':'' ?>">📤 Pending Submissions (<?= count($submissions) ?>)</a>
-    <a href="?tab=create"      class="filter-tab <?= $tab==='create'     ?'active':'' ?>">+ New Creator</a>
+    <?php if (isSuperAdmin()): ?><a href="?tab=create" class="filter-tab <?= $tab==='create'?'active':'' ?>">+ New Creator</a><?php endif; ?>
   </div>
 
   <?php if (!empty($errors)): ?>
@@ -257,8 +265,8 @@ adminNav('manage-creators'); adminNavAssets();
   </div>
   <?php endif; ?>
 
-  <?php if ($tab === 'create'): ?>
-  <!-- Create creator form -->
+  <?php if ($tab === 'create' && isSuperAdmin()): ?>
+  <!-- Create creator form (super admin only) -->
   <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:24px;max-width:520px;">
     <h3 style="margin-top:0;font-size:1.05rem;">+ New Creator</h3>
     <form method="POST">
@@ -401,12 +409,14 @@ adminNav('manage-creators'); adminNavAssets();
           <input type="hidden" name="user_id" value="<?= $cr['id'] ?>">
           <button type="submit" style="background:rgba(138,180,248,0.12);border:1px solid rgba(138,180,248,0.3);color:#8ab4f8;border-radius:6px;padding:5px 14px;font-size:12px;cursor:pointer;font-family:inherit;">👁 Login as</button>
         </form>
+        <?php if (isSuperAdmin()): ?>
         <form method="POST">
           <input type="hidden" name="csrf" value="<?= csrf() ?>">
           <input type="hidden" name="action" value="switch_to_agent">
           <input type="hidden" name="user_id" value="<?= $cr['id'] ?>">
           <button type="submit" style="background:rgba(138,180,248,0.08);border:1px solid rgba(138,180,248,0.2);color:#8ab4f8;border-radius:6px;padding:5px 14px;font-size:12px;cursor:pointer;font-family:inherit;" onclick="adminConfirm('Convert <?= e($cr["name"]) ?> to Sales Agent? They will lose their Creator role.', this.closest('form')); return false;">👔 Switch to Agent</button>
         </form>
+        <?php endif; ?>
         <form method="POST">
           <input type="hidden" name="csrf" value="<?= csrf() ?>">
           <input type="hidden" name="action" value="suspend_creator">

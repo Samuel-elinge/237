@@ -6,6 +6,7 @@ requireAnyAdmin();
 // ── POST handler ─────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
+    requirePermission('review.approve'); // ops admin must have review.approve to act here
     $action = $_POST['action'] ?? '';
 
     // ── Bulk action ────────────────────────────────────────────────────────────
@@ -38,10 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } catch (Exception $e) {}
                 }
             } elseif ($bulkAct === 'reject') {
+                requirePermission('review.reject');
                 db()->prepare("DELETE FROM reviews WHERE id IN ($ph)")->execute($ids);
+                opsAuditLog('review.bulk_reject', 'review', 0, 'Bulk rejected ' . count($ids) . ' review(s)');
             } elseif ($bulkAct === 'flag') {
                 db()->prepare("UPDATE reviews SET flagged=1 WHERE id IN ($ph)")->execute($ids);
+                opsAuditLog('review.bulk_flag', 'review', 0, 'Bulk flagged ' . count($ids) . ' review(s)');
             }
+            if ($bulkAct === 'approve') opsAuditLog('review.bulk_approve', 'review', 0, 'Bulk approved ' . count($ids) . ' review(s)');
             flash('success', count($ids) . ' review(s) updated.');
         }
         redirect(SITE_URL . '/admin/reviews.php' . (isset($_GET['status']) ? '?status=' . urlencode($_GET['status']) : ''));
@@ -51,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $reviewId = (int)($_POST['review_id'] ?? 0);
     if ($reviewId && in_array($action, ['approve','reject','flag','unflag'])) {
         if ($action === 'approve') {
+            opsAuditLog('review.approve', 'review', $reviewId);
             db()->prepare("UPDATE reviews SET status='approved', flagged=0 WHERE id=?")->execute([$reviewId]);
             try {
                 $rv = db()->prepare("SELECT r.*, l.title AS listing_title, l.slug, u.email AS owner_email, u.name AS owner_name FROM reviews r JOIN listings l ON l.id=r.listing_id LEFT JOIN users u ON u.id=l.user_id WHERE r.id=?");
@@ -71,10 +77,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } catch (Exception $e) {}
         } elseif ($action === 'reject') {
+            requirePermission('review.reject');
+            opsAuditLog('review.reject', 'review', $reviewId);
             db()->prepare("DELETE FROM reviews WHERE id=?")->execute([$reviewId]);
         } elseif ($action === 'flag') {
+            opsAuditLog('review.flag', 'review', $reviewId);
             db()->prepare("UPDATE reviews SET flagged=1 WHERE id=?")->execute([$reviewId]);
         } elseif ($action === 'unflag') {
+            opsAuditLog('review.unflag', 'review', $reviewId);
             db()->prepare("UPDATE reviews SET flagged=0 WHERE id=?")->execute([$reviewId]);
         }
         flash('success', 'Review updated.');
