@@ -129,14 +129,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pkg->execute([$packageId]);
             $pkg = $pkg->fetch();
             if ($pkg) {
+                // ── Server-side promo code validation ────────────────────────────
+                $promoCode     = strtoupper(trim($_POST['promo_code'] ?? ''));
+                $promoDiscount = 0;
+                $promoId       = null;
+                if ($promoCode) {
+                    $promoSt = db()->prepare("
+                        SELECT * FROM promo_codes
+                        WHERE code=? AND active=1
+                        AND (expires_at IS NULL OR expires_at > NOW())
+                        AND (max_uses IS NULL OR used_count < max_uses)
+                        AND (applies_to='featured' OR applies_to='both')
+                    ");
+                    $promoSt->execute([$promoCode]);
+                    $promoRow = $promoSt->fetch();
+                    if ($promoRow) {
+                        $promoId = $promoRow['id'];
+                        if ($promoRow['discount_pct'] > 0) {
+                            $promoDiscount = (int) round($pkg['price_xaf'] * ($promoRow['discount_pct'] / 100));
+                        }
+                        if ($promoRow['discount_xaf'] > 0) {
+                            $promoDiscount = max($promoDiscount, $promoRow['discount_xaf']);
+                        }
+                        $promoDiscount = min($promoDiscount, $pkg['price_xaf']);
+                    }
+                }
+                $finalAmountXaf = $pkg['price_xaf'] - $promoDiscount;
+                // ─────────────────────────────────────────────────────────────────
+
                 $ref = generateRef('FTR');
                 db()->prepare("INSERT INTO listing_payments (listing_id,user_id,package_id,amount_xaf,ref,proof,status)
                                VALUES (?,?,?,?,?,?,'pending')")
                      ->execute([$newListingId,
-                                $_SESSION['user_id'], $packageId, $pkg['price_xaf'], $ref, $proofPath]);
+                                $_SESSION['user_id'], $packageId, $finalAmountXaf, $ref, $proofPath]);
+
+                // ── Record promo use & increment counter ──────────────────────────
+                if ($promoId) {
+                    db()->prepare("INSERT INTO promo_uses (code_id, user_id, listing_id, ref, discount_xaf, used_at)
+                                   VALUES (?,?,?,?,?,NOW())")
+                         ->execute([$promoId, $_SESSION['user_id'], $newListingId, $ref, $promoDiscount]);
+                    db()->prepare("UPDATE promo_codes SET used_count = used_count + 1 WHERE id=?")
+                         ->execute([$promoId]);
+                }
+                // ─────────────────────────────────────────────────────────────────
+
                 // Notify admin
+                $discountNote = $promoId ? " (promo: $promoCode, -{$promoDiscount} XAF)" : '';
                 sendMail(SITE_EMAIL, 'New Listing + Featured Payment — '.$ref,
-                    '<p>New listing submitted with featured payment.<br>Ref: '.$ref.'</p>
+                    '<p>New listing submitted with featured payment.<br>Ref: '.$ref.$discountNote.'</p>
                      <a href="'.SITE_URL.'/admin/orders.php" style="background:#00A878;color:#fff;padding:0.75rem 1.5rem;border-radius:5px;text-decoration:none;display:inline-block;">Review in Admin</a>');
             }
         }
