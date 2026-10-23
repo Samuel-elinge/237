@@ -38,8 +38,9 @@ if (!$link) {
 }
 
 // ── Assigned leads ────────────────────────────────────────────────────────
-$statusFilter = $_GET['status'] ?? 'all';
-$whereStatus  = ($statusFilter !== 'all') ? "AND aa.status='{$statusFilter}'" : '';
+$allowedStatuses = ['all', 'assigned', 'contacted', 'follow_up', 'converted', 'lost'];
+$statusFilter = in_array($_GET['status'] ?? '', $allowedStatuses, true) ? $_GET['status'] : 'all';
+$whereStatus  = ($statusFilter !== 'all') ? "AND aa.status='" . $statusFilter . "'" : '';
 $leads = $pdo->prepare("
     SELECT aa.*, l.title AS listing_title, l.slug AS listing_slug,
            loc.name_en AS city, l.phone AS listing_phone, l.whatsapp AS listing_whatsapp
