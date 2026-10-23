@@ -168,9 +168,6 @@ require_once __DIR__ . '/../includes/admin-header.php';
 <section class="page-section">
 <div class="container">
 
-<?php if ($flash = flash()): ?>
-  <div class="alert alert-<?= $flash['type'] ?>" style="margin-bottom:1.5rem;"><?= e($flash['msg']) ?></div>
-<?php endif; ?>
 
 <!-- PLAN LIST -->
 <?php if ($plans): ?>
