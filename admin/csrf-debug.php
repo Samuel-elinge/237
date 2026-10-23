@@ -59,6 +59,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Show source of verifyCsrf from config.php
+echo "\n=== verifyCsrf source (from config.php) ===\n";
+$lines = file('/home/biz97h/public_html/includes/config.php');
+// print lines 80-100 (around line 86)
+for ($i = 78; $i < min(105, count($lines)); $i++) {
+    echo ($i+1) . ": " . $lines[$i];
+}
+
 // Also show a test form
 ?>
 <hr>
