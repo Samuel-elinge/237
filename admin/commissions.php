@@ -131,8 +131,10 @@ $cfPage   = max(1, (int)($_GET['cp'] ?? 1));
 $cfPer    = 30;
 $cfOffset = ($cfPage - 1) * $cfPer;
 
+$allowedCfFilters = ['pending','approved','in_batch','paid','cancelled','all'];
+if (!in_array($cfFilter, $allowedCfFilters, true)) $cfFilter = 'pending';
 $cfWhere = "pc.order_type IN ('subscription','promotion') AND pc.reversed_at IS NULL";
-if ($cfFilter !== 'all') $cfWhere .= " AND pc.status='" . db()->quote($cfFilter) . "'";
+if ($cfFilter !== 'all') $cfWhere .= " AND pc.status=" . db()->quote($cfFilter);
 
 $cfTotal = db()->query("SELECT COUNT(*) FROM partner_commissions pc WHERE $cfWhere")->fetchColumn();
 $commissions = db()->query("SELECT pc.*,
