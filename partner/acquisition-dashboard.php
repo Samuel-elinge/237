@@ -14,29 +14,6 @@ $partnerId      = (int)$partnerProfile['id'];
 // ── Live stats ────────────────────────────────────────────────────────────────
 $pdo = db();
 
-// Count of all eligible businesses (not already assigned to THIS partner,
-// not restricted by admin – simplified: businesses with no active assignment
-// to this partner)
-$availableCount = (int) $pdo->prepare("
-    SELECT COUNT(*) FROM businesses b
-    WHERE b.status = 'active'
-      AND NOT EXISTS (
-          SELECT 1 FROM business_prospects bp
-          WHERE bp.business_id = b.id
-            AND bp.partner_id = :pid
-            AND bp.status NOT IN ('not_interested','unreachable','rejected','closed')
-      )
-")->execute([':pid' => $partnerId]) ? $pdo->query("
-    SELECT COUNT(*) FROM businesses b
-    WHERE b.status = 'active'
-      AND NOT EXISTS (
-          SELECT 1 FROM business_prospects bp
-          WHERE bp.business_id = b.id
-            AND bp.partner_id = :pid
-            AND bp.status NOT IN ('not_interested','unreachable','rejected','closed')
-      )
-")->fetchColumn() : 0;
-
 // Use a helper closure for simple counts
 $count = function(string $sql, array $params = []) use ($pdo): int {
     $stmt = $pdo->prepare($sql);
