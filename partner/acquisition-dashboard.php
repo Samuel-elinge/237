@@ -270,9 +270,15 @@ require_once '../includes/partner-header.php';
       </a>
     </div>
     <div class="col-6 col-md-3">
-      <a href="acquisition-performance.php" class="card text-center text-decoration-none border-0 shadow-sm h-100 p-3">
+      <a href="acquisition-insights.php" class="card text-center text-decoration-none border-0 shadow-sm h-100 p-3">
+        <i class="bi bi-lightbulb fs-2 text-warning mb-2"></i>
+        <div class="small fw-semibold">Insights</div>
+      </a>
+    </div>
+    <div class="col-6 col-md-3">
+      <a href="acquisition-report.php" class="card text-center text-decoration-none border-0 shadow-sm h-100 p-3">
         <i class="bi bi-graph-up-arrow fs-2 text-success mb-2"></i>
-        <div class="small fw-semibold">My Performance</div>
+        <div class="small fw-semibold">Performance Report</div>
       </a>
     </div>
   </div>
