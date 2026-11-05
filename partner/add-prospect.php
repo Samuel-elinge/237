@@ -5,10 +5,11 @@
  */
 
 require_once '../includes/config.php';
-require_once '../includes/auth.php';
-require_once '../includes/db.php';
+require_once '../includes/partner-helpers.php';
 
-requirePermission('partner');
+$partnerProfile = requireGrowthPartner();
+$partnerId      = (int)$partnerProfile['id'];
+$userId         = (int)($_SESSION['user_id'] ?? 0);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: find-businesses.php');

@@ -5,16 +5,14 @@
  */
 
 require_once '../includes/config.php';
-require_once '../includes/auth.php';
-require_once '../includes/db.php';
+require_once '../includes/partner-helpers.php';
 
-requirePermission('partner');
+$partnerProfile = requireGrowthPartner();
+$partnerId      = (int)$partnerProfile['id'];
+$userId         = (int)($_SESSION['user_id'] ?? 0);
+$id             = (int)($_GET['id'] ?? 0);
 
-$partnerId = $_SESSION['partner_id'] ?? null;
-$userId    = $_SESSION['user_id']    ?? null;
-$id        = (int)($_GET['id'] ?? 0);
-
-if (!$partnerId || $id <= 0) {
+if ($id <= 0) {
     header('Location: my-prospects.php');
     exit;
 }

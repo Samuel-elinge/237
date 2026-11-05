@@ -6,16 +6,10 @@
  */
 
 require_once '../includes/config.php';
-require_once '../includes/auth.php';
-require_once '../includes/db.php';
+require_once '../includes/partner-helpers.php';
 
-requirePermission('partner');
-
-$partnerId = $_SESSION['partner_id'] ?? null;
-if (!$partnerId) {
-    header('Location: /partner/dashboard.php');
-    exit;
-}
+$partnerProfile = requireGrowthPartner();
+$partnerId      = (int)$partnerProfile['id'];
 
 // ── Live stats ────────────────────────────────────────────────────────────────
 $pdo = db();
