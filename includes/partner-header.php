@@ -32,16 +32,26 @@ $_pHeader_active = basename($_SERVER['SCRIPT_FILENAME'] ?? '', '.php');
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
 <style>
-  /* Reset any global site overrides so Bootstrap works correctly */
   body { font-family: 'Inter', system-ui, sans-serif; background: #f8f9fa; }
-  .card { border-radius: 0.375rem !important; background-color: #fff !important; border: 1px solid rgba(0,0,0,.125) !important; }
-  .card-header { border-radius: 0 !important; background-color: #f8f9fa !important; border-bottom: 1px solid rgba(0,0,0,.125) !important; }
-  .btn { border-radius: 0.375rem !important; }
-  .badge { border-radius: 0.375rem !important; }
-  .alert { border-radius: 0.375rem !important; }
-  .table { border-radius: 0 !important; }
-  .form-control, .form-select { border-radius: 0.375rem !important; }
-  .list-group-item { border-radius: 0 !important; }
+
+  /* ── Undo the site's global CSS reset inside acquisition pages ── */
+  /* The site's main.css zeros padding, border-radius etc globally.  */
+  /* We scope fixes under .acq-portal which is set on <body>.        */
+  .acq-portal .card         { background-color: #fff !important; border: 1px solid rgba(0,0,0,.125) !important; border-radius: .375rem !important; }
+  .acq-portal .card-body    { padding: 1rem !important; }
+  .acq-portal .card-header  { padding: .75rem 1rem !important; background-color: #fff !important; border-bottom: 1px solid rgba(0,0,0,.125) !important; border-radius: 0 !important; }
+  .acq-portal .btn          { padding: .375rem .75rem !important; border-radius: .375rem !important; line-height: 1.5 !important; }
+  .acq-portal .btn-sm       { padding: .25rem .5rem !important; font-size: .875rem !important; border-radius: .25rem !important; }
+  .acq-portal .badge        { padding: .35em .65em !important; border-radius: .375rem !important; }
+  .acq-portal .alert        { padding: 1rem !important; border-radius: .375rem !important; }
+  .acq-portal .form-control,
+  .acq-portal .form-select  { padding: .375rem .75rem !important; border-radius: .375rem !important; border: 1px solid #dee2e6 !important; }
+  .acq-portal textarea.form-control { padding: .375rem .75rem !important; }
+  .acq-portal .list-group-item { padding: .5rem 1rem !important; }
+  .acq-portal .table th,
+  .acq-portal .table td     { padding: .5rem !important; }
+  .acq-portal .row          { --bs-gutter-x: 1.5rem; --bs-gutter-y: 0; display: flex !important; flex-wrap: wrap !important; margin-top: 0; margin-right: calc(-.5 * var(--bs-gutter-x)); margin-left: calc(-.5 * var(--bs-gutter-x)); }
+  .acq-portal [class*="col-"] { padding-right: calc(var(--bs-gutter-x) * .5) !important; padding-left: calc(var(--bs-gutter-x) * .5) !important; }
 
   /* ── Top navbar ── */
   .pnav-top {
@@ -99,7 +109,7 @@ $_pHeader_active = basename($_SERVER['SCRIPT_FILENAME'] ?? '', '.php');
   .flash-container { max-width: 100%; }
 </style>
 </head>
-<body>
+<body class="acq-portal">
 
 <!-- ── Top navbar ─────────────────────────────────────────────── -->
 <nav class="pnav-top navbar navbar-expand-lg">
