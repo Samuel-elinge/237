@@ -32,7 +32,16 @@ $_pHeader_active = basename($_SERVER['SCRIPT_FILENAME'] ?? '', '.php');
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
 <style>
+  /* Reset any global site overrides so Bootstrap works correctly */
   body { font-family: 'Inter', system-ui, sans-serif; background: #f8f9fa; }
+  .card { border-radius: 0.375rem !important; background-color: #fff !important; border: 1px solid rgba(0,0,0,.125) !important; }
+  .card-header { border-radius: 0 !important; background-color: #f8f9fa !important; border-bottom: 1px solid rgba(0,0,0,.125) !important; }
+  .btn { border-radius: 0.375rem !important; }
+  .badge { border-radius: 0.375rem !important; }
+  .alert { border-radius: 0.375rem !important; }
+  .table { border-radius: 0 !important; }
+  .form-control, .form-select { border-radius: 0.375rem !important; }
+  .list-group-item { border-radius: 0 !important; }
 
   /* ── Top navbar ── */
   .pnav-top {
