@@ -294,8 +294,8 @@ CREATE TABLE IF NOT EXISTS acquisition_commission_events (
     KEY idx_ace_partner     (partner_id),
     KEY idx_ace_event       (event_type),
     KEY idx_ace_status      (status),
-    -- Prevent exact duplicate commission events on same day for same trigger
-    KEY idx_ace_dedup       (business_id, partner_id, event_type, DATE(created_at))
+    -- Composite index for dedup queries (DATE() check is done in PHP)
+    KEY idx_ace_dedup       (business_id, partner_id, event_type, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
