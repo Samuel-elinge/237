@@ -1,5 +1,4 @@
 <?php
-ini_set('display_errors', 1); error_reporting(E_ALL);
 /**
  * My Prospects — pipeline view with status filter
  * Stage A §6
@@ -29,8 +28,10 @@ $filterMap = [
     'all'       => "1=1",
 ];
 $whereFilter = $filterMap[$filter] ?? $filterMap['active'];
+// COUNT query has no JOIN/alias — strip the bp. prefix for it
+$countFilter = str_replace('bp.', '', $whereFilter);
 
-$countStmt = $pdo->prepare("SELECT COUNT(*) FROM business_prospects WHERE partner_id = ? AND $whereFilter");
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM business_prospects WHERE partner_id = ? AND $countFilter");
 $countStmt->execute([$partnerId]);
 $total = (int) $countStmt->fetchColumn();
 $pages = max(1, (int) ceil($total / $perPage));
