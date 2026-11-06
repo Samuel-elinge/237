@@ -19,6 +19,15 @@ $_pHeader_base  = defined('SITE_URL') ? rtrim(SITE_URL, '/') : '';
 
 // Active page detection (filename without .php)
 $_pHeader_active = basename($_SERVER['SCRIPT_FILENAME'] ?? '', '.php');
+// Map old page names to their replacement so nav highlights correctly
+$_pHeader_activeMap = [
+    'my-prospects'        => 'acquisition-dashboard',
+    'acquisition-insights'=> 'acquisition-reports',
+    'acquisition-report'  => 'acquisition-reports',
+];
+if (isset($_pHeader_activeMap[$_pHeader_active])) {
+    $_pHeader_active = $_pHeader_activeMap[$_pHeader_active];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -134,11 +143,9 @@ $_pHeader_active = basename($_SERVER['SCRIPT_FILENAME'] ?? '', '.php');
   <div class="pnav-sub-inner">
     <?php
     $navItems = [
-        ['acquisition-dashboard',  'bi-speedometer2',      'Overview',      '/partner/acquisition-dashboard'],
-        ['find-businesses',        'bi-search',            'Find Businesses','/partner/find-businesses'],
-        ['my-prospects',           'bi-person-lines-fill', 'My Prospects',  '/partner/my-prospects'],
-        ['acquisition-insights',   'bi-lightbulb',         'Insights',      '/partner/acquisition-insights'],
-        ['acquisition-report',     'bi-graph-up-arrow',    'Report',        '/partner/acquisition-report'],
+        ['acquisition-dashboard',  'bi-list-task',         'Pipeline',      '/partner/acquisition-dashboard'],
+        ['find-businesses',        'bi-search',            'Find & Add',    '/partner/find-businesses'],
+        ['acquisition-reports',    'bi-graph-up-arrow',    'Reports',       '/partner/acquisition-reports'],
     ];
     foreach ($navItems as [$key, $icon, $label, $path]):
         $active = $_pHeader_active === $key ? ' active' : '';
