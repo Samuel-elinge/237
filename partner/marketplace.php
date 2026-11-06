@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_order'])) {
 
     /* 2. Load product + price */
     $stP = $pdo->prepare("
-        SELECT p.*, c.key AS cat_key,
+        SELECT p.*, c.`key` AS cat_key,
                pr.id AS price_id, pr.price_type, pr.setup_amount, pr.recurring_amount,
                pr.currency, pr.billing_interval, pr.mailbox_limit, pr.variant_key
         FROM mp_service_products p
@@ -270,10 +270,10 @@ if ($listingId) {
 $catalogue = [];
 if ($selectedBusiness) {
     $stCat = $pdo->prepare("
-        SELECT cat.id AS cat_id, cat.key AS cat_key,
+        SELECT cat.id AS cat_id, cat.`key` AS cat_key,
                cat.name_en AS cat_name_en, cat.name_fr AS cat_name_fr,
                cat.icon,
-               p.id AS product_id, p.key AS product_key,
+               p.id AS product_id, p.`key` AS product_key,
                p.name_en, p.name_fr, p.description_en, p.description_fr,
                p.service_type, p.form_schema, p.terms_en, p.terms_fr,
                pr.id AS price_id, pr.variant_key, pr.price_type,
