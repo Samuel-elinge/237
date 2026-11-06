@@ -82,7 +82,7 @@ $sql = "
         CASE WHEN pba.id IS NOT NULL THEN 1 ELSE 0 END AS has_active_partner
     FROM businesses b
     LEFT JOIN partner_business_assignments pba
-           ON pba.business_id = b.id AND pba.status = 'active'
+           ON pba.listing_id = b.id AND pba.status = 'active'
     WHERE $where
     GROUP BY b.id
     ORDER BY b.name ASC

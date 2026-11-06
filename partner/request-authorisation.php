@@ -59,7 +59,7 @@ $activeAuth = $existing->fetch(PDO::FETCH_ASSOC);
 $partnerStmt = $pdo->prepare("
     SELECT p.business_name, p.bio, p.city, p.specialisations,
            u.name AS partner_user_name
-    FROM partners p
+    FROM partner_profiles p
     JOIN users u ON u.id = p.user_id
     WHERE p.id = ?
 ");
