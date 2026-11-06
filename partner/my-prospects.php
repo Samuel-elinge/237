@@ -1,4 +1,6 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 /**
  * My Prospects — pipeline view with status filter
  * Stage A §6
@@ -44,7 +46,10 @@ $stmt = $pdo->prepare("
     ORDER BY bp.next_followup IS NULL ASC, bp.next_followup ASC, bp.updated_at DESC
     LIMIT ? OFFSET ?
 ");
-$stmt->execute([$partnerId, $perPage, $offset]);
+$stmt->bindValue(1, $partnerId, PDO::PARAM_INT);
+$stmt->bindValue(2, $perPage,   PDO::PARAM_INT);
+$stmt->bindValue(3, $offset,    PDO::PARAM_INT);
+$stmt->execute();
 $prospects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $statusLabels = [
