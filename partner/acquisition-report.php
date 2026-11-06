@@ -40,7 +40,7 @@ $funnel = [];
 foreach ($stFunnel->fetchAll(PDO::FETCH_ASSOC) as $r) $funnel[$r['status']] = (int)$r['cnt'];
 
 $totalConverted = $funnel['converted'] ?? 0;
-$totalLost      = $funnel['lost']      ?? 0;
+$totalLost      = ($funnel['not_interested'] ?? 0) + ($funnel['rejected'] ?? 0) + ($funnel['unreachable'] ?? 0) + ($funnel['closed'] ?? 0);
 $totalActive    = array_sum($funnel) - $totalLost - $totalConverted;
 
 // Conversion rate (of all closed: converted vs lost)
@@ -273,19 +273,24 @@ $eventIcons = [
             <tbody>
             <?php
             $funnelStages = [
-                'initial_contact'        => ['Initial Contact',      'secondary'],
-                'interested'             => ['Interested',            'primary'],
-                'invitation_sent'        => ['Invitation Sent',       'warning'],
-                'awaiting_authorisation' => ['Awaiting Authorisation','info'],
-                'awaiting_assignment'    => ['Awaiting Assignment',   'teal'],
-                'converted'              => ['Converted ✓',           'success'],
-                'on_hold'                => ['On Hold',               'light'],
-                'lost'                   => ['Lost',                  'danger'],
+                'new'                    => ['New',                   'secondary'],
+                'contacted'              => ['Contacted',              'info'],
+                'follow_up_required'     => ['Follow-up Required',    'warning'],
+                'interested'             => ['Interested',             'primary'],
+                'invitation_sent'        => ['Invitation Sent',        'warning'],
+                'awaiting_owner_response'=> ['Awaiting Owner',         'warning'],
+                'awaiting_authorisation' => ['Awaiting Authorisation', 'info'],
+                'awaiting_assignment'    => ['Awaiting Assignment',    'info'],
+                'converted'              => ['Converted ✓',            'success'],
+                'not_interested'         => ['Not Interested',         'danger'],
+                'rejected'               => ['Rejected',               'danger'],
+                'unreachable'            => ['Unreachable',            'danger'],
+                'closed'                 => ['Closed',                 'secondary'],
             ];
             $maxCount = max(array_values($funnel) ?: [1]);
             foreach ($funnelStages as $key => [$label, $color]):
                 $cnt = $funnel[$key] ?? 0;
-                if ($cnt === 0 && in_array($key, ['on_hold','lost'])) continue;
+                if ($cnt === 0 && in_array($key, ['not_interested','rejected','unreachable','closed'])) continue;
                 $pct = $maxCount > 0 ? round(($cnt / $maxCount) * 100) : 0;
             ?>
             <tr>
