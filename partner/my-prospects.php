@@ -1,4 +1,5 @@
 <?php
+ini_set('display_errors', 1); error_reporting(E_ALL);
 /**
  * My Prospects — pipeline view with status filter
  * Stage A §6
