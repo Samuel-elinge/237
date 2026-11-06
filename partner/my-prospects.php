@@ -1,6 +1,4 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 /**
  * My Prospects — pipeline view with status filter
  * Stage A §6
@@ -20,13 +18,13 @@ $perPage = 25;
 $offset  = ($page - 1) * $perPage;
 
 $filterMap = [
-    'active'    => "status NOT IN('closed','rejected','not_interested','unreachable','converted')",
-    'contacted' => "status IN('contacted','follow_up_required')",
-    'interested'=> "status = 'interested'",
-    'awaiting'  => "status IN('awaiting_authorisation','awaiting_assignment','awaiting_owner_response')",
-    'converted' => "status = 'converted'",
-    'overdue'   => "next_followup IS NOT NULL AND next_followup < CURDATE() AND status NOT IN('converted','closed','rejected','not_interested','unreachable')",
-    'closed'    => "status IN('closed','rejected','not_interested','unreachable')",
+    'active'    => "bp.status NOT IN('closed','rejected','not_interested','unreachable','converted')",
+    'contacted' => "bp.status IN('contacted','follow_up_required')",
+    'interested'=> "bp.status = 'interested'",
+    'awaiting'  => "bp.status IN('awaiting_authorisation','awaiting_assignment','awaiting_owner_response')",
+    'converted' => "bp.status = 'converted'",
+    'overdue'   => "bp.next_followup IS NOT NULL AND bp.next_followup < CURDATE() AND bp.status NOT IN('converted','closed','rejected','not_interested','unreachable')",
+    'closed'    => "bp.status IN('closed','rejected','not_interested','unreachable')",
     'all'       => "1=1",
 ];
 $whereFilter = $filterMap[$filter] ?? $filterMap['active'];
