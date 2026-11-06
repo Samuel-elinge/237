@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stA->execute([$orderId]);
             $attempt = $stA->fetch();
             if ($attempt) {
-                $pdo->prepare("UPDATE mp_payment_attempts SET payment_state='SUCCEEDED', reviewer_id=?, reviewer_note=?, reviewed_at=NOW() WHERE id=?")
+                $pdo->prepare("UPDATE mp_payment_attempts SET payment_state='SUCCEEDED', reviewed_by_user_id=?, reviewer_note=?, reviewed_at=NOW() WHERE id=?")
                     ->execute([$_SESSION['user_id'], $note ?: null, $attempt['id']]);
             }
             // 2. Advance order
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stA->execute([$orderId]);
             $attempt = $stA->fetch();
             if ($attempt) {
-                $pdo->prepare("UPDATE mp_payment_attempts SET payment_state='FAILED', reviewer_id=?, reviewer_note=?, reviewed_at=NOW() WHERE id=?")
+                $pdo->prepare("UPDATE mp_payment_attempts SET payment_state='FAILED', reviewed_by_user_id=?, reviewer_note=?, reviewed_at=NOW() WHERE id=?")
                     ->execute([$_SESSION['user_id'], $note ?: null, $attempt['id']]);
             }
             $pdo->prepare("UPDATE marketplace_orders SET order_state='AWAITING_PAYMENT', payment_state='FAILED', updated_at=NOW() WHERE id=?")
@@ -184,7 +184,7 @@ if ($filterRef && count($orders) === 1) {
     $stDI->execute([$did]);
     $detailItems = $stDI->fetchAll();
 
-    $stDP = $pdo->prepare("SELECT pa.*, u.name AS reviewer_name FROM mp_payment_attempts pa LEFT JOIN users u ON u.id=pa.reviewer_id WHERE pa.order_id=? ORDER BY pa.created_at DESC");
+    $stDP = $pdo->prepare("SELECT pa.*, u.name AS reviewer_name FROM mp_payment_attempts pa LEFT JOIN users u ON u.id=pa.reviewed_by_user_id WHERE pa.order_id=? ORDER BY pa.created_at DESC");
     $stDP->execute([$did]);
     $detailPayments = $stDP->fetchAll();
 

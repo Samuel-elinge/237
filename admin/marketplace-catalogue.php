@@ -121,7 +121,7 @@ $settingKeys = [
     'mp_fulfilment_sla_days',
 ];
 $settings = [];
-$stS = $pdo->query("SELECT `key`, `value` FROM site_settings WHERE `key` LIKE 'mp_%'");
+$stS = $pdo->query("SELECT `key`, value FROM site_settings WHERE `key` LIKE 'mp_%'");
 foreach ($stS->fetchAll() as $row) $settings[$row['key']] = $row['value'];
 
 /* ── Stats ───────────────────────────────────────────────────── */
