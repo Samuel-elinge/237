@@ -23,7 +23,8 @@ if ($search) {
     $params[] = is_numeric($search) ? (int)$search : 0;
 }
 
-$listings = db()->prepare("
+$pdo = db();
+$listings = $pdo->prepare("
     SELECT l.*, c.name_en AS cat_en, c.icon AS cat_icon, loc.name_en AS city,
            pba.role AS assignment_role, pba.assigned_at,
            (SELECT COUNT(*) FROM growth_tasks gt WHERE gt.listing_id = l.id AND gt.partner_id = {$partnerId} AND gt.status NOT IN ('completed','cancelled')) AS open_tasks,
@@ -49,8 +50,6 @@ partnerNavBadges($partnerId, $pdo);
 ?>
 <?php partnerNavAssets(); ?>
 <?php partnerNav('portfolio'); ?>
-
-?>
 
 <style>
 .partner-wrap { max-width:1280px; margin:0 auto; padding:2rem 1.5rem; }
