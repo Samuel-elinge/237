@@ -18,7 +18,7 @@ $pdo = db();
 // ── GENERATE INSIGHTS ────────────────────────────────────────────────────────
 // Rule 1: Prospects with no contact in 7+ days (still active)
 $overdueContacts = $pdo->prepare("
-    SELECT bp.id, bp.status, bp.priority, bp.overdue_at, bp.created_at,
+    SELECT bp.id, bp.status, bp.created_at,
            b.name AS business_name, b.city,
            COALESCE(MAX(bpc.contacted_at), bp.created_at) AS last_contact,
            DATEDIFF(NOW(), COALESCE(MAX(bpc.contacted_at), bp.created_at)) AS days_since_contact
@@ -26,7 +26,7 @@ $overdueContacts = $pdo->prepare("
     JOIN businesses b ON b.id = bp.business_id
     LEFT JOIN business_prospect_contacts bpc ON bpc.prospect_id = bp.id
     WHERE bp.partner_id = ?
-      AND bp.status NOT IN ('converted','lost','on_hold')
+      AND bp.status NOT IN ('converted','closed','rejected','not_interested','unreachable')
     GROUP BY bp.id
     HAVING days_since_contact >= 7
     ORDER BY days_since_contact DESC
@@ -73,16 +73,15 @@ $stalePendingRows = $stalePending->fetchAll(PDO::FETCH_ASSOC);
 
 // Rule 4: High-priority prospects stuck in initial_contact for 3+ days
 $stuckProspects = $pdo->prepare("
-    SELECT bp.id, bp.status, bp.priority, bp.created_at,
+    SELECT bp.id, bp.status, bp.created_at,
            b.name AS business_name, b.city,
            DATEDIFF(NOW(), bp.created_at) AS days_in_pipeline
     FROM business_prospects bp
     JOIN businesses b ON b.id = bp.business_id
     WHERE bp.partner_id = ?
-      AND bp.status = 'initial_contact'
-      AND bp.priority IN ('high','urgent')
+      AND bp.status = 'new'
       AND DATEDIFF(NOW(), bp.created_at) >= 3
-    ORDER BY bp.priority DESC, days_in_pipeline DESC
+    ORDER BY days_in_pipeline DESC
     LIMIT 10
 ");
 $stuckProspects->execute([$partnerId]);
@@ -115,7 +114,7 @@ $urgentCount = count($expiringRows)   // expiring invitations are urgent
 $stats = $pdo->prepare("
     SELECT status, COUNT(*) AS cnt
     FROM business_prospects
-    WHERE partner_id = ? AND status NOT IN ('lost')
+    WHERE partner_id = ? AND status NOT IN ('closed','rejected','not_interested','unreachable')
     GROUP BY status
 ");
 $stats->execute([$partnerId]);
@@ -275,7 +274,6 @@ require_once '../includes/partner-header.php';
             <tr>
               <th class="ps-3">Business</th>
               <th>Status</th>
-              <th>Priority</th>
               <th>Last Contact</th>
               <th>Overdue</th>
               <th class="pe-3">Action</th>
@@ -297,14 +295,6 @@ require_once '../includes/partner-header.php';
                 <span class="badge text-bg-secondary">
                   <?= ucfirst(str_replace('_', ' ', $row['status'])) ?>
                 </span>
-              </td>
-              <td>
-                <?php
-                $pColors = ['urgent'=>'danger','high'=>'warning text-dark','medium'=>'primary','low'=>'secondary'];
-                $pLabel  = ucfirst($row['priority'] ?? 'medium');
-                $pc      = $pColors[$row['priority'] ?? 'medium'] ?? 'secondary';
-                ?>
-                <span class="badge bg-<?= $pc ?>"><?= $pLabel ?></span>
               </td>
               <td class="text-muted small"><?= date('d M Y', strtotime($row['last_contact'])) ?></td>
               <td><span class="badge <?= $badgeClass ?>"><?= $days ?> days</span></td>
@@ -339,7 +329,6 @@ require_once '../includes/partner-header.php';
           <thead class="table-light">
             <tr>
               <th class="ps-3">Business</th>
-              <th>Priority</th>
               <th>Days in Pipeline</th>
               <th class="pe-3">Action</th>
             </tr>
@@ -352,13 +341,6 @@ require_once '../includes/partner-header.php';
                 <?php if ($row['city']): ?>
                   <div class="text-muted small"><?= htmlspecialchars($row['city']) ?></div>
                 <?php endif; ?>
-              </td>
-              <td>
-                <?php
-                $pColors = ['urgent'=>'danger','high'=>'warning text-dark','medium'=>'primary','low'=>'secondary'];
-                $pc = $pColors[$row['priority'] ?? 'medium'] ?? 'secondary';
-                ?>
-                <span class="badge bg-<?= $pc ?>"><?= ucfirst($row['priority']) ?></span>
               </td>
               <td>
                 <span class="badge text-bg-secondary"><?= (int)$row['days_in_pipeline'] ?> days</span>
@@ -490,22 +472,26 @@ require_once '../includes/partner-header.php';
     <div class="card-body">
       <?php
       $stageLabels = [
-          'initial_contact'      => 'Initial Contact',
-          'interested'           => 'Interested',
-          'invitation_sent'      => 'Invitation Sent',
+          'new'                    => 'New',
+          'contacted'              => 'Contacted',
+          'follow_up_required'     => 'Follow-up Needed',
+          'interested'             => 'Interested',
+          'invitation_sent'        => 'Invitation Sent',
+          'awaiting_owner_response'=> 'Awaiting Owner',
           'awaiting_authorisation' => 'Awaiting Authorisation',
-          'awaiting_assignment'  => 'Awaiting Assignment',
-          'converted'            => 'Converted',
-          'on_hold'              => 'On Hold',
+          'awaiting_assignment'    => 'Awaiting Assignment',
+          'converted'              => 'Converted',
       ];
       $stageColors = [
-          'initial_contact'        => '#6c757d',
+          'new'                    => '#6c757d',
+          'contacted'              => '#0dcaf0',
+          'follow_up_required'     => '#fd7e14',
           'interested'             => '#0d6efd',
-          'invitation_sent'        => '#fd7e14',
+          'invitation_sent'        => '#6610f2',
+          'awaiting_owner_response'=> '#ffc107',
           'awaiting_authorisation' => '#ffc107',
           'awaiting_assignment'    => '#20c997',
           'converted'              => '#198754',
-          'on_hold'                => '#adb5bd',
       ];
       ?>
       <div class="d-flex flex-wrap gap-3">
