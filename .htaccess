@@ -73,6 +73,7 @@ RewriteRule ^business-listing/?$        business-listing.php         [L,QSA]
 RewriteRule ^api/track/?$               api/track.php                [L,QSA]
 
 # Bookings
+RewriteRule ^booking/([a-z0-9-]+)/?$   booking.php?slug=$1          [L,QSA]
 RewriteRule ^booking/?$                 booking.php                  [L,QSA]
 RewriteRule ^manage-bookings/?$         manage-bookings.php          [L,QSA]
 
