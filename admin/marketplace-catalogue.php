@@ -92,14 +92,14 @@ $cats = $pdo->query("
 ")->fetchAll();
 
 $products = $pdo->query("
-    SELECT p.*, c.name_en AS cat_name, c.key AS cat_key
+    SELECT p.*, c.name_en AS cat_name, c.`key` AS cat_key
     FROM mp_service_products p
     JOIN mp_service_categories c ON c.id = p.category_id
     ORDER BY c.sort_order, p.sort_order
 ")->fetchAll();
 
 $prices = $pdo->query("
-    SELECT pr.*, p.name_en AS product_name, p.key AS product_key
+    SELECT pr.*, p.name_en AS product_name, p.`key` AS product_key
     FROM mp_service_prices pr
     JOIN mp_service_products p ON p.id = pr.product_id
     ORDER BY p.sort_order, pr.price_type DESC, pr.id
