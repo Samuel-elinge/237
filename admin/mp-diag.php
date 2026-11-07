@@ -1,114 +1,80 @@
 <?php
 /**
- * Temporary diagnostic script — DELETE after use
- * This version simulates the full catalogue page logic to find the exact crash point
+ * Temporary diagnostic — reads PHP error log and tests catalogue include chain
  */
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
-
 require_once __DIR__ . '/../includes/config.php';
 requireAdmin();
-
-$pdo = db();
 header('Content-Type: text/plain; charset=utf-8');
 
-echo "=== SIMULATING marketplace-catalogue.php ===\n\n";
-
-echo "Step 1: cats query\n";
-try {
-    $cats = $pdo->query("
-        SELECT c.*,
-               COUNT(DISTINCT p.id) AS product_count,
-               SUM(p.orderable)     AS orderable_count
-        FROM mp_service_categories c
-        LEFT JOIN mp_service_products p ON p.category_id = c.id
-        GROUP BY c.id
-        ORDER BY c.sort_order
-    ")->fetchAll();
-    echo "OK — " . count($cats) . " cats\n";
-} catch (Throwable $e) { echo "FAIL: " . $e->getMessage() . "\n"; exit; }
-
-echo "Step 2: products query\n";
-try {
-    $products = $pdo->query("
-        SELECT p.*, c.name_en AS cat_name, c.`key` AS cat_key
-        FROM mp_service_products p
-        JOIN mp_service_categories c ON c.id = p.category_id
-        ORDER BY c.sort_order, p.sort_order
-    ")->fetchAll();
-    echo "OK — " . count($products) . " products\n";
-} catch (Throwable $e) { echo "FAIL: " . $e->getMessage() . "\n"; exit; }
-
-echo "Step 3: prices query\n";
-try {
-    $prices = $pdo->query("
-        SELECT pr.*, p.name_en AS product_name, p.`key` AS product_key
-        FROM mp_service_prices pr
-        JOIN mp_service_products p ON p.id = pr.product_id
-        ORDER BY p.sort_order, pr.price_type DESC, pr.id
-    ")->fetchAll();
-    echo "OK — " . count($prices) . " prices\n";
-} catch (Throwable $e) { echo "FAIL: " . $e->getMessage() . "\n"; exit; }
-
-echo "Step 4: pricesByProduct grouping\n";
-$pricesByProduct = [];
-foreach ($prices as $pr) {
-    $pricesByProduct[$pr['product_id']][] = $pr;
+// Check error log
+$errLog = ini_get('error_log');
+echo "Error log path: $errLog\n";
+if ($errLog && file_exists($errLog)) {
+    $lines = file($errLog);
+    $recent = array_slice($lines, -30);
+    echo "Last 30 lines of error log:\n";
+    foreach ($recent as $l) {
+        if (stripos($l, 'marketplace') !== false || stripos($l, 'mpFmt') !== false || stripos($l, 'getSet') !== false || stripos($l, 'fatal') !== false) {
+            echo $l;
+        }
+    }
+} else {
+    echo "No error log found or not readable\n";
 }
-echo "OK — " . count($pricesByProduct) . " product groups\n";
 
-echo "Step 5: settings query\n";
-try {
-    $settings = [];
-    $stS = $pdo->query("SELECT `key`, value FROM site_settings WHERE `key` LIKE 'mp_%'");
-    foreach ($stS->fetchAll() as $row) $settings[$row['key']] = $row['value'];
-    echo "OK — " . count($settings) . " settings\n";
-} catch (Throwable $e) { echo "FAIL: " . $e->getMessage() . "\n"; exit; }
-
-echo "Step 6: stats\n";
+// Try to actually output the stats bar like the catalogue does
+$pdo = db();
+$cats = $pdo->query("SELECT c.*, COUNT(DISTINCT p.id) AS product_count, SUM(p.orderable) AS orderable_count FROM mp_service_categories c LEFT JOIN mp_service_products p ON p.category_id = c.id GROUP BY c.id ORDER BY c.sort_order")->fetchAll();
+$products = $pdo->query("SELECT p.*, c.name_en AS cat_name, c.`key` AS cat_key FROM mp_service_products p JOIN mp_service_categories c ON c.id = p.category_id ORDER BY c.sort_order, p.sort_order")->fetchAll();
+$prices = $pdo->query("SELECT pr.*, p.name_en AS product_name, p.`key` AS product_key FROM mp_service_prices pr JOIN mp_service_products p ON p.id = pr.product_id ORDER BY p.sort_order, pr.price_type DESC, pr.id")->fetchAll();
+$pricesByProduct = [];
+foreach ($prices as $pr) $pricesByProduct[$pr['product_id']][] = $pr;
 $totalProducts  = count($products);
 $orderableCount = count(array_filter($products, fn($p) => $p['orderable']));
-$activeCount    = count(array_filter($products, fn($p) => $p['active']));
-echo "totalProducts=$totalProducts orderableCount=$orderableCount activeCount=$activeCount\n";
+$orderCount     = (int)$pdo->query("SELECT COUNT(*) FROM marketplace_orders")->fetchColumn();
+$pendingPayCount= (int)$pdo->query("SELECT COUNT(*) FROM marketplace_orders WHERE order_state='PAYMENT_REVIEW'")->fetchColumn();
 
-echo "Step 7: order count\n";
-try {
-    $orderCount = (int)$pdo->query("SELECT COUNT(*) FROM marketplace_orders")->fetchColumn();
-    echo "OK — $orderCount\n";
-} catch (Throwable $e) { echo "FAIL: " . $e->getMessage() . "\n"; exit; }
+echo "\ntotalProducts=$totalProducts orderableCount=$orderableCount orderCount=$orderCount pendingPayCount=$pendingPayCount\n";
+echo "cats count=" . count($cats) . "\n";
+echo "prices count=" . count($prices) . "\n";
 
-echo "Step 8: pending pay count\n";
-try {
-    $pendingPayCount = (int)$pdo->query("SELECT COUNT(*) FROM marketplace_orders WHERE order_state='PAYMENT_REVIEW'")->fetchColumn();
-    echo "OK — $pendingPayCount\n";
-} catch (Throwable $e) { echo "FAIL: " . $e->getMessage() . "\n"; exit; }
+// Check if there's a 'confirmed_by_user_id' column issue
+echo "\nmarketplace_orders columns:\n";
+foreach ($pdo->query("SHOW COLUMNS FROM marketplace_orders")->fetchAll() as $c) {
+    echo "  " . $c['Field'] . "\n";
+}
 
-echo "Step 9: mpFmt function\n";
-function mpFmt(int $xaf): string { return number_format($xaf) . ' FCFA'; }
-echo "OK\n";
+echo "\nmp_payment_attempts columns:\n";
+foreach ($pdo->query("SHOW COLUMNS FROM mp_payment_attempts")->fetchAll() as $c) {
+    echo "  " . $c['Field'] . "\n";
+}
 
-echo "Step 10: getSettingCached calls\n";
-try {
-    $v1 = getSettingCached('mp_approval_expiry_days', '7');
-    $v2 = getSettingCached('mp_commission_enabled', '0');
-    $v3 = getSettingCached('mp_auto_renewal_enabled', '0');
-    $v4 = getSettingCached('mp_fulfilment_sla_days', '5');
-    echo "OK — expiry=$v1 commission=$v2 renewal=$v3 sla=$v4\n";
-} catch (Throwable $e) { echo "FAIL: " . $e->getMessage() . "\n"; exit; }
-
-echo "\n=== ALL STEPS PASSED — checking header include ===\n";
-echo "PHP version: " . PHP_VERSION . "\n";
-echo "Error log: " . ini_get('error_log') . "\n";
-
-// Check if header include itself errors
-echo "\nAbout to include header.php...\n";
+// Test if header.php causes any issues
+echo "\nTesting header include...\n";
 flush();
 ob_start();
 try {
     require_once __DIR__ . '/../includes/header.php';
-    $headerOut = ob_get_clean();
-    echo "header.php included OK — " . strlen($headerOut) . " bytes output\n";
+    $h = ob_get_clean();
+    echo "header.php OK — " . strlen($h) . " bytes\n";
 } catch (Throwable $e) {
     ob_end_clean();
-    echo "header.php FAILED: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine() . "\n";
+    echo "header.php FAILED: " . $e->getMessage() . " at " . $e->getFile() . ":" . $e->getLine() . "\n";
+    echo $e->getTraceAsString();
 }
+
+// Test footer
+echo "\nTesting footer include...\n";
+ob_start();
+try {
+    require_once __DIR__ . '/../includes/footer.php';
+    $f = ob_get_clean();
+    echo "footer.php OK — " . strlen($f) . " bytes\n";
+} catch (Throwable $e) {
+    ob_end_clean();
+    echo "footer.php FAILED: " . $e->getMessage() . "\n";
+}
+
+echo "\nDone.\n";
