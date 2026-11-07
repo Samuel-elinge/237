@@ -31,17 +31,63 @@ foreach ($tables as $t) {
     }
 }
 
-echo "\n--- mp_service_categories columns ---\n";
+echo "\n--- Test catalogue queries ---\n";
+
 try {
-    foreach ($pdo->query("SHOW COLUMNS FROM mp_service_categories")->fetchAll() as $c) {
-        echo $c['Field'] . ' ' . $c['Type'] . "\n";
-    }
-} catch (Exception $e) { echo $e->getMessage() . "\n"; }
+    $cats = $pdo->query("
+        SELECT c.*,
+               COUNT(DISTINCT p.id) AS product_count,
+               SUM(p.orderable)     AS orderable_count
+        FROM mp_service_categories c
+        LEFT JOIN mp_service_products p ON p.category_id = c.id
+        GROUP BY c.id
+        ORDER BY c.sort_order
+    ")->fetchAll();
+    echo "cats query OK — " . count($cats) . " rows\n";
+    foreach ($cats as $c) echo "  cat: {$c['id']} {$c['name_en']}\n";
+} catch (Exception $e) { echo "cats FAILED: " . $e->getMessage() . "\n"; }
+
+try {
+    $products = $pdo->query("
+        SELECT p.*, c.name_en AS cat_name, c.`key` AS cat_key
+        FROM mp_service_products p
+        JOIN mp_service_categories c ON c.id = p.category_id
+        ORDER BY c.sort_order, p.sort_order
+    ")->fetchAll();
+    echo "products query OK — " . count($products) . " rows\n";
+} catch (Exception $e) { echo "products FAILED: " . $e->getMessage() . "\n"; }
+
+try {
+    $prices = $pdo->query("
+        SELECT pr.*, p.name_en AS product_name, p.`key` AS product_key
+        FROM mp_service_prices pr
+        JOIN mp_service_products p ON p.id = pr.product_id
+        ORDER BY p.sort_order, pr.price_type DESC, pr.id
+    ")->fetchAll();
+    echo "prices query OK — " . count($prices) . " rows\n";
+} catch (Exception $e) { echo "prices FAILED: " . $e->getMessage() . "\n"; }
+
+try {
+    $orderCount = (int)$pdo->query("SELECT COUNT(*) FROM marketplace_orders")->fetchColumn();
+    echo "orderCount OK — $orderCount\n";
+} catch (Exception $e) { echo "orderCount FAILED: " . $e->getMessage() . "\n"; }
+
+try {
+    $pendingPayCount = (int)$pdo->query("SELECT COUNT(*) FROM marketplace_orders WHERE order_state='PAYMENT_REVIEW'")->fetchColumn();
+    echo "pendingPayCount OK — $pendingPayCount\n";
+} catch (Exception $e) { echo "pendingPayCount FAILED: " . $e->getMessage() . "\n"; }
 
 echo "\n--- marketplace_orders columns ---\n";
 try {
     foreach ($pdo->query("SHOW COLUMNS FROM marketplace_orders")->fetchAll() as $c) {
-        echo $c['Field'] . ' ' . $c['Type'] . "\n";
+        echo $c['Field'] . "\n";
+    }
+} catch (Exception $e) { echo $e->getMessage() . "\n"; }
+
+echo "\n--- mp_payment_attempts columns ---\n";
+try {
+    foreach ($pdo->query("SHOW COLUMNS FROM mp_payment_attempts")->fetchAll() as $c) {
+        echo $c['Field'] . "\n";
     }
 } catch (Exception $e) { echo $e->getMessage() . "\n"; }
 
