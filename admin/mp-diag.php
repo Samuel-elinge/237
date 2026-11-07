@@ -1,38 +1,20 @@
 <?php
 /**
  * Temporary diagnostic script — DELETE after use
+ * This version simulates the full catalogue page logic to find the exact crash point
  */
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../includes/config.php';
 requireAdmin();
 
 $pdo = db();
 header('Content-Type: text/plain; charset=utf-8');
 
-$tables = [
-    'mp_service_categories',
-    'mp_service_products',
-    'mp_service_prices',
-    'marketplace_orders',
-    'marketplace_order_items',
-    'mp_order_approvals',
-    'mp_payment_attempts',
-    'mp_fulfilment_tasks',
-    'mp_audit_events',
-    'mp_notification_log',
-    'site_settings',
-];
+echo "=== SIMULATING marketplace-catalogue.php ===\n\n";
 
-foreach ($tables as $t) {
-    try {
-        $n = $pdo->query("SELECT COUNT(*) FROM `$t`")->fetchColumn();
-        echo "✅ $t — $n rows\n";
-    } catch (Exception $e) {
-        echo "❌ $t — " . $e->getMessage() . "\n";
-    }
-}
-
-echo "\n--- Test catalogue queries ---\n";
-
+echo "Step 1: cats query\n";
 try {
     $cats = $pdo->query("
         SELECT c.*,
@@ -43,10 +25,10 @@ try {
         GROUP BY c.id
         ORDER BY c.sort_order
     ")->fetchAll();
-    echo "cats query OK — " . count($cats) . " rows\n";
-    foreach ($cats as $c) echo "  cat: {$c['id']} {$c['name_en']}\n";
-} catch (Exception $e) { echo "cats FAILED: " . $e->getMessage() . "\n"; }
+    echo "OK — " . count($cats) . " cats\n";
+} catch (Throwable $e) { echo "FAIL: " . $e->getMessage() . "\n"; exit; }
 
+echo "Step 2: products query\n";
 try {
     $products = $pdo->query("
         SELECT p.*, c.name_en AS cat_name, c.`key` AS cat_key
@@ -54,9 +36,10 @@ try {
         JOIN mp_service_categories c ON c.id = p.category_id
         ORDER BY c.sort_order, p.sort_order
     ")->fetchAll();
-    echo "products query OK — " . count($products) . " rows\n";
-} catch (Exception $e) { echo "products FAILED: " . $e->getMessage() . "\n"; }
+    echo "OK — " . count($products) . " products\n";
+} catch (Throwable $e) { echo "FAIL: " . $e->getMessage() . "\n"; exit; }
 
+echo "Step 3: prices query\n";
 try {
     $prices = $pdo->query("
         SELECT pr.*, p.name_en AS product_name, p.`key` AS product_key
@@ -64,36 +47,68 @@ try {
         JOIN mp_service_products p ON p.id = pr.product_id
         ORDER BY p.sort_order, pr.price_type DESC, pr.id
     ")->fetchAll();
-    echo "prices query OK — " . count($prices) . " rows\n";
-} catch (Exception $e) { echo "prices FAILED: " . $e->getMessage() . "\n"; }
+    echo "OK — " . count($prices) . " prices\n";
+} catch (Throwable $e) { echo "FAIL: " . $e->getMessage() . "\n"; exit; }
 
+echo "Step 4: pricesByProduct grouping\n";
+$pricesByProduct = [];
+foreach ($prices as $pr) {
+    $pricesByProduct[$pr['product_id']][] = $pr;
+}
+echo "OK — " . count($pricesByProduct) . " product groups\n";
+
+echo "Step 5: settings query\n";
+try {
+    $settings = [];
+    $stS = $pdo->query("SELECT `key`, value FROM site_settings WHERE `key` LIKE 'mp_%'");
+    foreach ($stS->fetchAll() as $row) $settings[$row['key']] = $row['value'];
+    echo "OK — " . count($settings) . " settings\n";
+} catch (Throwable $e) { echo "FAIL: " . $e->getMessage() . "\n"; exit; }
+
+echo "Step 6: stats\n";
+$totalProducts  = count($products);
+$orderableCount = count(array_filter($products, fn($p) => $p['orderable']));
+$activeCount    = count(array_filter($products, fn($p) => $p['active']));
+echo "totalProducts=$totalProducts orderableCount=$orderableCount activeCount=$activeCount\n";
+
+echo "Step 7: order count\n";
 try {
     $orderCount = (int)$pdo->query("SELECT COUNT(*) FROM marketplace_orders")->fetchColumn();
-    echo "orderCount OK — $orderCount\n";
-} catch (Exception $e) { echo "orderCount FAILED: " . $e->getMessage() . "\n"; }
+    echo "OK — $orderCount\n";
+} catch (Throwable $e) { echo "FAIL: " . $e->getMessage() . "\n"; exit; }
 
+echo "Step 8: pending pay count\n";
 try {
     $pendingPayCount = (int)$pdo->query("SELECT COUNT(*) FROM marketplace_orders WHERE order_state='PAYMENT_REVIEW'")->fetchColumn();
-    echo "pendingPayCount OK — $pendingPayCount\n";
-} catch (Exception $e) { echo "pendingPayCount FAILED: " . $e->getMessage() . "\n"; }
+    echo "OK — $pendingPayCount\n";
+} catch (Throwable $e) { echo "FAIL: " . $e->getMessage() . "\n"; exit; }
 
-echo "\n--- marketplace_orders columns ---\n";
-try {
-    foreach ($pdo->query("SHOW COLUMNS FROM marketplace_orders")->fetchAll() as $c) {
-        echo $c['Field'] . "\n";
-    }
-} catch (Exception $e) { echo $e->getMessage() . "\n"; }
+echo "Step 9: mpFmt function\n";
+function mpFmt(int $xaf): string { return number_format($xaf) . ' FCFA'; }
+echo "OK\n";
 
-echo "\n--- mp_payment_attempts columns ---\n";
+echo "Step 10: getSettingCached calls\n";
 try {
-    foreach ($pdo->query("SHOW COLUMNS FROM mp_payment_attempts")->fetchAll() as $c) {
-        echo $c['Field'] . "\n";
-    }
-} catch (Exception $e) { echo $e->getMessage() . "\n"; }
+    $v1 = getSettingCached('mp_approval_expiry_days', '7');
+    $v2 = getSettingCached('mp_commission_enabled', '0');
+    $v3 = getSettingCached('mp_auto_renewal_enabled', '0');
+    $v4 = getSettingCached('mp_fulfilment_sla_days', '5');
+    echo "OK — expiry=$v1 commission=$v2 renewal=$v3 sla=$v4\n";
+} catch (Throwable $e) { echo "FAIL: " . $e->getMessage() . "\n"; exit; }
 
-echo "\n--- site_settings mp_ keys ---\n";
+echo "\n=== ALL STEPS PASSED — checking header include ===\n";
+echo "PHP version: " . PHP_VERSION . "\n";
+echo "Error log: " . ini_get('error_log') . "\n";
+
+// Check if header include itself errors
+echo "\nAbout to include header.php...\n";
+flush();
+ob_start();
 try {
-    foreach ($pdo->query("SELECT `key`, value FROM site_settings WHERE `key` LIKE 'mp_%'")->fetchAll() as $r) {
-        echo $r['key'] . ' = ' . $r['value'] . "\n";
-    }
-} catch (Exception $e) { echo $e->getMessage() . "\n"; }
+    require_once __DIR__ . '/../includes/header.php';
+    $headerOut = ob_get_clean();
+    echo "header.php included OK — " . strlen($headerOut) . " bytes output\n";
+} catch (Throwable $e) {
+    ob_end_clean();
+    echo "header.php FAILED: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine() . "\n";
+}
