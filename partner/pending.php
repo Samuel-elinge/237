@@ -12,6 +12,19 @@ $st   = $pdo->prepare("SELECT * FROM partner_profiles WHERE user_id = ?");
 $st->execute([$user['id']]);
 $profile = $st->fetch();
 
+// If user has growth_partner role but no profile row (manually promoted by admin),
+// auto-create an approved profile and send them straight to the dashboard.
+if (!$profile && $user['role'] === 'growth_partner') {
+    $name = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+    if (!$name) $name = $user['email'];
+    $ins = $pdo->prepare("
+        INSERT INTO partner_profiles (user_id, status, created_at, updated_at)
+        VALUES (?, 'approved', NOW(), NOW())
+    ");
+    $ins->execute([$user['id']]);
+    redirect(SITE_URL . '/partner/dashboard');
+}
+
 $pageTitle = pt('Partner Application') . ' — 237Biz';
 require_once __DIR__ . '/../includes/header.php';
 ?>
