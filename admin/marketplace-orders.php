@@ -149,7 +149,7 @@ $offset = ($page - 1) * $perPage;
 
 $stOrders = $pdo->prepare("
     SELECT o.id, o.ref, o.order_state, o.payment_state, o.due_now_amount,
-           o.created_at, o.payment_confirmed_at,
+           o.created_at, o.completed_at AS payment_confirmed_at,
            l.title AS listing_title,
            u_partner.name AS partner_name,
            u_owner.name AS owner_name,
@@ -216,91 +216,112 @@ $stateBadge = fn($s) => match($s) {
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/includes/nav.php';
 ?>
+<link rel="stylesheet" href="<?= SITE_URL ?>/admin/includes/mp-admin.css">
 
-<div class="admin-wrap">
-  <div class="admin-header">
-    <h1>📋 Marketplace Orders</h1>
-    <div class="admin-header-actions">
-      <a href="<?= SITE_URL ?>/admin/marketplace-catalogue" class="btn btn-sm btn-outline-secondary">🛒 Catalogue</a>
-      <a href="<?= SITE_URL ?>/admin/marketplace-fulfilment" class="btn btn-sm btn-outline-secondary">⚙️ Fulfilment</a>
+<div class="mp-wrap">
+
+  <!-- Page header -->
+  <div class="mp-page-header">
+    <div>
+      <h1 class="mp-page-title">📋 Marketplace Orders</h1>
+      <div class="mp-page-subtitle"><?= $total ?> order<?= $total !== 1 ? 's' : '' ?> total</div>
+    </div>
+    <div class="mp-nav-links">
+      <a href="<?= SITE_URL ?>/admin/marketplace-catalogue" class="mp-btn secondary">🛒 Catalogue</a>
+      <a href="<?= SITE_URL ?>/admin/marketplace-fulfilment" class="mp-btn secondary">⚙️ Fulfilment</a>
     </div>
   </div>
 
   <?php showFlash(); ?>
 
   <!-- Filter bar -->
-  <div class="card shadow-sm mb-4">
-    <div class="card-body d-flex flex-wrap gap-2 align-items-center">
-      <form method="GET" class="d-flex gap-2 flex-wrap align-items-center">
-        <input type="text" name="ref" value="<?= e($filterRef) ?>" class="form-control form-control-sm"
-          placeholder="Search ref or business…" style="width:220px;">
-        <select name="state" class="form-select form-select-sm" style="width:200px;">
-          <option value="">All states</option>
-          <?php
-          $allStates = ['PENDING_OWNER_APPROVAL','AWAITING_PAYMENT','PAYMENT_REVIEW','PAID','READY_FOR_FULFILMENT','IN_FULFILMENT','BLOCKED','COMPLETED','REJECTED','CANCELLED'];
-          foreach ($allStates as $s):
-          ?>
-          <option value="<?= $s ?>" <?= $filterState===$s?'selected':'' ?>>
-            <?= $s ?> <?= isset($stateCounts[$s]) ? '('.$stateCounts[$s].')' : '' ?>
-          </option>
-          <?php endforeach; ?>
-        </select>
-        <button class="btn btn-sm btn-primary">Filter</button>
-        <?php if ($filterState || $filterRef): ?>
-        <a href="<?= SITE_URL ?>/admin/marketplace-orders" class="btn btn-sm btn-outline-secondary">Clear</a>
-        <?php endif; ?>
-      </form>
-
-      <!-- Quick links for important states -->
-      <div class="ms-auto d-flex gap-2 flex-wrap">
-        <?php foreach (['PAYMENT_REVIEW','PENDING_OWNER_APPROVAL','READY_FOR_FULFILMENT'] as $qs): ?>
-        <a href="?state=<?= $qs ?>" class="btn btn-sm btn-outline-<?= $stateBadge($qs) ?>">
-          <?= $qs ?> <?= isset($stateCounts[$qs]) ? '<span class="badge bg-'.$stateBadge($qs).'">'.$stateCounts[$qs].'</span>' : '' ?>
-        </a>
+  <div class="mp-filter-bar">
+    <form method="GET" style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;">
+      <input type="text" name="ref" value="<?= e($filterRef) ?>" class="form-control form-control-sm"
+        placeholder="Search ref or business…" style="width:200px;">
+      <select name="state" class="form-select form-select-sm" style="width:190px;">
+        <option value="">All states</option>
+        <?php
+        $allStates = ['PENDING_OWNER_APPROVAL','AWAITING_PAYMENT','PAYMENT_REVIEW','PAID','READY_FOR_FULFILMENT','IN_FULFILMENT','BLOCKED','COMPLETED','REJECTED','CANCELLED'];
+        foreach ($allStates as $s):
+        ?>
+        <option value="<?= $s ?>" <?= $filterState===$s?'selected':'' ?>>
+          <?= $s ?> <?= isset($stateCounts[$s]) ? '('.$stateCounts[$s].')' : '' ?>
+        </option>
         <?php endforeach; ?>
-      </div>
+      </select>
+      <button class="mp-btn primary sm">Filter</button>
+      <?php if ($filterState || $filterRef): ?>
+      <a href="<?= SITE_URL ?>/admin/marketplace-orders" class="mp-btn secondary sm">Clear</a>
+      <?php endif; ?>
+    </form>
+    <!-- Quick state links -->
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-left:auto;">
+      <?php
+      $quickStates = [
+          'PAYMENT_REVIEW'         => ['⚡ Payment Review', 'yellow'],
+          'PENDING_OWNER_APPROVAL' => ['🕐 Awaiting Approval', 'grey'],
+          'READY_FOR_FULFILMENT'   => ['✅ Ready to Fulfil', 'green'],
+      ];
+      foreach ($quickStates as $qs => [$qlabel, $qcol]): ?>
+      <a href="?state=<?= $qs ?>" class="mp-btn sm <?= $filterState===$qs ? 'primary' : 'secondary' ?>">
+        <?= $qlabel ?>
+        <?php if (isset($stateCounts[$qs]) && $stateCounts[$qs] > 0): ?>
+        <span class="mp-badge <?= $qcol ?>"><?= $stateCounts[$qs] ?></span>
+        <?php endif; ?>
+      </a>
+      <?php endforeach; ?>
     </div>
   </div>
 
   <?php if ($detail): ?>
   <!-- ── Detail view ──────────────────────────────────────────── -->
-  <div class="row g-4 mb-4">
-    <div class="col-lg-7">
+  <div class="mp-detail-grid">
+    <!-- Left: order info -->
+    <div>
 
-      <div class="card shadow-sm mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong><?= e($detail['ref']) ?></strong>
-          <span class="badge bg-<?= $stateBadge($detail['order_state']) ?>"><?= e($detail['order_state']) ?></span>
+      <div class="mp-detail-card">
+        <div class="mp-detail-card-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="mp-ref"><?= e($detail['ref']) ?></span>
+          <?php
+          $badgeCol = match($detail['order_state']) {
+              'PAYMENT_REVIEW','PAID','READY_FOR_FULFILMENT','IN_FULFILMENT','COMPLETED' => 'green',
+              'PENDING_OWNER_APPROVAL','AWAITING_PAYMENT' => 'yellow',
+              'REJECTED','CANCELLED','BLOCKED' => 'red',
+              default => 'grey',
+          };
+          ?>
+          <span class="mp-badge <?= $badgeCol ?>"><?= e($detail['order_state']) ?></span>
         </div>
-        <div class="card-body">
-          <dl class="row mb-0 small">
-            <dt class="col-sm-4">Business</dt><dd class="col-sm-8"><?= e($detail['listing_title']) ?></dd>
-            <dt class="col-sm-4">Partner</dt><dd class="col-sm-8"><?= e($detail['partner_name']) ?></dd>
-            <dt class="col-sm-4">Owner</dt><dd class="col-sm-8"><?= e($detail['owner_name']) ?></dd>
-            <dt class="col-sm-4">Submitted</dt><dd class="col-sm-8"><?= date('d M Y H:i', strtotime($detail['created_at'])) ?></dd>
-            <dt class="col-sm-4">Amount</dt><dd class="col-sm-8 fw-bold text-success"><?= mpFmt((int)$detail['due_now_amount']) ?></dd>
+        <div class="mp-detail-card-body">
+          <dl class="mp-dl">
+            <dt>Business</dt><dd><?= e($detail['listing_title']) ?></dd>
+            <dt>Partner</dt><dd><?= e($detail['partner_name']) ?></dd>
+            <dt>Owner</dt><dd><?= e($detail['owner_name']) ?></dd>
+            <dt>Submitted</dt><dd><?= date('d M Y H:i', strtotime($detail['created_at'])) ?></dd>
+            <dt>Amount</dt><dd style="color:#00A878;font-weight:700;"><?= mpFmt((int)$detail['due_now_amount']) ?></dd>
             <?php if ($detail['payment_confirmed_at']): ?>
-            <dt class="col-sm-4">Paid at</dt><dd class="col-sm-8"><?= date('d M Y H:i', strtotime($detail['payment_confirmed_at'])) ?></dd>
+            <dt>Paid at</dt><dd><?= date('d M Y H:i', strtotime($detail['payment_confirmed_at'])) ?></dd>
             <?php endif; ?>
           </dl>
         </div>
       </div>
 
       <!-- Items -->
-      <div class="card shadow-sm mb-3">
-        <div class="card-header fw-bold small">Items</div>
-        <div class="list-group list-group-flush small">
+      <div class="mp-detail-card">
+        <div class="mp-detail-card-header">Order Items</div>
+        <div class="mp-detail-card-body" style="padding:0;">
           <?php foreach ($detailItems as $item): ?>
-          <div class="list-group-item d-flex justify-content-between">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:0.75rem 1rem;border-bottom:1px solid rgba(255,255,255,0.05);">
             <div>
-              <strong><?= e($item['pname']) ?></strong>
-              <div class="text-muted"><?= e($item['interval']) ?></div>
+              <div style="font-weight:600;color:#e8f4ee;font-size:0.85rem;"><?= e($item['pname']) ?></div>
+              <?php if ($item['interval']): ?><div style="font-size:0.75rem;color:#6c9e88;"><?= e($item['interval']) ?></div><?php endif; ?>
               <?php $cfg = json_decode($item['configuration'] ?? '{}', true) ?: []; ?>
               <?php foreach ($cfg as $k => $v): if ($k==='partner_note') continue; ?>
-              <span class="text-muted"><?= e($k) ?>: <?= e($v) ?></span>
+              <div style="font-size:0.75rem;color:#6c9e88;"><?= e($k) ?>: <?= e($v) ?></div>
               <?php endforeach; ?>
             </div>
-            <strong><?= mpFmt((int)$item['amount_due_now']) ?></strong>
+            <span style="color:#00A878;font-weight:700;font-size:0.85rem;white-space:nowrap;"><?= mpFmt((int)$item['amount_due_now']) ?></span>
           </div>
           <?php endforeach; ?>
         </div>
@@ -308,30 +329,30 @@ require_once __DIR__ . '/includes/nav.php';
 
       <!-- Payment attempts -->
       <?php if ($detailPayments): ?>
-      <div class="card shadow-sm mb-3">
-        <div class="card-header fw-bold small">Payment Attempts (<?= count($detailPayments) ?>)</div>
-        <div class="list-group list-group-flush small">
-          <?php foreach ($detailPayments as $pa): ?>
-          <div class="list-group-item">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
-                <span class="badge bg-<?= in_array($pa['payment_state'],['SUCCEEDED']) ? 'success' : (in_array($pa['payment_state'],['PAYMENT_REVIEW']) ? 'primary' : 'secondary') ?>">
-                  <?= e($pa['payment_state']) ?>
-                </span>
-                <?= e($pa['provider']) ?> · <?= mpFmt((int)$pa['amount']) ?>
-                <?php if ($pa['provider_ref']): ?> · ref: <?= e($pa['provider_ref']) ?><?php endif; ?>
+      <div class="mp-detail-card">
+        <div class="mp-detail-card-header">Payment Attempts (<?= count($detailPayments) ?>)</div>
+        <div class="mp-detail-card-body" style="padding:0;">
+          <?php foreach ($detailPayments as $pa):
+            $pCol = match($pa['payment_state']) {
+                'SUCCEEDED' => 'green', 'PAYMENT_REVIEW' => 'blue', 'FAILED' => 'red', default => 'grey'
+            };
+          ?>
+          <div style="padding:0.75rem 1rem;border-bottom:1px solid rgba(255,255,255,0.05);">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;">
+              <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                <span class="mp-badge <?= $pCol ?>"><?= e($pa['payment_state']) ?></span>
+                <span style="font-size:0.82rem;color:#c8ddd4;"><?= e($pa['provider']) ?> · <?= mpFmt((int)$pa['amount']) ?></span>
+                <?php if ($pa['provider_ref']): ?><span style="font-size:0.75rem;color:#6c9e88;">ref: <?= e($pa['provider_ref']) ?></span><?php endif; ?>
               </div>
-              <span class="text-muted"><?= date('d M Y H:i', strtotime($pa['created_at'])) ?></span>
+              <span style="font-size:0.75rem;color:#6c9e88;white-space:nowrap;"><?= date('d M Y H:i', strtotime($pa['created_at'])) ?></span>
             </div>
             <?php if ($pa['proof_path']): ?>
-            <div class="mt-1">
-              <a href="<?= UPLOAD_URL . e($pa['proof_path']) ?>" target="_blank" class="btn btn-sm btn-outline-primary">
-                👁 View Proof
-              </a>
+            <div style="margin-top:0.5rem;">
+              <a href="<?= UPLOAD_URL . e($pa['proof_path']) ?>" target="_blank" class="mp-btn primary sm">👁 View Proof</a>
             </div>
             <?php endif; ?>
             <?php if ($pa['reviewer_note']): ?>
-            <div class="mt-1 text-muted">Admin note: <?= e($pa['reviewer_note']) ?></div>
+            <div style="margin-top:0.4rem;font-size:0.75rem;color:#6c9e88;">Note: <?= e($pa['reviewer_note']) ?></div>
             <?php endif; ?>
           </div>
           <?php endforeach; ?>
@@ -340,39 +361,40 @@ require_once __DIR__ . '/includes/nav.php';
       <?php endif; ?>
 
       <!-- Audit log -->
-      <div class="card shadow-sm mb-3">
-        <div class="card-header fw-bold small">Audit Log</div>
-        <div class="list-group list-group-flush small">
+      <div class="mp-detail-card">
+        <div class="mp-detail-card-header">Audit Log</div>
+        <div class="mp-detail-card-body">
           <?php foreach ($detailAudit as $ev): ?>
-          <div class="list-group-item d-flex justify-content-between text-muted">
-            <span><?= e($ev['action']) ?> <span class="text-dark"><?= e($ev['actor_name'] ?? $ev['actor_role']) ?></span></span>
-            <span><?= date('d M H:i', strtotime($ev['created_at'])) ?></span>
+          <div class="mp-audit-row">
+            <span class="mp-audit-action"><?= e($ev['action']) ?></span>
+            <span><?= e($ev['actor_name'] ?? $ev['actor_role']) ?> · <?= date('d M H:i', strtotime($ev['created_at'])) ?></span>
           </div>
           <?php endforeach; ?>
+          <?php if (!$detailAudit): ?><div style="color:#6c9e88;font-size:0.82rem;">No events yet.</div><?php endif; ?>
         </div>
       </div>
 
     </div>
 
-    <!-- Actions panel -->
-    <div class="col-lg-5">
+    <!-- Right: action panel -->
+    <div>
 
       <?php $os = $detail['order_state']; ?>
 
       <?php if ($os === 'PAYMENT_REVIEW'): ?>
-      <div class="card shadow-sm border-primary mb-3">
-        <div class="card-header bg-primary text-white fw-bold">🔍 Review Payment</div>
-        <div class="card-body">
+      <div class="mp-action-card review">
+        <div class="mp-action-header">🔍 Review Payment</div>
+        <div class="mp-action-body">
           <form method="POST">
             <?= csrfField() ?>
             <input type="hidden" name="order_id" value="<?= $detail['id'] ?>">
-            <div class="mb-3">
-              <label class="form-label small">Admin note (optional)</label>
+            <div style="margin-bottom:0.75rem;">
+              <label class="mp-config-label">Admin note (optional)</label>
               <input type="text" name="admin_note" class="form-control form-control-sm" placeholder="e.g. verified on MTN portal">
             </div>
-            <div class="d-flex gap-2">
-              <button name="action" value="confirm_payment" class="btn btn-success flex-grow-1">✅ Confirm Payment</button>
-              <button name="action" value="reject_payment" class="btn btn-danger flex-grow-1"
+            <div style="display:flex;gap:0.5rem;">
+              <button name="action" value="confirm_payment" class="mp-btn success w100">✅ Confirm Payment</button>
+              <button name="action" value="reject_payment" class="mp-btn danger w100"
                 onclick="return confirm('Reject this payment? Partner will need to resubmit.')">❌ Reject</button>
             </div>
           </form>
@@ -381,57 +403,57 @@ require_once __DIR__ . '/includes/nav.php';
       <?php endif; ?>
 
       <?php if (in_array($os, ['IN_FULFILMENT','READY_FOR_FULFILMENT'])): ?>
-      <div class="card shadow-sm border-success mb-3">
-        <div class="card-header bg-success text-white fw-bold">✅ Mark Complete</div>
-        <div class="card-body">
+      <div class="mp-action-card success">
+        <div class="mp-action-header">✅ Mark Complete</div>
+        <div class="mp-action-body">
           <form method="POST">
             <?= csrfField() ?>
             <input type="hidden" name="order_id" value="<?= $detail['id'] ?>">
             <input type="hidden" name="action" value="mark_complete">
-            <p class="small text-muted">Use this once the service has been fully delivered to the business.</p>
-            <button class="btn btn-success w-100">Mark as Completed</button>
+            <p style="font-size:0.8rem;color:#6c9e88;margin-bottom:0.75rem;">Use once the service has been fully delivered to the business.</p>
+            <button class="mp-btn success w100">Mark as Completed</button>
           </form>
         </div>
       </div>
       <?php endif; ?>
 
       <?php if (!in_array($os, ['COMPLETED','CANCELLED','REJECTED'])): ?>
-      <div class="card shadow-sm border-danger mb-3">
-        <div class="card-header fw-bold small">🚫 Cancel Order</div>
-        <div class="card-body">
+      <div class="mp-action-card danger">
+        <div class="mp-action-header">🚫 Cancel Order</div>
+        <div class="mp-action-body">
           <form method="POST" onsubmit="return confirm('Cancel this order?')">
             <?= csrfField() ?>
             <input type="hidden" name="order_id" value="<?= $detail['id'] ?>">
             <input type="hidden" name="action" value="cancel_order">
-            <input type="text" name="admin_note" class="form-control form-control-sm mb-2" placeholder="Reason (shown to partner)" required>
-            <button class="btn btn-danger btn-sm w-100">Cancel Order</button>
+            <input type="text" name="admin_note" class="form-control form-control-sm" style="margin-bottom:0.5rem;" placeholder="Reason (shown to partner)" required>
+            <button class="mp-btn danger w100">Cancel Order</button>
           </form>
         </div>
       </div>
       <?php endif; ?>
 
-      <a href="<?= SITE_URL ?>/admin/marketplace-orders" class="btn btn-outline-secondary w-100">← All Orders</a>
+      <a href="<?= SITE_URL ?>/admin/marketplace-orders" class="mp-btn secondary w100" style="margin-top:0.5rem;">← All Orders</a>
 
     </div>
   </div>
   <?php endif; ?>
 
   <!-- ── Orders table ─────────────────────────────────────────── -->
-  <div class="card shadow-sm">
-    <div class="card-header d-flex justify-content-between align-items-center small fw-semibold">
-      <span><?= $total ?> order<?= $total !== 1 ? 's' : '' ?></span>
+  <div class="mp-category">
+    <div class="mp-category-header">
+      <span style="font-weight:600;color:#d4ede0;"><?= $total ?> order<?= $total !== 1 ? 's' : '' ?></span>
       <?php if ($pages > 1): ?>
-      <div class="d-flex gap-1">
+      <div style="display:flex;gap:0.3rem;flex-wrap:wrap;">
         <?php for ($p = 1; $p <= $pages; $p++): ?>
         <a href="?<?= http_build_query(array_merge($_GET, ['page'=>$p])) ?>"
-          class="btn btn-sm btn-<?= $p===$page?'primary':'outline-secondary' ?>"><?= $p ?></a>
+          class="mp-btn sm <?= $p===$page?'primary':'secondary' ?>"><?= $p ?></a>
         <?php endfor; ?>
       </div>
       <?php endif; ?>
     </div>
-    <div class="table-responsive">
-      <table class="table table-hover mb-0 align-middle small">
-        <thead class="table-light">
+    <div style="overflow-x:auto;">
+      <table class="mp-table mp-orders-table">
+        <thead>
           <tr>
             <th>Ref</th>
             <th>Business</th>
@@ -445,26 +467,31 @@ require_once __DIR__ . '/includes/nav.php';
         </thead>
         <tbody>
           <?php if (!$orders): ?>
-          <tr><td colspan="8" class="text-center text-muted py-4">No orders found.</td></tr>
+          <tr><td colspan="8" style="text-align:center;color:#6c9e88;padding:2rem;">No orders found.</td></tr>
           <?php endif; ?>
-          <?php foreach ($orders as $o): ?>
+          <?php foreach ($orders as $o):
+            $badgeCol = match($o['order_state']) {
+                'PAYMENT_REVIEW','PAID','READY_FOR_FULFILMENT','IN_FULFILMENT','COMPLETED' => 'green',
+                'PENDING_OWNER_APPROVAL','AWAITING_PAYMENT' => 'yellow',
+                'REJECTED','CANCELLED','BLOCKED' => 'red',
+                default => 'grey',
+            };
+          ?>
           <tr>
-            <td><code><?= e($o['ref']) ?></code></td>
+            <td><span class="mp-ref"><?= e($o['ref']) ?></span></td>
             <td><?= e($o['listing_title']) ?></td>
-            <td><?= e($o['partner_name']) ?></td>
-            <td class="fw-semibold text-success"><?= mpFmt((int)$o['due_now_amount']) ?></td>
-            <td><span class="badge bg-<?= $stateBadge($o['order_state']) ?>"><?= e($o['order_state']) ?></span></td>
+            <td style="color:#9ab8a8;"><?= e($o['partner_name']) ?></td>
+            <td style="color:#00A878;font-weight:700;"><?= mpFmt((int)$o['due_now_amount']) ?></td>
+            <td><span class="mp-badge <?= $badgeCol ?>"><?= e($o['order_state']) ?></span></td>
             <td>
               <?php if ($o['order_state'] === 'PAYMENT_REVIEW'): ?>
-              <span class="badge bg-primary">⚡ Review needed</span>
+              <span class="mp-badge yellow">⚡ Review needed</span>
               <?php else: ?>
-              <span class="text-muted"><?= e($o['payment_state']) ?></span>
+              <span style="font-size:0.75rem;color:#6c9e88;"><?= e($o['payment_state']) ?></span>
               <?php endif; ?>
             </td>
-            <td class="text-muted"><?= date('d M Y', strtotime($o['created_at'])) ?></td>
-            <td>
-              <a href="?ref=<?= e($o['ref']) ?>" class="btn btn-sm btn-outline-primary">View</a>
-            </td>
+            <td style="color:#6c9e88;font-size:0.78rem;"><?= date('d M Y', strtotime($o['created_at'])) ?></td>
+            <td><a href="?ref=<?= e($o['ref']) ?>" class="mp-btn primary sm">View</a></td>
           </tr>
           <?php endforeach; ?>
         </tbody>

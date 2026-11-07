@@ -13,6 +13,12 @@ if (!function_exists('flash')) {
     }
 }
 
+if (!function_exists('e')) {
+    function e(string $s): string {
+        return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+}
+
 if (!function_exists('showFlash')) {
     function showFlash(): void {
         if (session_status() === PHP_SESSION_NONE) session_start();
