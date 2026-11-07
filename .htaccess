@@ -140,6 +140,10 @@ RewriteRule ^creator/submissions/?$  creator/submissions.php  [L,QSA]
 RewriteRule ^creator/referrals/?$    creator/referrals.php    [L,QSA]
 
 # Growth Partner Marketplace
+RewriteRule ^partner/acquisition-dashboard/?$  partner/acquisition-dashboard.php  [L,QSA]
+RewriteRule ^partner/acquisition-insights/?$   partner/acquisition-insights.php   [L,QSA]
+RewriteRule ^partner/acquisition-report/?$     partner/acquisition-report.php     [L,QSA]
+RewriteRule ^partner/acquisition-reports/?$    partner/acquisition-reports.php    [L,QSA]
 RewriteRule ^partner/marketplace/?$        partner/marketplace.php        [L,QSA]
 RewriteRule ^partner/marketplace-orders/?$ partner/marketplace-orders.php [L,QSA]
 RewriteRule ^partner/marketplace-order/?$  partner/marketplace-order.php  [L,QSA]
