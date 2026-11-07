@@ -1,80 +1,83 @@
 <?php
 /**
- * Temporary diagnostic — reads PHP error log and tests catalogue include chain
+ * Temporary diagnostic — tests marketplace-fulfilment queries
  */
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/flash-helpers.php';
 requireAdmin();
 header('Content-Type: text/plain; charset=utf-8');
 
-// Check error log
+$pdo = db();
+
+echo "=== Fulfilment diagnostic ===\n\n";
+
+// 1. Check if mp_fulfilment_tasks exists
+echo "1. mp_fulfilment_tasks table:\n";
+try {
+    $cols = $pdo->query("SHOW COLUMNS FROM mp_fulfilment_tasks")->fetchAll();
+    foreach ($cols as $c) echo "   " . $c['Field'] . " " . $c['Type'] . "\n";
+} catch (Throwable $e) {
+    echo "   ERROR: " . $e->getMessage() . "\n";
+}
+
+// 2. Test staff query
+echo "\n2. Staff query:\n";
+try {
+    $staff = $pdo->query("SELECT id, name FROM users WHERE role IN ('admin','staff','operator') ORDER BY name")->fetchAll();
+    echo "   OK — " . count($staff) . " staff members\n";
+} catch (Throwable $e) {
+    echo "   ERROR: " . $e->getMessage() . "\n";
+}
+
+// 3. Test main fulfilment orders query
+echo "\n3. Fulfilment orders query:\n";
+try {
+    $st = $pdo->prepare("
+        SELECT o.id, o.ref, o.order_state, o.due_now_amount,
+               o.created_at, o.completed_at AS payment_confirmed_at,
+               l.title AS listing_title,
+               u_partner.name AS partner_name,
+               COUNT(ft.id) AS task_total,
+               SUM(ft.fulfilment_state='COMPLETED') AS task_done,
+               SUM(ft.fulfilment_state='BLOCKED') AS task_blocked,
+               MIN(ft.due_date) AS earliest_due
+        FROM marketplace_orders o
+        JOIN listings l ON l.id = o.listing_id
+        JOIN partner_profiles pp ON pp.id = o.partner_profile_id
+        JOIN users u_partner ON u_partner.id = pp.user_id
+        LEFT JOIN mp_fulfilment_tasks ft ON ft.order_id = o.id AND ft.fulfilment_state NOT IN ('CANCELLED')
+        WHERE o.order_state IN ('READY_FOR_FULFILMENT','IN_FULFILMENT')
+        GROUP BY o.id
+        ORDER BY earliest_due ASC, o.payment_confirmed_at ASC
+    ");
+    $st->execute();
+    $rows = $st->fetchAll();
+    echo "   OK — " . count($rows) . " orders\n";
+} catch (Throwable $e) {
+    echo "   ERROR: " . $e->getMessage() . "\n";
+}
+
+// 4. Check error log for recent fulfilment errors
+echo "\n4. Recent PHP errors mentioning fulfilment:\n";
 $errLog = ini_get('error_log');
-echo "Error log path: $errLog\n";
 if ($errLog && file_exists($errLog)) {
-    $lines = file($errLog);
-    $recent = array_slice($lines, -30);
-    echo "Last 30 lines of error log:\n";
-    foreach ($recent as $l) {
-        if (stripos($l, 'marketplace') !== false || stripos($l, 'mpFmt') !== false || stripos($l, 'getSet') !== false || stripos($l, 'fatal') !== false) {
-            echo $l;
+    $lines = array_slice(file($errLog), -50);
+    $found = 0;
+    foreach ($lines as $l) {
+        if (stripos($l, 'fulfilment') !== false || stripos($l, 'mp_fulfilment') !== false) {
+            echo "   " . $l;
+            $found++;
         }
     }
+    if (!$found) {
+        // show last 10 lines regardless
+        echo "   (no fulfilment-specific lines; last 5 error log entries:)\n";
+        foreach (array_slice($lines, -5) as $l) echo "   $l";
+    }
 } else {
-    echo "No error log found or not readable\n";
-}
-
-// Try to actually output the stats bar like the catalogue does
-$pdo = db();
-$cats = $pdo->query("SELECT c.*, COUNT(DISTINCT p.id) AS product_count, SUM(p.orderable) AS orderable_count FROM mp_service_categories c LEFT JOIN mp_service_products p ON p.category_id = c.id GROUP BY c.id ORDER BY c.sort_order")->fetchAll();
-$products = $pdo->query("SELECT p.*, c.name_en AS cat_name, c.`key` AS cat_key FROM mp_service_products p JOIN mp_service_categories c ON c.id = p.category_id ORDER BY c.sort_order, p.sort_order")->fetchAll();
-$prices = $pdo->query("SELECT pr.*, p.name_en AS product_name, p.`key` AS product_key FROM mp_service_prices pr JOIN mp_service_products p ON p.id = pr.product_id ORDER BY p.sort_order, pr.price_type DESC, pr.id")->fetchAll();
-$pricesByProduct = [];
-foreach ($prices as $pr) $pricesByProduct[$pr['product_id']][] = $pr;
-$totalProducts  = count($products);
-$orderableCount = count(array_filter($products, fn($p) => $p['orderable']));
-$orderCount     = (int)$pdo->query("SELECT COUNT(*) FROM marketplace_orders")->fetchColumn();
-$pendingPayCount= (int)$pdo->query("SELECT COUNT(*) FROM marketplace_orders WHERE order_state='PAYMENT_REVIEW'")->fetchColumn();
-
-echo "\ntotalProducts=$totalProducts orderableCount=$orderableCount orderCount=$orderCount pendingPayCount=$pendingPayCount\n";
-echo "cats count=" . count($cats) . "\n";
-echo "prices count=" . count($prices) . "\n";
-
-// Check if there's a 'confirmed_by_user_id' column issue
-echo "\nmarketplace_orders columns:\n";
-foreach ($pdo->query("SHOW COLUMNS FROM marketplace_orders")->fetchAll() as $c) {
-    echo "  " . $c['Field'] . "\n";
-}
-
-echo "\nmp_payment_attempts columns:\n";
-foreach ($pdo->query("SHOW COLUMNS FROM mp_payment_attempts")->fetchAll() as $c) {
-    echo "  " . $c['Field'] . "\n";
-}
-
-// Test if header.php causes any issues
-echo "\nTesting header include...\n";
-flush();
-ob_start();
-try {
-    require_once __DIR__ . '/../includes/header.php';
-    $h = ob_get_clean();
-    echo "header.php OK — " . strlen($h) . " bytes\n";
-} catch (Throwable $e) {
-    ob_end_clean();
-    echo "header.php FAILED: " . $e->getMessage() . " at " . $e->getFile() . ":" . $e->getLine() . "\n";
-    echo $e->getTraceAsString();
-}
-
-// Test footer
-echo "\nTesting footer include...\n";
-ob_start();
-try {
-    require_once __DIR__ . '/../includes/footer.php';
-    $f = ob_get_clean();
-    echo "footer.php OK — " . strlen($f) . " bytes\n";
-} catch (Throwable $e) {
-    ob_end_clean();
-    echo "footer.php FAILED: " . $e->getMessage() . "\n";
+    echo "   No error log readable at: $errLog\n";
 }
 
 echo "\nDone.\n";
