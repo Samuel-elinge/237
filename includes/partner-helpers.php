@@ -66,6 +66,37 @@ if (!function_exists('verifyCsrf')) {
 }
 
 /**
+ * Alias of verifyCsrf() — abort with 403 if CSRF token is invalid.
+ */
+if (!function_exists('verifyCsrfOrDie')) {
+    function verifyCsrfOrDie(): void {
+        verifyCsrf();
+    }
+}
+
+/**
+ * Read a site setting by key, with an in-process cache.
+ * Settings live in site_settings (key, value).
+ */
+if (!function_exists('getSettingCached')) {
+    function getSettingCached(string $key): ?string {
+        static $cache = null;
+        if ($cache === null) {
+            $cache = [];
+            try {
+                $rows = db()->query("SELECT `key`, value FROM site_settings")->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($rows as $row) {
+                    $cache[$row['key']] = $row['value'];
+                }
+            } catch (\Throwable $e) {
+                // table may not exist yet — return null for all keys
+            }
+        }
+        return $cache[$key] ?? null;
+    }
+}
+
+/**
  * Require an active/approved growth_partner. Redirect if not.
  */
 function requireGrowthPartner(): array {
