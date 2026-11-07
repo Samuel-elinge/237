@@ -9,6 +9,7 @@
  *  - View full timeline
  */
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/flash-helpers.php';
 requireAdmin();
 
 $pdo = db();
