@@ -28,13 +28,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $desc    = trim($_POST['task_desc']    ?? '');
         $assign  = (int)($_POST['assignee_id'] ?? 0) ?: null;
         $slaDays = (int)($pdo->query("SELECT value FROM site_settings WHERE `key`='mp_fulfilment_sla_days' LIMIT 1")->fetchColumn() ?: 5);
-        $due     = date('Y-m-d', strtotime("+{$slaDays} days"));
+        $due     = date('Y-m-d H:i:s', strtotime("+{$slaDays} days"));
         if ($title) {
             $pdo->prepare("
                 INSERT INTO mp_fulfilment_tasks
-                  (order_id, title, description, fulfilment_state, assignee_id, due_date, created_by_user_id)
-                VALUES (?, ?, ?, 'ASSIGNED', ?, ?, ?)
-            ")->execute([$orderId, $title, $desc ?: null, $assign, $due, $_SESSION['user_id']]);
+                  (order_id, assignee_user_id, status, internal_notes, due_at, created_at, updated_at)
+                VALUES (?, ?, 'ASSIGNED', ?, ?, NOW(), NOW())
+            ")->execute([$orderId, $assign, $title . ($desc ? "\n" . $desc : ''), $due]);
 
             // Advance order to IN_FULFILMENT if still READY
             $pdo->prepare("UPDATE marketplace_orders SET order_state='IN_FULFILMENT', updated_at=NOW() WHERE id=? AND order_state='READY_FOR_FULFILMENT'")
@@ -48,24 +48,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $note    = trim($_POST['task_note'] ?? '');
         $validStates = ['UNASSIGNED','ASSIGNED','IN_PROGRESS','WAITING_ON_CUSTOMER','COMPLETED','BLOCKED','CANCELLED'];
         if (in_array($state, $validStates)) {
-            $pdo->prepare("UPDATE mp_fulfilment_tasks SET fulfilment_state=?, notes=?, updated_at=NOW() WHERE id=?")
-                ->execute([$state, $note ?: null, $taskId]);
-
-            // If all tasks for this order are completed, advance order
-            if ($state === 'COMPLETED') {
-                $stTasks = $pdo->prepare("SELECT COUNT(*) FROM mp_fulfilment_tasks WHERE order_id=(SELECT order_id FROM mp_fulfilment_tasks WHERE id=?) AND fulfilment_state NOT IN ('COMPLETED','CANCELLED')");
-                $stTasks->execute([$taskId]);
-                if ((int)$stTasks->fetchColumn() === 0) {
-                    // All done — but admin still manually marks order complete from orders page
-                    // Just set a flag for the UI
-                }
-            }
+            $completedAt = $state === 'COMPLETED' ? ', completed_at=NOW()' : '';
+            $pdo->prepare("UPDATE mp_fulfilment_tasks SET status=?, internal_notes=CONCAT(COALESCE(internal_notes,''),' | Note: ',?), updated_at=NOW()$completedAt WHERE id=?")
+                ->execute([$state, $note, $taskId]);
             flash('success', 'Task updated.');
         }
 
     } elseif ($action === 'assign_task' && $taskId) {
         $assign = (int)($_POST['assignee_id'] ?? 0) ?: null;
-        $pdo->prepare("UPDATE mp_fulfilment_tasks SET assignee_id=?, fulfilment_state=IF(fulfilment_state='UNASSIGNED','ASSIGNED',fulfilment_state), updated_at=NOW() WHERE id=?")
+        $pdo->prepare("UPDATE mp_fulfilment_tasks SET assignee_user_id=?, status=IF(status='UNASSIGNED','ASSIGNED',status), updated_at=NOW() WHERE id=?")
             ->execute([$assign, $taskId]);
         flash('success', 'Task assigned.');
     }
@@ -85,14 +76,14 @@ $stOrders = $pdo->prepare("
            l.title AS listing_title,
            u_partner.name AS partner_name,
            COUNT(ft.id) AS task_total,
-           SUM(ft.fulfilment_state='COMPLETED') AS task_done,
-           SUM(ft.fulfilment_state='BLOCKED') AS task_blocked,
-           MIN(ft.due_date) AS earliest_due
+           SUM(ft.status='COMPLETED') AS task_done,
+           SUM(ft.status='BLOCKED') AS task_blocked,
+           MIN(ft.due_at) AS earliest_due
     FROM marketplace_orders o
     JOIN listings l ON l.id = o.listing_id
     JOIN partner_profiles pp ON pp.id = o.partner_profile_id
     JOIN users u_partner ON u_partner.id = pp.user_id
-    LEFT JOIN mp_fulfilment_tasks ft ON ft.order_id = o.id AND ft.fulfilment_state NOT IN ('CANCELLED')
+    LEFT JOIN mp_fulfilment_tasks ft ON ft.order_id = o.id AND ft.status NOT IN ('CANCELLED')
     WHERE o.order_state IN ('READY_FOR_FULFILMENT','IN_FULFILMENT')
     GROUP BY o.id
     ORDER BY earliest_due ASC, o.payment_confirmed_at ASC
@@ -120,21 +111,13 @@ if ($filterOrderId) {
     $selectedOrder = $stSO->fetch();
 
     if ($selectedOrder) {
-        $stT = $pdo->prepare("SELECT ft.*, u.name AS assignee_name FROM mp_fulfilment_tasks ft LEFT JOIN users u ON u.id=ft.assignee_id WHERE ft.order_id=? ORDER BY ft.created_at");
+        $stT = $pdo->prepare("SELECT ft.*, u.name AS assignee_name FROM mp_fulfilment_tasks ft LEFT JOIN users u ON u.id=ft.assignee_user_id WHERE ft.order_id=? ORDER BY ft.created_at");
         $stT->execute([$filterOrderId]);
         $orderTasks = $stT->fetchAll();
     }
 }
 
-$taskStateBadge = fn($s) => match($s) {
-    'COMPLETED'          => 'success',
-    'IN_PROGRESS'        => 'primary',
-    'ASSIGNED'           => 'info',
-    'WAITING_ON_CUSTOMER'=> 'warning',
-    'BLOCKED'            => 'danger',
-    'CANCELLED'          => 'secondary',
-    default              => 'secondary',
-};
+// $taskStateBadge kept for reference but HTML uses mp-badge classes directly
 
 $slaColor = function(string $due): string {
     $days = (strtotime($due) - time()) / 86400;
@@ -178,7 +161,7 @@ require_once __DIR__ . '/includes/nav.php';
 
       <?php foreach ($fulfilOrders as $fo):
         $isSelected = $fo['id'] == $filterOrderId;
-        $pct = $fo['task_total'] > 0 ? round($fo['task_done'] / $fo['task_total'] * 100) : 0;
+        $pct        = $fo['task_total'] > 0 ? round((int)$fo['task_done'] / (int)$fo['task_total'] * 100) : 0;
         $stateLabel = $fo['order_state'] === 'READY_FOR_FULFILMENT' ? 'Ready' : 'In Progress';
         $stateCol   = $fo['order_state'] === 'READY_FOR_FULFILMENT' ? 'yellow' : 'green';
       ?>
@@ -199,8 +182,8 @@ require_once __DIR__ . '/includes/nav.php';
         <div style="font-size:0.75rem;color:#f0c040;">⚠ No tasks yet</div>
         <?php endif; ?>
         <?php if ($fo['earliest_due']): ?>
-        <?php $dueCol = $slaColor($fo['earliest_due']); $dueCSS = $dueCol==='danger'?'#e74c3c':($dueCol==='warning'?'#f0c040':'#00A878'); ?>
-        <div style="font-size:0.72rem;color:<?= $dueCSS ?>;margin-top:0.3rem;">Due: <?= date('d M', strtotime($fo['earliest_due'])) ?></div>
+        <?php $dueCol = $slaColor((string)$fo['earliest_due']); $dueCSS = $dueCol==='danger'?'#e74c3c':($dueCol==='warning'?'#f0c040':'#00A878'); ?>
+        <div style="font-size:0.72rem;color:<?= $dueCSS ?>;margin-top:0.3rem;">Due: <?= date('d M', strtotime((string)$fo['earliest_due'])) ?></div>
         <?php endif; ?>
       </a>
       <?php endforeach; ?>
@@ -236,26 +219,25 @@ require_once __DIR__ . '/includes/nav.php';
         <div class="mp-detail-card-header">Tasks (<?= count($orderTasks) ?>)</div>
         <div class="mp-detail-card-body" style="padding:0.75rem;">
           <?php foreach ($orderTasks as $task):
-            $tsBadge = match($task['fulfilment_state']) {
+            $tsBadge = match($task['status']) {
                 'COMPLETED' => 'green', 'IN_PROGRESS' => 'blue', 'ASSIGNED' => 'grey',
                 'WAITING_ON_CUSTOMER' => 'yellow', 'BLOCKED' => 'red', default => 'grey'
             };
-            $dueCol2 = $task['due_date'] ? $slaColor($task['due_date']) : '';
+            $dueCol2 = $task['due_at'] ? $slaColor((string)$task['due_at']) : '';
             $dueCSS2 = $dueCol2==='danger'?'#e74c3c':($dueCol2==='warning'?'#f0c040':'#6c9e88');
           ?>
           <div class="mp-task-row">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;margin-bottom:0.4rem;">
               <div>
                 <div style="font-weight:600;color:#e8f4ee;font-size:0.85rem;"><?= e($task['title']) ?></div>
-                <?php if ($task['description']): ?><div style="font-size:0.75rem;color:#6c9e88;"><?= e($task['description']) ?></div><?php endif; ?>
                 <?php if ($task['assignee_name']): ?><div style="font-size:0.75rem;color:#9ab8a8;">👤 <?= e($task['assignee_name']) ?></div><?php endif; ?>
-                <?php if ($task['due_date']): ?><div style="font-size:0.72rem;color:<?= $dueCSS2 ?>;">Due: <?= date('d M Y', strtotime($task['due_date'])) ?></div><?php endif; ?>
-                <?php if ($task['notes']): ?><div style="font-size:0.75rem;color:#6c9e88;margin-top:0.2rem;">📝 <?= e($task['notes']) ?></div><?php endif; ?>
+                <?php if ($task['due_at']): ?><div style="font-size:0.72rem;color:<?= $dueCSS2 ?>;">Due: <?= date('d M Y', strtotime((string)$task['due_at'])) ?></div><?php endif; ?>
+                <?php if ($task['internal_notes']): ?><div style="font-size:0.75rem;color:#6c9e88;margin-top:0.2rem;">📝 <?= e($task['internal_notes']) ?></div><?php endif; ?>
               </div>
-              <span class="mp-badge <?= $tsBadge ?>" style="white-space:nowrap;"><?= e($task['fulfilment_state']) ?></span>
+              <span class="mp-badge <?= $tsBadge ?>" style="white-space:nowrap;"><?= e($task['status']) ?></span>
             </div>
 
-            <?php if ($task['fulfilment_state'] !== 'COMPLETED' && $task['fulfilment_state'] !== 'CANCELLED'): ?>
+            <?php if ($task['status'] !== 'COMPLETED' && $task['status'] !== 'CANCELLED'): ?>
             <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem;">
               <!-- Assign form -->
               <form method="POST" style="display:flex;gap:0.3rem;align-items:center;">
@@ -266,7 +248,7 @@ require_once __DIR__ . '/includes/nav.php';
                 <select name="assignee_id" class="form-select form-select-sm" style="width:140px;">
                   <option value="">Assign to…</option>
                   <?php foreach ($staff as $sv): ?>
-                  <option value="<?= $sv['id'] ?>" <?= $task['assignee_id'] == $sv['id'] ? 'selected' : '' ?>><?= e($sv['name']) ?></option>
+                  <option value="<?= $sv['id'] ?>" <?= $task['assignee_user_id'] == $sv['id'] ? 'selected' : '' ?>><?= e($sv['name']) ?></option>
                   <?php endforeach; ?>
                 </select>
                 <button class="mp-btn primary sm">Assign</button>
@@ -280,7 +262,7 @@ require_once __DIR__ . '/includes/nav.php';
                 <input type="text" name="task_note" class="form-control form-control-sm" style="width:120px;" placeholder="Note">
                 <select name="task_state" class="form-select form-select-sm" style="width:140px;">
                   <?php foreach (['ASSIGNED','IN_PROGRESS','WAITING_ON_CUSTOMER','BLOCKED','COMPLETED','CANCELLED'] as $ts): ?>
-                  <option value="<?= $ts ?>" <?= $task['fulfilment_state']===$ts?'selected':'' ?>><?= $ts ?></option>
+                  <option value="<?= $ts ?>" <?= $task['status']===$ts?'selected':'' ?>><?= $ts ?></option>
                   <?php endforeach; ?>
                 </select>
                 <button class="mp-btn success sm">Update</button>
@@ -351,7 +333,7 @@ require_once __DIR__ . '/includes/nav.php';
 
       <!-- All done banner -->
       <?php
-      $allDone = $orderTasks && count(array_filter($orderTasks, fn($t) => !in_array($t['fulfilment_state'], ['COMPLETED','CANCELLED']))) === 0;
+      $allDone = $orderTasks && count(array_filter($orderTasks, fn($t) => !in_array($t['status'], ['COMPLETED','CANCELLED']))) === 0;
       if ($allDone && $selectedOrder['order_state'] !== 'COMPLETED'):
       ?>
       <div class="mp-action-card success">

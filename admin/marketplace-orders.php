@@ -156,7 +156,7 @@ $stOrders = $pdo->prepare("
            oa.decision AS approval_decision,
            (SELECT COUNT(*) FROM mp_payment_attempts pa WHERE pa.order_id=o.id) AS pay_attempts,
            (SELECT COUNT(*) FROM mp_fulfilment_tasks ft WHERE ft.order_id=o.id) AS task_count,
-           (SELECT COUNT(*) FROM mp_fulfilment_tasks ft WHERE ft.order_id=o.id AND ft.fulfilment_state='COMPLETED') AS task_done
+           (SELECT COUNT(*) FROM mp_fulfilment_tasks ft WHERE ft.order_id=o.id AND ft.status='COMPLETED') AS task_done
     FROM marketplace_orders o
     JOIN listings l ON l.id = o.listing_id
     JOIN users u_owner ON u_owner.id = l.user_id
