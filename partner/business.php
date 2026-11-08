@@ -287,8 +287,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $healthData  = calcHealthScore($listing);
 $healthScore = $healthData['score'];
 $completion  = profileCompletion($listing);
-$actions     = getRecommendedActionsP2($listing, $partnerId);
-$campStats   = getCampaignStats($listingId, $partnerId);
+try { $actions = getRecommendedActionsP2($listing, $partnerId); } catch (Exception $e) { $actions = []; }
+try { $campStats = getCampaignStats($listingId, $partnerId); } catch (Exception $e) { $campStats = ['active'=>0,'scheduled'=>0,'completed'=>0,'draft'=>0,'total'=>0]; }
 
 // Growth Plan
 $planSt = $pdo->prepare("SELECT * FROM growth_plans WHERE listing_id=? AND partner_id=? ORDER BY status='active' DESC, created_at DESC LIMIT 1");
@@ -379,9 +379,11 @@ switch ($tab) {
         $tasks = $st->fetchAll();
         break;
     case 'campaigns':
-        $st = $pdo->prepare("SELECT * FROM partner_campaigns WHERE listing_id=? AND partner_id=? ORDER BY created_at DESC");
-        $st->execute([$listingId, $partnerId]);
-        $campaigns = $st->fetchAll();
+        try {
+            $st = $pdo->prepare("SELECT * FROM partner_campaigns WHERE listing_id=? AND partner_id=? ORDER BY created_at DESC");
+            $st->execute([$listingId, $partnerId]);
+            $campaigns = $st->fetchAll();
+        } catch (Exception $e) { $campaigns = []; }
         break;
     case 'content':
         $st = $pdo->prepare("SELECT ci.*, c.name AS campaign_name FROM content_items ci LEFT JOIN campaigns c ON c.id=ci.campaign_id WHERE ci.listing_id=? AND ci.partner_id=? ORDER BY ci.scheduled_date DESC, ci.created_at DESC");
@@ -414,9 +416,11 @@ switch ($tab) {
 }
 
 // Tab-specific campaigns list for content form
-$allCampaigns = $pdo->prepare("SELECT id, name FROM partner_campaigns WHERE listing_id=? AND partner_id=? AND status IN ('active','scheduled','draft') ORDER BY name");
-$allCampaigns->execute([$listingId, $partnerId]);
-$allCampaigns = $allCampaigns->fetchAll();
+try {
+    $allCampaigns = $pdo->prepare("SELECT id, name FROM partner_campaigns WHERE listing_id=? AND partner_id=? AND status IN ('active','scheduled','draft') ORDER BY name");
+    $allCampaigns->execute([$listingId, $partnerId]);
+    $allCampaigns = $allCampaigns->fetchAll();
+} catch (Exception $e) { $allCampaigns = []; }
 
 $pageTitle = e($listing['title']) . ' — Growth Workspace';
 require_once __DIR__ . '/../includes/header.php';
