@@ -205,39 +205,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 /* ── Load data ───────────────────────────────────────────────── */
-$cats = $pdo->query("
-    SELECT c.*, COUNT(DISTINCT p.id) AS product_count, SUM(p.orderable) AS orderable_count
-    FROM mp_service_categories c
-    LEFT JOIN mp_service_products p ON p.category_id=c.id
-    GROUP BY c.id ORDER BY c.sort_order, c.name_en
-")->fetchAll();
+$migrationNeeded = false;
+try {
+    $cats = $pdo->query("
+        SELECT c.*, COUNT(DISTINCT p.id) AS product_count, SUM(p.orderable) AS orderable_count
+        FROM mp_service_categories c
+        LEFT JOIN mp_service_products p ON p.category_id=c.id
+        GROUP BY c.id ORDER BY c.sort_order, c.name_en
+    ")->fetchAll();
 
-$products = $pdo->query("
-    SELECT p.*, c.name_en AS cat_name
-    FROM mp_service_products p
-    JOIN mp_service_categories c ON c.id=p.category_id
-    ORDER BY c.sort_order, p.sort_order, p.name_en
-")->fetchAll();
+    $products = $pdo->query("
+        SELECT p.*, c.name_en AS cat_name
+        FROM mp_service_products p
+        JOIN mp_service_categories c ON c.id=p.category_id
+        ORDER BY c.sort_order, p.sort_order, p.name_en
+    ")->fetchAll();
 
-$prices = $pdo->query("
-    SELECT pr.*, p.name_en AS product_name
-    FROM mp_service_prices pr
-    JOIN mp_service_products p ON p.id=pr.product_id
-    ORDER BY p.sort_order, pr.price_type DESC, pr.id
-")->fetchAll();
+    $prices = $pdo->query("
+        SELECT pr.*, p.name_en AS product_name
+        FROM mp_service_prices pr
+        JOIN mp_service_products p ON p.id=pr.product_id
+        ORDER BY p.sort_order, pr.price_type DESC, pr.id
+    ")->fetchAll();
+
+    $stS = $pdo->query("SELECT `key`,value FROM site_settings WHERE `key` LIKE 'mp_%' OR `key` IN ('mtn_momo_number','orange_money_number')");
+    $settings = [];
+    foreach ($stS->fetchAll() as $r) $settings[$r['key']] = $r['value'];
+
+    $orderCount     = (int)$pdo->query("SELECT COUNT(*) FROM marketplace_orders")->fetchColumn();
+    $pendingPayCount= (int)$pdo->query("SELECT COUNT(*) FROM marketplace_orders WHERE order_state='PAYMENT_REVIEW'")->fetchColumn();
+} catch (\Throwable $e) {
+    $migrationNeeded = true;
+    $cats = $products = $prices = $settings = [];
+    $orderCount = $pendingPayCount = 0;
+}
 
 $pricesByProduct = [];
 foreach ($prices as $pr) $pricesByProduct[$pr['product_id']][] = $pr;
 
-$stS = $pdo->query("SELECT `key`,value FROM site_settings WHERE `key` LIKE 'mp_%' OR `key` IN ('mtn_momo_number','orange_money_number')");
-$settings = [];
-foreach ($stS->fetchAll() as $r) $settings[$r['key']] = $r['value'];
-
 $totalProducts  = count($products);
 $orderableCount = count(array_filter($products, fn($p) => $p['orderable']));
 $activeCount    = count(array_filter($products, fn($p) => $p['active']));
-$orderCount     = (int)$pdo->query("SELECT COUNT(*) FROM marketplace_orders")->fetchColumn();
-$pendingPayCount= (int)$pdo->query("SELECT COUNT(*) FROM marketplace_orders WHERE order_state='PAYMENT_REVIEW'")->fetchColumn();
 
 $catOptions = '';
 foreach ($cats as $c) $catOptions .= '<option value="' . $c['id'] . '">' . htmlspecialchars($c['name_en'], ENT_QUOTES) . '</option>';
@@ -277,6 +285,13 @@ require_once __DIR__ . '/includes/nav.php';
 </style>
 
 <div class="mp-wrap">
+<?php if ($migrationNeeded): ?>
+<div style="background:#1a0a0a;border:1px solid #c0392b;border-radius:10px;padding:1.5rem 2rem;margin-bottom:2rem;color:#e8d0d0;">
+  <strong style="color:#e74c3c;font-size:1.05rem;">⚠️ Database tables not found</strong><br>
+  <p style="margin:.6rem 0 1rem;">The marketplace database tables have not been created yet. Run the migration SQL to set up the marketplace.</p>
+  <p style="font-size:.9rem;color:#b08080;">Go to <strong>cPanel → phpMyAdmin → biz97h_app</strong>, then run the contents of <code>admin/marketplace-migration.sql</code> from the repository.</p>
+</div>
+<?php endif; ?>
 
   <!-- Page header -->
   <div class="mp-page-header">
