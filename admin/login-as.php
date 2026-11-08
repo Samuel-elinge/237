@@ -26,7 +26,7 @@ if (isset($_GET['return'])) {
 
 // ── Switch to user ────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    verifyCsrf();
+    gpVerifyCsrf();
 
     $targetId = (int)($_POST['user_id'] ?? 0);
     if (!$targetId) {

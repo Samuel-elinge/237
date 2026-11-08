@@ -28,53 +28,63 @@ if (!function_exists('getFlash')) {
 
 /**
  * Generate a CSRF token hidden input field.
- *
- * Uses $_SESSION['_gp_csrf'] — a key config.php does not touch — so the token
- * survives POST requests even if config.php regenerates $_SESSION['csrf_token'].
+ * Falls back gracefully if config.php already defined csrfField().
  */
 if (!function_exists('csrfField')) {
     function csrfField(): string {
         if (!isset($_SESSION)) session_start();
-        // Generate a stable token in our own key that config.php won't overwrite.
-        if (empty($_SESSION['_gp_csrf'])) {
-            $_SESSION['_gp_csrf'] = bin2hex(random_bytes(32));
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         }
-        $token = htmlspecialchars($_SESSION['_gp_csrf'], ENT_QUOTES, 'UTF-8');
+        $token = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8');
         return '<input type="hidden" name="csrf_token" value="' . $token . '">';
     }
 }
-
-/**
- * Validate the CSRF token from a POST request.
- */
 if (!function_exists('csrfCheck')) {
     function csrfCheck(): bool {
         if (!isset($_SESSION)) session_start();
         $posted = $_POST['csrf_token'] ?? '';
-        // Check our stable key first; fall back to config.php's key.
-        $stored = $_SESSION['_gp_csrf'] ?? $_SESSION['csrf_token'] ?? '';
+        $stored = $_SESSION['csrf_token'] ?? '';
         return $stored && hash_equals($stored, $posted);
     }
 }
-
-/**
- * Verify CSRF token and abort with 403 if invalid.
- */
 if (!function_exists('verifyCsrf')) {
     function verifyCsrf(): void {
-        if (!csrfCheck()) {
-            http_response_code(403);
-            exit('Invalid CSRF token.');
-        }
+        if (!csrfCheck()) { http_response_code(403); exit('Invalid CSRF token.'); }
     }
+}
+if (!function_exists('verifyCsrfOrDie')) {
+    function verifyCsrfOrDie(): void { verifyCsrf(); }
 }
 
 /**
- * Alias of verifyCsrf() — abort with 403 if CSRF token is invalid.
+ * GP-specific CSRF functions that use $_SESSION['_gp_csrf'] — a key
+ * config.php never touches — so they work even if config.php redefines
+ * csrfField() / csrfCheck() and regenerates the token on every request.
+ *
+ * Usage: replace csrfField() → gpCsrfField(), verifyCsrf() → gpVerifyCsrf()
+ * in any admin page that was broken by the token mismatch.
  */
-if (!function_exists('verifyCsrfOrDie')) {
-    function verifyCsrfOrDie(): void {
-        verifyCsrf();
+function gpCsrfField(): string {
+    if (!isset($_SESSION)) session_start();
+    if (empty($_SESSION['_gp_csrf'])) {
+        $_SESSION['_gp_csrf'] = bin2hex(random_bytes(32));
+    }
+    $token = htmlspecialchars($_SESSION['_gp_csrf'], ENT_QUOTES, 'UTF-8');
+    return '<input type="hidden" name="csrf_token" value="' . $token . '">';
+}
+
+function gpCsrfCheck(): bool {
+    if (!isset($_SESSION)) session_start();
+    $posted = $_POST['csrf_token'] ?? '';
+    $stored = $_SESSION['_gp_csrf'] ?? '';
+    return $stored && hash_equals($stored, $posted);
+}
+
+function gpVerifyCsrf(): void {
+    if (!gpCsrfCheck()) {
+        http_response_code(403);
+        exit('Invalid CSRF token.');
     }
 }
 

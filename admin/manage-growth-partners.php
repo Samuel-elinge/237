@@ -13,7 +13,7 @@ $msg = '';
 
 // ── Handle POST actions ───────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    verifyCsrf();
+    gpVerifyCsrf();
     $action = $_POST['action'] ?? '';
     requirePermission('partner.manage');
 
@@ -269,28 +269,28 @@ require_once __DIR__ . '/../includes/header.php';
           <span class="status-badge status-<?= $viewPartner['status'] ?>"><?= $viewPartner['status'] ?></span>
           <?php if (in_array($viewPartner['status'], ['pending','applicant'])): ?>
             <form method="POST" style="display:inline;">
-              <?= csrfField() ?>
+              <?= gpCsrfField() ?>
               <input type="hidden" name="action" value="approve_partner">
               <input type="hidden" name="partner_id" value="<?= $viewPartner['id'] ?>">
               <button class="btn btn-primary" style="font-size:0.85rem;" onclick="adminConfirm('Approve this partner?', this.closest('form')); return false;" >✓ Approve</button>
             </form>
           <?php elseif (in_array($viewPartner['status'], ['approved','active'])): ?>
             <form method="POST" style="display:inline;">
-              <?= csrfField() ?>
+              <?= gpCsrfField() ?>
               <input type="hidden" name="action" value="suspend_partner">
               <input type="hidden" name="partner_id" value="<?= $viewPartner['id'] ?>">
               <button class="btn btn-outline" style="font-size:0.85rem; color:#e63946; border-color:#e63946;" onclick="adminConfirm('Suspend this partner?', this.closest('form')); return false;" >⊘ Suspend</button>
             </form>
           <?php elseif ($viewPartner['status'] === 'suspended'): ?>
             <form method="POST" style="display:inline;">
-              <?= csrfField() ?>
+              <?= gpCsrfField() ?>
               <input type="hidden" name="action" value="reactivate_partner">
               <input type="hidden" name="partner_id" value="<?= $viewPartner['id'] ?>">
               <button class="btn btn-primary" style="font-size:0.85rem;" onclick="adminConfirm('Reactivate this partner?', this.closest('form')); return false;" >↺ Reactivate</button>
             </form>
           <?php endif; ?>
           <form method="POST" action="<?= SITE_URL ?>/admin/login-as.php" style="display:inline;">
-            <?= csrfField() ?>
+            <?= gpCsrfField() ?>
             <input type="hidden" name="user_id" value="<?= (int)$viewPartner['user_id'] ?>">
             <button class="btn btn-outline" style="font-size:0.85rem;color:#8ab4f8;border-color:#8ab4f8;">👁 View Partner Portal</button>
           </form>
@@ -309,7 +309,7 @@ require_once __DIR__ . '/../includes/header.php';
           <div class="dv" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
             <strong style="color:var(--accent);"><?= number_format((float)($viewPartner['marketplace_commission_rate'] ?? 10), 1) ?>%</strong>
             <form method="POST" style="display:flex;gap:.4rem;align-items:center;">
-              <?= csrfField() ?>
+              <?= gpCsrfField() ?>
               <input type="hidden" name="action" value="set_commission_rate">
               <input type="hidden" name="partner_id" value="<?= $viewPartner['id'] ?>">
               <input type="number" name="commission_rate"
@@ -365,7 +365,7 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
             <a href="<?= SITE_URL ?>/listing.php?slug=<?= urlencode($asg['listing_slug']) ?>" target="_blank" class="action-link" style="flex-shrink:0;">View ↗</a>
             <form method="POST" style="display:inline; flex-shrink:0;">
-              <?= csrfField() ?>
+              <?= gpCsrfField() ?>
               <input type="hidden" name="action" value="unassign_business">
               <input type="hidden" name="assignment_id" value="<?= $asg['id'] ?>">
               <input type="hidden" name="partner_id" value="<?= $viewPartner['id'] ?>">
@@ -384,7 +384,7 @@ require_once __DIR__ . '/../includes/header.php';
         <h3>➕ Assign a Business</h3>
         <?php if ($availableListings): ?>
         <form method="POST">
-          <?= csrfField() ?>
+          <?= gpCsrfField() ?>
           <input type="hidden" name="action" value="assign_business">
           <input type="hidden" name="partner_id" value="<?= $viewPartner['id'] ?>">
 
@@ -449,7 +449,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <td>
                   <?php if ($p['pp_id']): ?>
                   <form method="POST" style="display:flex;gap:.3rem;align-items:center;">
-                    <?= csrfField() ?>
+                    <?= gpCsrfField() ?>
                     <input type="hidden" name="action" value="set_commission_rate">
                     <input type="hidden" name="partner_id" value="<?= $p['pp_id'] ?>">
                     <input type="number" name="commission_rate"
@@ -466,7 +466,7 @@ require_once __DIR__ . '/../includes/header.php';
                   <?php if ($p['pp_id']): ?><a href="?pid=<?= $p['pp_id'] ?>" class="action-link">View →</a><?php endif; ?>
                   &nbsp;
                   <form method="POST" action="<?= SITE_URL ?>/admin/login-as.php" style="display:inline;">
-                    <?= csrfField() ?>
+                    <?= gpCsrfField() ?>
                     <input type="hidden" name="user_id" value="<?= (int)$p['uid'] ?>">
                     <button style="background:none;border:none;color:#8ab4f8;cursor:pointer;font-size:0.8rem;font-weight:700;"
                       title="View partner portal as <?= e(addslashes($p['user_name'])) ?>">👁 Login as</button>
@@ -474,7 +474,7 @@ require_once __DIR__ . '/../includes/header.php';
                   <?php if (in_array($p['status'], ['pending','applicant'])): ?>
                     &nbsp;
                     <form method="POST" style="display:inline;">
-                      <?= csrfField() ?>
+                      <?= gpCsrfField() ?>
                       <input type="hidden" name="action" value="approve_partner">
                       <input type="hidden" name="partner_id" value="<?= $p['pp_id'] ?>">
                       <button style="background:none;border:none;color:#00A878;cursor:pointer;font-size:0.8rem;font-weight:700;"
@@ -484,7 +484,7 @@ require_once __DIR__ . '/../includes/header.php';
                   <?php if ($p['pp_id'] && in_array($p['status'], ['approved','active'])): ?>
                     &nbsp;
                     <form method="POST" style="display:inline;">
-                      <?= csrfField() ?>
+                      <?= gpCsrfField() ?>
                       <input type="hidden" name="action" value="suspend_partner">
                       <input type="hidden" name="partner_id" value="<?= $p['pp_id'] ?>">
                       <button style="background:none;border:none;color:#f4a261;cursor:pointer;font-size:0.8rem;font-weight:700;"
@@ -494,7 +494,7 @@ require_once __DIR__ . '/../includes/header.php';
                   <?php if ($p['pp_id'] && $p['status'] === 'suspended'): ?>
                     &nbsp;
                     <form method="POST" style="display:inline;">
-                      <?= csrfField() ?>
+                      <?= gpCsrfField() ?>
                       <input type="hidden" name="action" value="reactivate_partner">
                       <input type="hidden" name="partner_id" value="<?= $p['pp_id'] ?>">
                       <button style="background:none;border:none;color:#00A878;cursor:pointer;font-size:0.8rem;font-weight:700;"
@@ -503,7 +503,7 @@ require_once __DIR__ . '/../includes/header.php';
                   <?php endif; ?>
                   &nbsp;
                   <form method="POST" style="display:inline;">
-                    <?= csrfField() ?>
+                    <?= gpCsrfField() ?>
                     <input type="hidden" name="action" value="delete_partner">
                     <input type="hidden" name="user_id" value="<?= (int)$p['uid'] ?>">
                     <button style="background:none;border:none;color:#e63946;cursor:pointer;font-size:0.8rem;font-weight:700;"
