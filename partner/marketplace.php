@@ -1202,7 +1202,7 @@ foreach ($catalogue as $cat) {
         <span class="val" id="cart-total-amount"></span>
       </div>
       <div class="mp-cart-commission-total" id="mp-cart-comm-block">
-        <div class="label">💰 <?= mpT('Your commission', 'Votre commission') ?></div>
+        <div class="label">💰 <?= mpT('Partner Commission', 'Commission Partenaire') ?></div>
         <div class="amount" id="cart-commission-amount"></div>
       </div>
       <div class="mp-approval-notice">
@@ -1261,7 +1261,7 @@ foreach ($catalogue as $cat) {
       <span class="val" id="drawer-total-amount"></span>
     </div>
     <div class="mp-cart-commission-total" id="mp-drawer-comm-block">
-      <div class="label">💰 <?= mpT('Your commission', 'Votre commission') ?></div>
+      <div class="label">💰 <?= mpT('Partner Commission', 'Commission Partenaire') ?></div>
       <div class="amount" id="drawer-commission-amount"></div>
     </div>
     <div class="mp-approval-notice">
