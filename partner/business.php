@@ -430,7 +430,7 @@ partnerNavBadges($partnerId, $pdo);
 <?php partnerNavAssets(); ?>
 <?php partnerNav('business'); ?>
 
-
+<?php
 // ─── Helpers ──────────────────────────────────────────────────
 function healthColor(int $s): string {
     if ($s >= 80) return '#00A878';
