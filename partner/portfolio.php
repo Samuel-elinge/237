@@ -12,18 +12,22 @@ $partnerId      = (int)$partnerProfile['id'];
 $filter = $_GET['filter'] ?? 'all';
 $search = trim($_GET['q'] ?? '');
 
-// Build query
-$where  = ["pba.partner_id = ?", "pba.status = 'active'"];
-$params = [$partnerId];
+$pdo = db();
 
+// Own user_id for the partner (to include their own listings without an assignment row)
+$stOwner = $pdo->prepare("SELECT user_id FROM partner_profiles WHERE id = ?");
+$stOwner->execute([$partnerId]);
+$partnerUserId = (int)($stOwner->fetchColumn() ?: 0);
+
+// Build search clause
+$searchWhere  = '';
+$searchParams = [];
 if ($search) {
-    $where[] = "(l.title LIKE ? OR c.name_en LIKE ? OR loc.name_en LIKE ? OR l.id = ?)";
     $like = "%$search%";
-    $params[] = $like; $params[] = $like; $params[] = $like;
-    $params[] = is_numeric($search) ? (int)$search : 0;
+    $searchWhere  = "AND (l.title LIKE ? OR c.name_en LIKE ? OR loc.name_en LIKE ? OR l.id = ?)";
+    $searchParams = [$like, $like, $like, is_numeric($search) ? (int)$search : 0];
 }
 
-$pdo = db();
 $listings = $pdo->prepare("
     SELECT l.*, c.name_en AS cat_en, c.icon AS cat_icon, loc.name_en AS city,
            pba.role AS assignment_role, pba.assigned_at,
@@ -33,13 +37,18 @@ $listings = $pdo->prepare("
            (SELECT COUNT(*) FROM reviews r WHERE r.listing_id = l.id AND r.status = 'approved') AS review_count,
            (SELECT AVG(r.rating) FROM reviews r WHERE r.listing_id = l.id AND r.status = 'approved') AS avg_rating
     FROM listings l
-    JOIN partner_business_assignments pba ON pba.listing_id = l.id
+    LEFT JOIN partner_business_assignments pba ON pba.listing_id = l.id AND pba.partner_id = ? AND pba.status = 'active'
     JOIN categories c ON c.id = l.category_id
     JOIN locations loc ON loc.id = l.location_id
-    WHERE " . implode(' AND ', $where) . "
+    WHERE l.status IN ('active','approved')
+      AND (
+        pba.id IS NOT NULL
+        OR l.user_id = ?
+      )
+    $searchWhere
     ORDER BY open_tasks DESC, l.title ASC
 ");
-$listings->execute($params);
+$listings->execute(array_merge([$partnerId, $partnerUserId], $searchParams));
 $businesses = $listings->fetchAll();
 
 // Client-side filter (by status flags computed per business)
