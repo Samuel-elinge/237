@@ -1003,16 +1003,10 @@ foreach ($catalogue as $cat) {
         <div class="label"><?= mpT('Commission rate', 'Taux de commission') ?></div>
       </div>
       <?php endif; ?>
-      <?php if ($heroCommMin !== null): ?>
-      <div class="mp-hero-stat">
-        <div class="value"><?= number_format($heroCommMin, 0, '.', ' ') ?></div>
-        <div class="label">FCFA <?= mpT('min/order', 'min/commande') ?></div>
+      <div class="mp-hero-stat" id="hero-order-comm-wrap" style="display:none;">
+        <div class="value" id="hero-order-comm">—</div>
+        <div class="label">FCFA <?= mpT('on current order', 'sur la commande') ?></div>
       </div>
-      <div class="mp-hero-stat">
-        <div class="value"><?= number_format($heroCommMax, 0, '.', ' ') ?></div>
-        <div class="label">FCFA <?= mpT('max/order', 'max/commande') ?></div>
-      </div>
-      <?php endif; ?>
     </div>
   </div>
 </div>
@@ -1449,11 +1443,17 @@ function mpRender() {
   document.getElementById('cart-count-badge').textContent = count;
   const totals = document.getElementById('mp-cart-totals');
   totals.style.display = count ? '' : 'none';
+  const commBlock = document.getElementById('mp-cart-comm-block');
+  commBlock.style.display = count ? '' : 'none';
   if (count) {
     document.getElementById('cart-total-amount').textContent = FMT(totalDue);
-    const commBlock = document.getElementById('mp-cart-comm-block');
-    commBlock.style.display = '';
     document.getElementById('cart-commission-amount').textContent = totalComm > 0 ? FMT(totalComm) : '—';
+  }
+  /* Hero live stat */
+  const heroWrap = document.getElementById('hero-order-comm-wrap');
+  if (heroWrap) {
+    heroWrap.style.display = (count && totalComm > 0) ? '' : 'none';
+    if (count && totalComm > 0) document.getElementById('hero-order-comm').textContent = FMT(totalComm);
   }
   const noteEl = document.getElementById('mp-partner-note');
   noteEl.style.display = count ? '' : 'none';
@@ -1469,10 +1469,10 @@ function mpRender() {
   document.getElementById('drawer-count-badge').textContent = count;
   const dTotals = document.getElementById('mp-drawer-totals');
   dTotals.style.display = count ? '' : 'none';
+  const dCommBlock = document.getElementById('mp-drawer-comm-block');
+  dCommBlock.style.display = count ? '' : 'none';
   if (count) {
     document.getElementById('drawer-total-amount').textContent = FMT(totalDue);
-    const dCommBlock = document.getElementById('mp-drawer-comm-block');
-    dCommBlock.style.display = '';
     document.getElementById('drawer-commission-amount').textContent = totalComm > 0 ? FMT(totalComm) : '—';
   }
   document.getElementById('mp-drawer-note').style.display = count ? '' : 'none';
