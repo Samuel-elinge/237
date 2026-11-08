@@ -92,16 +92,17 @@ if (isset($_GET['msg'])) $msg = htmlspecialchars($_GET['msg']);
 
 // All partner profiles with user info
 $partners = $pdo->query("
-    SELECT pp.id, pp.user_id, pp.status, pp.organisation, pp.region, pp.phone,
-           pp.display_name, pp.tagline, pp.created_at,
+    SELECT pp.id AS pp_id, pp.user_id, pp.status, pp.organisation, pp.region, pp.phone,
+           pp.display_name, pp.tagline, pp.created_at AS pp_created_at,
            COALESCE(pp.marketplace_commission_rate, 10) AS marketplace_commission_rate,
            COALESCE(pp.businesses_managed_count, 0) AS assigned_count,
-           u.id AS uid, u.name AS user_name, u.email AS user_email
+           u.id AS uid, u.created_at AS user_created_at,
+           u.name AS user_name, u.email AS user_email
     FROM users u
     LEFT JOIN partner_profiles pp ON pp.user_id = u.id
     WHERE u.role = 'growth_partner'
     ORDER BY COALESCE(pp.created_at, u.created_at) DESC
-")->fetchAll();
+")->fetchAll(PDO::FETCH_ASSOC);
 
 // If viewing a specific partner
 $viewPartner = null;
@@ -435,11 +436,11 @@ require_once __DIR__ . '/../includes/header.php';
                 <td><?php if ($p['status']): ?><span class="status-badge status-<?= $p['status'] ?>"><?= $p['status'] ?></span><?php else: ?><span style="font-size:.75rem;color:var(--muted);">no profile</span><?php endif; ?></td>
                 <td style="text-align:center; font-weight:700;"><?= (int)$p['assigned_count'] ?></td>
                 <td>
-                  <?php if ($p['id']): ?>
+                  <?php if ($p['pp_id']): ?>
                   <form method="POST" style="display:flex;gap:.3rem;align-items:center;">
                     <?= csrfField() ?>
                     <input type="hidden" name="action" value="set_commission_rate">
-                    <input type="hidden" name="partner_id" value="<?= $p['id'] ?>">
+                    <input type="hidden" name="partner_id" value="<?= $p['pp_id'] ?>">
                     <input type="number" name="commission_rate"
                            value="<?= number_format((float)($p['marketplace_commission_rate'] ?? 10), 1) ?>"
                            min="0" max="100" step="0.5"
@@ -449,9 +450,9 @@ require_once __DIR__ . '/../includes/header.php';
                   </form>
                   <?php else: ?><span style="font-size:.75rem;color:var(--muted);">—</span><?php endif; ?>
                 </td>
-                <td style="white-space:nowrap;"><?= $p['created_at'] ? date('j M Y', strtotime($p['created_at'])) : '—' ?></td>
+                <td style="white-space:nowrap;"><?= $p['pp_created_at'] ? date('j M Y', strtotime($p['pp_created_at'])) : '—' ?></td>
                 <td style="white-space:nowrap;">
-                  <?php if ($p['id']): ?><a href="?pid=<?= $p['id'] ?>" class="action-link">View →</a><?php endif; ?>
+                  <?php if ($p['pp_id']): ?><a href="?pid=<?= $p['pp_id'] ?>" class="action-link">View →</a><?php endif; ?>
                   &nbsp;
                   <form method="POST" action="<?= SITE_URL ?>/admin/login-as.php" style="display:inline;" target="_blank">
                     <?= csrfField() ?>
@@ -464,7 +465,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <form method="POST" style="display:inline;">
                       <?= csrfField() ?>
                       <input type="hidden" name="action" value="approve_partner">
-                      <input type="hidden" name="partner_id" value="<?= $p['id'] ?>">
+                      <input type="hidden" name="partner_id" value="<?= $p['pp_id'] ?>">
                       <button style="background:none;border:none;color:#00A878;cursor:pointer;font-size:0.8rem;font-weight:700;"
                         onclick="adminConfirm('Approve this partner?', this.closest('form')); return false;">✓ Approve</button>
                     </form>
