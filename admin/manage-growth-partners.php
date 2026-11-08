@@ -42,6 +42,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = 'Partner reactivated.';
     }
 
+    if ($action === 'delete_partner') {
+        $uid = (int)$_POST['user_id'];
+        // Remove assignments, profile, then set user role to 'user'
+        $pdo->prepare("DELETE FROM partner_business_assignments WHERE partner_id IN (SELECT id FROM partner_profiles WHERE user_id=?)")->execute([$uid]);
+        $pdo->prepare("DELETE FROM partner_profiles WHERE user_id=?")->execute([$uid]);
+        $pdo->prepare("UPDATE users SET role='user' WHERE id=? AND role='growth_partner'")->execute([$uid]);
+        opsAuditLog('partner.delete', 'user', $uid);
+        $msg = 'Partner deleted.';
+    }
+
     if ($action === 'assign_business') {
         $pid       = (int)$_POST['partner_id'];
         $lid       = (int)$_POST['listing_id'];
@@ -416,7 +426,6 @@ require_once __DIR__ . '/../includes/header.php';
           <thead>
             <tr>
               <th>Partner</th>
-              <th>Organisation</th>
               <th>Region</th>
               <th>Status</th>
               <th>Businesses</th>
@@ -433,7 +442,6 @@ require_once __DIR__ . '/../includes/header.php';
                   <div style="font-weight:600;"><?= e($p['user_name']) ?></div>
                   <div style="font-size:0.78rem; color:var(--muted);"><?= e($p['user_email']) ?></div>
                 </td>
-                <td><?= e($p['organisation'] ?: '—') ?></td>
                 <td><?= e($p['region'] ?: '—') ?></td>
                 <td><?php if ($p['status']): ?><span class="status-badge status-<?= $p['status'] ?>"><?= $p['status'] ?></span><?php else: ?><span style="font-size:.75rem;color:var(--muted);">no profile</span><?php endif; ?></td>
                 <td style="text-align:center; font-weight:700;"><?= (int)$p['assigned_count'] ?></td>
@@ -472,6 +480,34 @@ require_once __DIR__ . '/../includes/header.php';
                         onclick="adminConfirm('Approve this partner?', this.closest('form')); return false;">✓ Approve</button>
                     </form>
                   <?php endif; ?>
+                  <?php if ($p['pp_id'] && in_array($p['status'], ['approved','active'])): ?>
+                    &nbsp;
+                    <form method="POST" style="display:inline;">
+                      <?= csrfField() ?>
+                      <input type="hidden" name="action" value="suspend_partner">
+                      <input type="hidden" name="partner_id" value="<?= $p['pp_id'] ?>">
+                      <button style="background:none;border:none;color:#f4a261;cursor:pointer;font-size:0.8rem;font-weight:700;"
+                        onclick="adminConfirm('Suspend this partner?', this.closest('form')); return false;">⊘ Suspend</button>
+                    </form>
+                  <?php endif; ?>
+                  <?php if ($p['pp_id'] && $p['status'] === 'suspended'): ?>
+                    &nbsp;
+                    <form method="POST" style="display:inline;">
+                      <?= csrfField() ?>
+                      <input type="hidden" name="action" value="reactivate_partner">
+                      <input type="hidden" name="partner_id" value="<?= $p['pp_id'] ?>">
+                      <button style="background:none;border:none;color:#00A878;cursor:pointer;font-size:0.8rem;font-weight:700;"
+                        onclick="adminConfirm('Reactivate this partner?', this.closest('form')); return false;">↺ Reactivate</button>
+                    </form>
+                  <?php endif; ?>
+                  &nbsp;
+                  <form method="POST" style="display:inline;">
+                    <?= csrfField() ?>
+                    <input type="hidden" name="action" value="delete_partner">
+                    <input type="hidden" name="user_id" value="<?= (int)$p['uid'] ?>">
+                    <button style="background:none;border:none;color:#e63946;cursor:pointer;font-size:0.8rem;font-weight:700;"
+                      onclick="adminConfirm('DELETE this partner permanently? This cannot be undone.', this.closest('form')); return false;">🗑 Delete</button>
+                  </form>
                 </td>
               </tr>
               <?php endforeach; ?>
