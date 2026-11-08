@@ -10,6 +10,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/flash-helpers.php';
+require_once __DIR__ . '/../includes/partner-helpers.php';
 requireAdmin();
 
 $pdo = db();
@@ -58,6 +59,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$orderId, $_SESSION['user_id'], $note, $_SERVER['REMOTE_ADDR'] ?? null]);
             _notifyPartner($pdo, $orderId, 'payment_rejected', $note);
             flash('warning', 'Payment rejected — partner notified to resubmit.');
+
+        } elseif ($action === 'approve_order') {
+            // Admin approves a pending order → move to AWAITING_PAYMENT (offline flow)
+            $pdo->prepare("UPDATE marketplace_orders SET order_state='AWAITING_PAYMENT', updated_at=NOW() WHERE id=? AND order_state='PENDING_OWNER_APPROVAL'")
+                ->execute([$orderId]);
+            // Also mark any pending approval row as approved
+            $pdo->prepare("UPDATE mp_order_approvals SET decision='APPROVED', decided_at=NOW(), notes=? WHERE order_id=? AND decision IS NULL")
+                ->execute([$note ?: null, $orderId]);
+            $pdo->prepare("INSERT INTO mp_audit_events (entity_type,entity_id,actor_user_id,actor_role,action,after_state,ip_address) VALUES ('marketplace_orders',?,?,'admin','order.approved',JSON_OBJECT('order_state','AWAITING_PAYMENT'),?)")
+                ->execute([$orderId, $_SESSION['user_id'], $_SERVER['REMOTE_ADDR'] ?? null]);
+            _notifyPartner($pdo, $orderId, 'order_approved', $note);
+            flash('success', 'Order approved — partner notified to arrange payment.');
 
         } elseif ($action === 'cancel_order') {
             $pdo->prepare("UPDATE marketplace_orders SET order_state='CANCELLED', updated_at=NOW() WHERE id=?")
@@ -111,6 +124,10 @@ function _notifyPartner(PDO $pdo, int $orderId, string $event, string $note = ''
         'order_completed' => [
             'Service Delivered — ' . $o['ref'],
             '<p>Your service has been delivered. Thank you!</p>',
+        ],
+        'order_approved' => [
+            'Order Approved — ' . $o['ref'],
+            '<p>Your order has been approved' . ($note ? ': ' . e($note) : '.') . ' Please now arrange payment to activate the service.</p>',
         ],
     ];
     [$subj, $body] = $msgs[$event] ?? ['Order Update — ' . $o['ref'], '<p>Your order has been updated.</p>'];
@@ -380,6 +397,25 @@ require_once __DIR__ . '/includes/nav.php';
     <div>
 
       <?php $os = $detail['order_state']; ?>
+
+      <?php if ($os === 'PENDING_OWNER_APPROVAL'): ?>
+      <div class="mp-action-card" style="border-color:#00A878;">
+        <div class="mp-action-header" style="color:#00A878;">✅ Approve Order</div>
+        <div class="mp-action-body">
+          <form method="POST">
+            <?= csrfField() ?>
+            <input type="hidden" name="order_id" value="<?= $detail['id'] ?>">
+            <input type="hidden" name="action" value="approve_order">
+            <p style="font-size:0.8rem;color:#6c9e88;margin-bottom:0.75rem;">
+              Approving moves the order to <strong>Awaiting Payment</strong> and notifies the partner to arrange offline payment.
+            </p>
+            <input type="text" name="admin_note" class="form-control form-control-sm"
+                   style="margin-bottom:0.5rem;" placeholder="Optional note to partner">
+            <button class="mp-btn success w100">✅ Approve &amp; Notify Partner</button>
+          </form>
+        </div>
+      </div>
+      <?php endif; ?>
 
       <?php if ($os === 'PAYMENT_REVIEW'): ?>
       <div class="mp-action-card review">
