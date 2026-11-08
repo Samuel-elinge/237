@@ -10,6 +10,7 @@ RewriteEngine On
 # Block direct access to sensitive directories
 RewriteRule ^sessions/ - [F,L]
 RewriteRule ^includes/ - [F,L]
+RewriteRule ^admin/includes/.*\.(css|js)$ - [L]
 RewriteRule ^admin/includes/ - [F,L]
 RewriteRule ^vendor/ - [F,L]
 
