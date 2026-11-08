@@ -368,6 +368,26 @@ partnerNavBadges($partnerId, $pdo);
   --mp-green-border: rgba(0,168,120,0.3);
   --mp-bg-dark: #081410;
   --mp-radius: 12px;
+  --mp-panel-bg: #ffffff;
+  --mp-panel-fg: #212529;
+  --mp-card-bg: #ffffff;
+  --mp-card-border: #dee2e6;
+}
+/* Dark mode — the site uses a dark background so detect it */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mp-panel-bg: #0d1f1a;
+    --mp-panel-fg: #e8f5f1;
+    --mp-card-bg: #0d1f1a;
+    --mp-card-border: rgba(0,168,120,0.25);
+  }
+}
+/* Also support explicit data-theme on <html> if the site sets it */
+[data-theme="dark"] {
+  --mp-panel-bg: #0d1f1a;
+  --mp-panel-fg: #e8f5f1;
+  --mp-card-bg: #0d1f1a;
+  --mp-card-border: rgba(0,168,120,0.25);
 }
 
 /* Cart panel */
@@ -378,10 +398,8 @@ partnerNavBadges($partnerId, $pdo);
   overflow-y: auto;
   border-radius: var(--mp-radius);
   border: 1.5px solid var(--mp-green-border);
-  background: #fff;
-}
-@media (prefers-color-scheme: dark) {
-  #mp-cart-panel { background: #0d1f1a; }
+  background: var(--mp-panel-bg);
+  color: var(--mp-panel-fg);
 }
 
 /* Category accordion */
@@ -400,8 +418,10 @@ partnerNavBadges($partnerId, $pdo);
 
 /* Product cards */
 .mp-product-card {
-  border: 1.5px solid #dee2e6;
+  border: 1.5px solid var(--mp-card-border);
   border-radius: var(--mp-radius);
+  background: var(--mp-card-bg);
+  color: var(--mp-panel-fg);
   transition: border-color 0.2s, transform 0.15s, box-shadow 0.15s;
   cursor: default;
 }
@@ -455,7 +475,8 @@ partnerNavBadges($partnerId, $pdo);
   display: none;
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  background: #fff;
+  background: var(--mp-panel-bg);
+  color: var(--mp-panel-fg);
   border-top: 2px solid var(--mp-green);
   padding: 0.75rem 1.25rem;
   z-index: 1030;
