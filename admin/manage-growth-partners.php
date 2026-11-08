@@ -81,7 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = 'Commission rate updated to ' . $rate . '%.';
     }
 
-    header('Location: ?tab=' . urlencode($tab) . ($pid ?? '' ? '&pid=' . ($pid ?? '') : '') . '&msg=' . urlencode($msg));
+    $backPid = isset($_POST['partner_id']) && isset($_GET['pid']) ? '&pid=' . (int)$_POST['partner_id'] : '';
+    header('Location: ?tab=' . urlencode($tab) . $backPid . '&msg=' . urlencode($msg));
     exit;
 }
 
@@ -92,6 +93,7 @@ if (isset($_GET['msg'])) $msg = htmlspecialchars($_GET['msg']);
 // All partner profiles with user info
 $partners = $pdo->query("
     SELECT pp.*, u.name AS user_name, u.email AS user_email,
+           COALESCE(pp.marketplace_commission_rate, 10) AS marketplace_commission_rate,
            COUNT(DISTINCT pba.id) AS assigned_count
     FROM partner_profiles pp
     JOIN users u ON u.id = pp.user_id
@@ -412,6 +414,7 @@ require_once __DIR__ . '/../includes/header.php';
               <th>Region</th>
               <th>Status</th>
               <th>Businesses</th>
+              <th style="white-space:nowrap;">Commission %</th>
               <th>Applied</th>
               <th>Actions</th>
             </tr>
@@ -428,6 +431,19 @@ require_once __DIR__ . '/../includes/header.php';
                 <td><?= e($p['region'] ?: '—') ?></td>
                 <td><span class="status-badge status-<?= $p['status'] ?>"><?= $p['status'] ?></span></td>
                 <td style="text-align:center; font-weight:700;"><?= (int)$p['assigned_count'] ?></td>
+                <td>
+                  <form method="POST" style="display:flex;gap:.3rem;align-items:center;">
+                    <?= csrfField() ?>
+                    <input type="hidden" name="action" value="set_commission_rate">
+                    <input type="hidden" name="partner_id" value="<?= $p['id'] ?>">
+                    <input type="number" name="commission_rate"
+                           value="<?= number_format((float)($p['marketplace_commission_rate'] ?? 10), 1) ?>"
+                           min="0" max="100" step="0.5"
+                           style="width:62px;padding:.2rem .4rem;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.8rem;">
+                    <span style="font-size:.8rem;color:var(--muted);">%</span>
+                    <button type="submit" style="font-size:.72rem;padding:.2rem .5rem;border-radius:6px;background:var(--accent, #00A878);color:#fff;border:none;cursor:pointer;" title="Save commission rate">✓</button>
+                  </form>
+                </td>
                 <td style="white-space:nowrap;"><?= date('j M Y', strtotime($p['created_at'])) ?></td>
                 <td style="white-space:nowrap;">
                   <a href="?pid=<?= $p['id'] ?>" class="action-link">View →</a>
