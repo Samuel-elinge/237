@@ -3,6 +3,7 @@
  * admin/manage-growth-partners.php — Manage Growth Partners (v2)
  */
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/partner-helpers.php';
 require_once __DIR__ . '/../includes/ops-admin-helpers.php';
 requireAnyAdmin();
 
@@ -424,15 +425,8 @@ require_once __DIR__ . '/../includes/header.php';
             </tr>
           </thead>
           <tbody>
-            <!-- DEBUG: partners_count=<?= count($partners) ?> ob_level=<?= ob_get_level() ?> -->
             <?php if ($partners): ?>
-              <?php
-              set_error_handler(function($no,$str,$f,$l){ echo "<!-- PHP_ERR e=$no msg=".htmlspecialchars($str)." line=$l -->"; return true; });
-              set_exception_handler(function($ex){ echo "<!-- PHP_EX class=".get_class($ex)." msg=".htmlspecialchars($ex->getMessage())." line=".$ex->getLine()." -->"; });
-              register_shutdown_function(function(){ $e=error_get_last(); if($e && in_array($e['type'],[E_ERROR,E_PARSE,E_CORE_ERROR,E_COMPILE_ERROR])){ echo "<!-- PHP_FATAL type={$e['type']} msg=".htmlspecialchars($e['message'])." line={$e['line']} -->"; } });
-              ?>
-              <?php $__i=0; foreach ($partners as $p): $__i++; ?>
-              <!-- DEBUG_ROW_<?= $__i ?> uid=<?= $p['uid'] ?> -->
+              <?php foreach ($partners as $p): ?>
               <tr>
                 <td>
                   <div style="font-weight:600;"><?= e($p['user_name']) ?></div>
@@ -479,9 +473,7 @@ require_once __DIR__ . '/../includes/header.php';
                   <?php endif; ?>
                 </td>
               </tr>
-              <!-- DEBUG_ROW_END_<?= $__i ?> -->
               <?php endforeach; ?>
-              <!-- DEBUG_LOOP_DONE total=<?= $__i ?> -->
             <?php else: ?>
               <tr><td colspan="7" style="text-align:center; padding:3rem; color:var(--muted);">No growth partner applications yet.</td></tr>
             <?php endif; ?>
