@@ -92,14 +92,17 @@ if (isset($_GET['msg'])) $msg = htmlspecialchars($_GET['msg']);
 
 // All partner profiles with user info
 $partners = $pdo->query("
-    SELECT pp.*, u.name AS user_name, u.email AS user_email,
+    SELECT pp.id, pp.user_id, pp.status, pp.organisation, pp.region, pp.phone,
+           pp.display_name, pp.tagline, pp.created_at,
            COALESCE(pp.marketplace_commission_rate, 10) AS marketplace_commission_rate,
+           u.name AS user_name, u.email AS user_email,
            COUNT(DISTINCT pba.id) AS assigned_count
-    FROM partner_profiles pp
-    JOIN users u ON u.id = pp.user_id
+    FROM users u
+    LEFT JOIN partner_profiles pp ON pp.user_id = u.id
     LEFT JOIN partner_business_assignments pba ON pba.partner_id = pp.id AND pba.status='active'
-    GROUP BY pp.id
-    ORDER BY FIELD(pp.status,'pending','applicant','approved','active','suspended','inactive','terminated'), pp.created_at DESC
+    WHERE u.role = 'growth_partner'
+    GROUP BY u.id
+    ORDER BY COALESCE(pp.created_at, u.created_at) DESC
 ")->fetchAll();
 
 // If viewing a specific partner
@@ -404,8 +407,8 @@ require_once __DIR__ . '/../includes/header.php';
 
   <?php else: ?>
     <!-- ── Partner List ── -->
-    <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
-      <div style="overflow-x:auto;">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; overflow-x:auto;">
+      <div>
         <table class="partner-table">
           <thead>
             <tr>
@@ -429,9 +432,10 @@ require_once __DIR__ . '/../includes/header.php';
                 </td>
                 <td><?= e($p['organisation'] ?: '—') ?></td>
                 <td><?= e($p['region'] ?: '—') ?></td>
-                <td><span class="status-badge status-<?= $p['status'] ?>"><?= $p['status'] ?></span></td>
+                <td><?php if ($p['status']): ?><span class="status-badge status-<?= $p['status'] ?>"><?= $p['status'] ?></span><?php else: ?><span style="font-size:.75rem;color:var(--muted);">no profile</span><?php endif; ?></td>
                 <td style="text-align:center; font-weight:700;"><?= (int)$p['assigned_count'] ?></td>
                 <td>
+                  <?php if ($p['id']): ?>
                   <form method="POST" style="display:flex;gap:.3rem;align-items:center;">
                     <?= csrfField() ?>
                     <input type="hidden" name="action" value="set_commission_rate">
@@ -443,10 +447,11 @@ require_once __DIR__ . '/../includes/header.php';
                     <span style="font-size:.8rem;color:var(--muted);">%</span>
                     <button type="submit" style="font-size:.72rem;padding:.2rem .5rem;border-radius:6px;background:var(--accent, #00A878);color:#fff;border:none;cursor:pointer;" title="Save commission rate">✓</button>
                   </form>
+                  <?php else: ?><span style="font-size:.75rem;color:var(--muted);">—</span><?php endif; ?>
                 </td>
-                <td style="white-space:nowrap;"><?= date('j M Y', strtotime($p['created_at'])) ?></td>
+                <td style="white-space:nowrap;"><?= $p['created_at'] ? date('j M Y', strtotime($p['created_at'])) : '—' ?></td>
                 <td style="white-space:nowrap;">
-                  <a href="?pid=<?= $p['id'] ?>" class="action-link">View →</a>
+                  <?php if ($p['id']): ?><a href="?pid=<?= $p['id'] ?>" class="action-link">View →</a><?php endif; ?>
                   &nbsp;
                   <form method="POST" action="<?= SITE_URL ?>/admin/login-as.php" style="display:inline;" target="_blank">
                     <?= csrfField() ?>
