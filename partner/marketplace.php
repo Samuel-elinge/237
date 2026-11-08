@@ -715,8 +715,8 @@ partnerNavBadges($partnerId, $pdo);
   text-align: right;
   flex-shrink: 0;
 }
-.mp-cart-item-price .amount { color: var(--g); font-weight: 600; }
-.mp-cart-item-price .comm { font-size: .68rem; color: var(--g); opacity: .75; }
+.mp-cart-item-price .amount { color: var(--text); font-weight: 600; font-size: .82rem; }
+.mp-cart-item-price .comm { font-size: .72rem; color: var(--g); font-weight: 500; }
 .mp-cart-remove {
   background: none; border: none; color: var(--muted);
   cursor: pointer; font-size: .8rem; padding: 0; line-height: 1;
@@ -1068,7 +1068,11 @@ foreach ($catalogue as $cat) {
           if (!$mainPrice) $mainPrice = $renewalPrice;
           if (!$mainPrice) continue;
 
-          $dueNow   = $mainPrice['price_type'] === 'setup' ? $mainPrice['setup_amount'] : $mainPrice['recurring_amount'];
+          // For monthly recurring (Business Email), bill at 12-month total
+          $isAnnualised = ($mainPrice['price_type'] === 'recurring' && ($mainPrice['billing_interval'] ?? '') === 'MONTH');
+          $dueNow   = $mainPrice['price_type'] === 'setup'
+            ? $mainPrice['setup_amount']
+            : ($isAnnualised ? $mainPrice['recurring_amount'] * 12 : $mainPrice['recurring_amount']);
           $commRate = $prod['commission_rate'];
           $commAmt  = $commRate > 0 ? (int)round($dueNow * $commRate / 100) : 0;
           $tierLabels = ['Starter','Professional','Premium','Enterprise'];
@@ -1091,6 +1095,7 @@ foreach ($catalogue as $cat) {
              data-mailbox-limit="<?= (int)($mainPrice['mailbox_limit'] ?? 0) ?>"
              data-comm-rate="<?= $commRate ?>"
              data-comm-amt="<?= $commAmt ?>"
+             data-annualised="<?= $isAnnualised ? '1' : '0' ?>"
              data-prod-sort="<?= $prodIdx ?>"
              data-prod-count="<?= $prodCount ?>">
 
@@ -1117,6 +1122,13 @@ foreach ($catalogue as $cat) {
             <div class="mp-price-sub"><?= mpT('one-time setup', 'mise en place unique') ?>
               <?php if ($renewalPrice && $renewalPrice['recurring_amount'] > 0): ?>
               · +<?= mpFmt($renewalPrice['recurring_amount']) ?> <?= mpInterval($renewalPrice['billing_interval']) ?>
+              <?php endif; ?>
+            </div>
+            <?php elseif ($isAnnualised): ?>
+            <div class="mp-price-sub">
+              <?= mpFmt($mainPrice['recurring_amount']) ?> <?= mpT('/ month', '/ mois') ?> · <?= mpT('billed as 12 months', 'facturé 12 mois') ?>
+              <?php if ($mainPrice['mailbox_limit']): ?>
+              · <?= mpT('up to', 'jusqu\'à') ?> <?= (int)$mainPrice['mailbox_limit'] ?> <?= mpT('mailboxes', 'boîtes mail') ?>
               <?php endif; ?>
             </div>
             <?php else: ?>
@@ -1354,6 +1366,7 @@ function mpAddToCart(productId) {
     mailbox_limit:    parseInt(d.mailboxLimit) || 0,
     comm_rate:        parseFloat(d.commRate) || 0,
     comm_amt:         parseInt(d.commAmt) || 0,
+    annualised:       d.annualised === '1',
     prod_sort:        parseInt(d.prodSort),
     prod_count:       parseInt(d.prodCount),
   };
@@ -1398,19 +1411,23 @@ function mpRender() {
       ${LANG === 'fr' ? 'Aucun service sélectionné.' : 'No services selected.'}
     </div>`;
     return items.map(item => {
-      const itvl = item.billing_interval === 'MONTH' ? (LANG==='fr'?'/ mois':'/ month')
-                 : item.billing_interval === 'YEAR'  ? (LANG==='fr'?'/ an':'/ year') : '';
-      const price = item.price_type === 'setup'
-        ? FMT(item.setup_amount) + (LANG==='fr'?' (mise en place)':' (setup)')
-        : FMT(item.recurring_amount) + ' ' + itvl;
+      let priceLabel;
+      if (item.price_type === 'setup') {
+        priceLabel = FMT(item.setup_amount) + (LANG==='fr'?' (mise en place)':' (setup)');
+      } else if (item.annualised) {
+        priceLabel = FMT(item.due_now) + (LANG==='fr'?' (12 mois)':' (12 months)');
+      } else {
+        const itvl = item.billing_interval === 'YEAR' ? (LANG==='fr'?'/ an':'/ year') : '';
+        priceLabel = FMT(item.recurring_amount) + ' ' + itvl;
+      }
       return `<div class="mp-cart-item">
         <div class="mp-cart-item-name">
           ${item.product_name}
           <div class="mp-cart-item-cat">${item.cat_name}</div>
         </div>
         <div class="mp-cart-item-price">
-          <div class="amount">${price}</div>
-          ${item.comm_amt > 0 ? `<div class="comm">+${FMT(item.comm_amt)}</div>` : ''}
+          <div class="amount">${priceLabel}</div>
+          ${item.comm_amt > 0 ? `<div class="comm">💰 +${FMT(item.comm_amt)}</div>` : ''}
         </div>
         <button class="mp-cart-remove" onclick="mpRemoveFromCart(${item.product_id})" title="Remove">
           <i class="bi bi-x"></i>
@@ -1483,10 +1500,11 @@ function mpCheckCategoryUpsells() {
         const el   = document.getElementById('upsell-' + next.id);
         const txt  = document.getElementById('upsell-text-' + next.id);
         if (el && txt) {
-          const curP  = lowestInCart.prices[0] || {};
-          const nxtP  = next.prices[0] || {};
-          const curD  = curP.price_type === 'setup' ? curP.setup_amount : curP.recurring_amount;
-          const nxtD  = nxtP.price_type === 'setup' ? nxtP.setup_amount : nxtP.recurring_amount;
+          // Use the DOM card's data-due-now (already annualised if needed)
+          const curCard = document.getElementById('card-' + lowestInCart.id);
+          const nxtCard = document.getElementById('card-' + next.id);
+          const curD = curCard ? parseInt(curCard.dataset.dueNow) : 0;
+          const nxtD = nxtCard ? parseInt(nxtCard.dataset.dueNow) : 0;
           const diff  = nxtD - curD;
           txt.innerHTML = LANG === 'fr'
             ? `Passez à <strong>${next.name}</strong> pour +<strong>${FMT(diff)}</strong> seulement.`
