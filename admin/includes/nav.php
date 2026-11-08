@@ -23,10 +23,11 @@ function adminNav(string $activePage = ''): void {
             ['Claims',      '&#x1F3E2;', $base . '/admin/claims.php',          ['claims']],
         ]],
         ['Users', '&#x1F464;', [
-            ['Users',       '&#x1F464;', $base . '/admin/users.php',           ['users']],
-            ['Agents',      '&#x1F454;', $base . '/admin/manage-agents.php',   ['manage-agents']],
-            ['Creators',    '&#x1F3AC;', $base . '/admin/manage-creators.php', ['manage-creators']],
-            ['Referrals',   '&#x1F4B0;', $base . '/admin/manage-referrals.php',['manage-referrals']],
+            ['Users',           '&#x1F464;', $base . '/admin/users.php',                    ['users']],
+            ['Agents',          '&#x1F454;', $base . '/admin/manage-agents.php',            ['manage-agents']],
+            ['Creators',        '&#x1F3AC;', $base . '/admin/manage-creators.php',          ['manage-creators']],
+            ['Growth Partners', '&#x1F91D;', $base . '/admin/manage-growth-partners.php',   ['manage-growth-partners']],
+            ['Referrals',       '&#x1F4B0;', $base . '/admin/manage-referrals.php',         ['manage-referrals']],
         ]],
         ['Commerce', '&#x1F4B3;', [
             ['Orders',      '&#x1F4E6;', $base . '/admin/orders.php',          ['orders']],
