@@ -1,6 +1,6 @@
 <?php
 /**
- * admin/manage-growth-partners.php — Manage Growth Partners
+ * admin/manage-growth-partners.php — Manage Growth Partners (v2)
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/ops-admin-helpers.php';
