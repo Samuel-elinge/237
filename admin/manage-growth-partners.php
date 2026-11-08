@@ -96,7 +96,8 @@ $partners = $pdo->query("
     SELECT pp.id AS pp_id, pp.user_id, pp.status, pp.organisation, pp.region, pp.phone,
            pp.display_name, pp.tagline, pp.created_at AS pp_created_at,
            COALESCE(pp.marketplace_commission_rate, 10) AS marketplace_commission_rate,
-           COALESCE(pp.businesses_managed_count, 0) AS assigned_count,
+           (SELECT COUNT(*) FROM partner_business_assignments pba
+            WHERE pba.partner_id = pp.id AND pba.status = 'active') AS assigned_count,
            u.id AS uid, u.created_at AS user_created_at,
            u.name AS user_name, u.email AS user_email
     FROM users u
