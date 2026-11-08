@@ -20,3 +20,6 @@ for ($i = 93; $i < min(105, count($lines)); $i++) {
 $content = file_get_contents($file);
 echo "\n\nOccurrences of 'pp_id' in file: " . substr_count($content, 'pp_id') . "\n";
 echo "Occurrences of 'GROUP BY' in file: " . substr_count($content, 'GROUP BY') . "\n";
+echo "Occurrences of 'DEBUG' in file: " . substr_count($content, 'DEBUG') . "\n";
+echo "Occurrences of 'DEBUG_ROW' in file: " . substr_count($content, 'DEBUG_ROW') . "\n";
+echo "File mod time: " . date('Y-m-d H:i:s', filemtime($file)) . "\n";
