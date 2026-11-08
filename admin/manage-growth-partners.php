@@ -426,6 +426,7 @@ require_once __DIR__ . '/../includes/header.php';
           <tbody>
             <!-- DEBUG: partners_count=<?= count($partners) ?> ob_level=<?= ob_get_level() ?> -->
             <?php if ($partners): ?>
+              <?php set_error_handler(function($no,$str,$f,$l){ echo "<!-- PHP_ERR e=$no msg=".htmlspecialchars($str)." line=$l -->"; return true; }); ?>
               <?php $__i=0; foreach ($partners as $p): $__i++; ?>
               <!-- DEBUG_ROW_<?= $__i ?> uid=<?= $p['uid'] ?> -->
               <tr>
@@ -474,7 +475,9 @@ require_once __DIR__ . '/../includes/header.php';
                   <?php endif; ?>
                 </td>
               </tr>
+              <!-- DEBUG_ROW_END_<?= $__i ?> -->
               <?php endforeach; ?>
+              <!-- DEBUG_LOOP_DONE total=<?= $__i ?> -->
             <?php else: ?>
               <tr><td colspan="7" style="text-align:center; padding:3rem; color:var(--muted);">No growth partner applications yet.</td></tr>
             <?php endif; ?>
