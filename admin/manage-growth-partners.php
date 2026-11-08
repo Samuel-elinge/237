@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $rate = min(100, max(0, (float)($_POST['commission_rate'] ?? 10)));
         $pdo->prepare("UPDATE partner_profiles SET marketplace_commission_rate=? WHERE id=?")
             ->execute([$rate, $pid]);
-        opsAuditLog('partner.commission_rate_set', 'partner_profile', $pid, ['rate' => $rate]);
+        opsAuditLog('partner.commission_rate_set', 'partner_profile', $pid, 'rate=' . $rate);
         $msg = 'Commission rate updated to ' . $rate . '%.';
     }
 
