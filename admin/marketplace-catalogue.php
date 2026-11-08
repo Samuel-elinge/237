@@ -86,15 +86,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $type   = $_POST['service_type'] ?? 'website_setup';
         $termsEn= trim($_POST['terms_en'] ?? '');
         $termsFr= trim($_POST['terms_fr'] ?? '') ?: $termsEn;
-        $sort   = (int)($_POST['sort_order'] ?? 0);
-        $key    = slugify($nameEn);
+        $sort       = (int)($_POST['sort_order'] ?? 0);
+        $commRate   = min(100, max(0, (float)($_POST['partner_commission_rate'] ?? 0)));
+        $key        = slugify($nameEn);
         if ($nameEn && $catId) {
             $base = $key; $i = 1;
             while ($pdo->query("SELECT id FROM mp_service_products WHERE `key`='$key'")->fetchColumn()) {
                 $key = $base . '_' . $i++;
             }
-            $pdo->prepare("INSERT INTO mp_service_products (category_id,`key`,name_en,name_fr,description_en,description_fr,service_type,terms_en,terms_fr,sort_order,active,orderable) VALUES (?,?,?,?,?,?,?,?,?,?,1,0)")
-                ->execute([$catId, $key, $nameEn, $nameFr, $descEn, $descFr, $type, $termsEn, $termsFr, $sort]);
+            $pdo->prepare("INSERT INTO mp_service_products (category_id,`key`,name_en,name_fr,description_en,description_fr,service_type,terms_en,terms_fr,sort_order,active,orderable,partner_commission_rate) VALUES (?,?,?,?,?,?,?,?,?,?,1,0,?)")
+                ->execute([$catId, $key, $nameEn, $nameFr, $descEn, $descFr, $type, $termsEn, $termsFr, $sort, $commRate]);
             flash('success', "Product '{$nameEn}' created.");
         } else {
             flash('error', 'Product name and category are required.');
@@ -110,11 +111,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $type   = $_POST['service_type'] ?? 'website_setup';
         $termsEn= trim($_POST['terms_en'] ?? '');
         $termsFr= trim($_POST['terms_fr'] ?? '') ?: $termsEn;
-        $sort   = (int)($_POST['sort_order'] ?? 0);
-        $catId  = (int)$_POST['category_id'];
+        $sort       = (int)($_POST['sort_order'] ?? 0);
+        $catId      = (int)$_POST['category_id'];
+        $commRate   = min(100, max(0, (float)($_POST['partner_commission_rate'] ?? 0)));
         if ($nameEn && $pid) {
-            $pdo->prepare("UPDATE mp_service_products SET category_id=?,name_en=?,name_fr=?,description_en=?,description_fr=?,service_type=?,terms_en=?,terms_fr=?,sort_order=?,updated_at=NOW() WHERE id=?")
-                ->execute([$catId, $nameEn, $nameFr, $descEn, $descFr, $type, $termsEn, $termsFr, $sort, $pid]);
+            $pdo->prepare("UPDATE mp_service_products SET category_id=?,name_en=?,name_fr=?,description_en=?,description_fr=?,service_type=?,terms_en=?,terms_fr=?,sort_order=?,partner_commission_rate=?,updated_at=NOW() WHERE id=?")
+                ->execute([$catId, $nameEn, $nameFr, $descEn, $descFr, $type, $termsEn, $termsFr, $sort, $commRate, $pid]);
             flash('success', "Product updated.");
         }
 
@@ -476,7 +478,8 @@ require_once __DIR__ . '/includes/nav.php';
                   <?= htmlspecialchars(json_encode($prod['service_type']),ENT_QUOTES) ?>,
                   <?= htmlspecialchars(json_encode($prod['terms_en'] ?? ''),ENT_QUOTES) ?>,
                   <?= htmlspecialchars(json_encode($prod['terms_fr'] ?? ''),ENT_QUOTES) ?>,
-                  <?= (int)$prod['sort_order'] ?>)">✏️ Edit</span>
+                  <?= (int)$prod['sort_order'] ?>,
+                  <?= (float)($prod['partner_commission_rate'] ?? 0) ?>)">✏️ Edit</span>
               <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this product and all its prices?')">
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="delete_product">
@@ -741,6 +744,15 @@ require_once __DIR__ . '/includes/nav.php';
         <label>Conditions générales (Français)</label>
         <textarea name="terms_fr" rows="2"></textarea>
       </div>
+      <div>
+        <label>Partner commission rate (%)</label>
+        <input type="number" name="partner_commission_rate" value="0" min="0" max="100" step="0.01"
+               placeholder="e.g. 15 for 15%"
+               style="max-width:160px;">
+        <span style="font-size:.78rem;color:#8db8a8;display:block;margin-top:.25rem;">
+          Percentage of the setup amount paid to the Growth Partner on completion.
+        </span>
+      </div>
       <div class="modal-footer">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-add-product')">Cancel</button>
         <button type="submit" class="btn-save">Create Product</button>
@@ -803,6 +815,15 @@ require_once __DIR__ . '/includes/nav.php';
       <div>
         <label>Conditions générales (Français)</label>
         <textarea name="terms_fr" id="edit-prod-terms-fr" rows="2"></textarea>
+      </div>
+      <div>
+        <label>Partner commission rate (%)</label>
+        <input type="number" name="partner_commission_rate" id="edit-prod-commission" value="0" min="0" max="100" step="0.01"
+               placeholder="e.g. 15 for 15%"
+               style="max-width:160px;">
+        <span style="font-size:.78rem;color:#8db8a8;display:block;margin-top:.25rem;">
+          Percentage of the setup amount paid to the Growth Partner on completion.
+        </span>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-edit-product')">Cancel</button>
@@ -969,7 +990,7 @@ function openAddProduct(catId, catName) {
   openModal('modal-add-product');
 }
 
-function openEditProduct(id, catId, nameEn, nameFr, descEn, descFr, type, termsEn, termsFr, sort) {
+function openEditProduct(id, catId, nameEn, nameFr, descEn, descFr, type, termsEn, termsFr, sort, commissionRate) {
   document.getElementById('edit-prod-id').value = id;
   document.getElementById('edit-prod-name-en').value = nameEn;
   document.getElementById('edit-prod-name-fr').value = nameFr;
@@ -979,6 +1000,7 @@ function openEditProduct(id, catId, nameEn, nameFr, descEn, descFr, type, termsE
   document.getElementById('edit-prod-terms-fr').value = termsFr;
   document.getElementById('edit-prod-sort').value = sort;
   document.getElementById('edit-prod-type').value = type;
+  document.getElementById('edit-prod-commission').value = commissionRate ?? 0;
   const catSel = document.getElementById('edit-prod-cat');
   if (catSel) catSel.value = catId;
   openModal('modal-edit-product');

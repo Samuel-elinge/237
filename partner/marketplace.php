@@ -61,7 +61,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_order'])) {
     ");
     $stA->execute([$partnerId, $listingId]);
     if (!$stA->fetch()) {
-        $errors[] = mpT('You are not authorised to order for this business.', 'Vous n\'êtes pas autorisé à commander pour cette entreprise.');
+        // Also allow if the partner owns the listing (auto-portfolio)
+        $stOwn = $pdo->prepare("SELECT id FROM listings WHERE id=? AND user_id=(SELECT user_id FROM partner_profiles WHERE id=?) LIMIT 1");
+        $stOwn->execute([$listingId, $partnerId]);
+        if (!$stOwn->fetch()) {
+            $errors[] = mpT('You are not authorised to order for this business.', 'Vous n\'êtes pas autorisé à commander pour cette entreprise.');
+        }
     }
 
     /* 2. Load product + price */
@@ -84,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_order'])) {
     }
 
     /* 3. Validate listing */
-    $stL = $pdo->prepare("SELECT id, title, user_id FROM listings WHERE id = ? AND status = 'active' LIMIT 1");
+    $stL = $pdo->prepare("SELECT id, title, user_id FROM listings WHERE id = ? AND status IN ('active','approved') LIMIT 1");
     $stL->execute([$listingId]);
     $listing = $stL->fetch();
     if (!$listing) {
@@ -234,18 +239,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_order'])) {
 }
 
 /* ── READ: partner's portfolio businesses ────────────────────── */
+// Assigned businesses (via partner_business_assignments) OR own listings
 $businesses = $pdo->prepare("
     SELECT l.id, l.title, l.verified,
            c.name_en AS cat_en, loc.name_en AS city
     FROM listings l
-    JOIN partner_business_assignments pba ON pba.listing_id = l.id
     JOIN categories c   ON c.id  = l.category_id
     JOIN locations  loc ON loc.id = l.location_id
-    WHERE pba.partner_id = ? AND pba.status = 'active'
-      AND l.status = 'active'
+    WHERE l.status IN ('active','approved')
+      AND (
+        EXISTS (
+            SELECT 1 FROM partner_business_assignments pba
+            WHERE pba.listing_id = l.id AND pba.partner_id = ? AND pba.status = 'active'
+        )
+        OR l.user_id = (SELECT user_id FROM partner_profiles WHERE id = ?)
+      )
     ORDER BY l.title ASC
 ");
-$businesses->execute([$partnerId]);
+$businesses->execute([$partnerId, $partnerId]);
 $businessList = $businesses->fetchAll();
 
 /* ── READ: chosen business detail ────────────────────────────── */
@@ -259,7 +270,7 @@ if ($listingId) {
         JOIN locations  loc ON loc.id = l.location_id
         JOIN users u        ON u.id   = l.user_id
         JOIN partner_business_assignments pba ON pba.listing_id = l.id AND pba.partner_id = ? AND pba.status = 'active'
-        WHERE l.id = ? AND l.status = 'active'
+        WHERE l.id = ? AND l.status IN ('active','approved')
         LIMIT 1
     ");
     $stSB->execute([$partnerId, $listingId]);
@@ -276,6 +287,7 @@ if ($selectedBusiness) {
                p.id AS product_id, p.`key` AS product_key,
                p.name_en, p.name_fr, p.description_en, p.description_fr,
                p.service_type, p.form_schema, p.terms_en, p.terms_fr,
+               p.partner_commission_rate,
                pr.id AS price_id, pr.variant_key, pr.price_type,
                pr.setup_amount, pr.recurring_amount, pr.currency,
                pr.billing_interval, pr.mailbox_limit
@@ -307,8 +319,9 @@ if ($selectedBusiness) {
                 'description' => $lang === 'fr' ? $row['description_fr'] : $row['description_en'],
                 'service_type'=> $row['service_type'],
                 'form_schema' => json_decode($row['form_schema'] ?? '{}', true) ?: [],
-                'terms'       => $lang === 'fr' ? $row['terms_fr'] : $row['terms_en'],
-                'prices'      => [],
+                'terms'            => $lang === 'fr' ? $row['terms_fr'] : $row['terms_en'],
+                'commission_rate'  => (float)($row['partner_commission_rate'] ?? 0),
+                'prices'           => [],
             ];
         }
         $catalogue[$catKey]['products'][$pid]['prices'][] = [
@@ -502,6 +515,24 @@ require_once __DIR__ . '/../includes/partner-header.php';
           <div class="text-muted small mt-2">
             + <?= mpFmt($selectedPrice['recurring_amount']) ?> <?= mpInterval($selectedPrice['billing_interval']) ?>
             <?= mpT('after activation', 'après activation') ?>
+          </div>
+          <?php endif; ?>
+
+          <?php
+          $commRate = (float)($selectedProduct['commission_rate'] ?? 0);
+          if ($commRate > 0):
+              $commAmt = (int)round($dueNow * $commRate / 100);
+          ?>
+          <div class="mt-3 p-2 rounded" style="background:rgba(0,168,120,0.12);border:1px solid rgba(0,168,120,0.3);">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="small fw-semibold" style="color:#00A878;">
+                💰 <?= mpT('Your commission', 'Votre commission') ?> (<?= number_format($commRate, 1) ?>%)
+              </span>
+              <strong style="color:#00A878;"><?= mpFmt($commAmt) ?></strong>
+            </div>
+            <div class="text-muted" style="font-size:0.72rem;margin-top:0.2rem;">
+              <?= mpT('Paid after order completion and confirmation.', 'Versée après finalisation et confirmation de la commande.') ?>
+            </div>
           </div>
           <?php endif; ?>
         </div>

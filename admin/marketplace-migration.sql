@@ -434,3 +434,11 @@ INSERT IGNORE INTO `site_settings` (`key`, `value`) VALUES
   ('mp_auto_renewal_enabled',    '0');
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ─────────────────────────────────────────────────────────────
+-- PATCH: Add partner_commission_rate to mp_service_products
+-- Run once; safe to re-run (IF NOT EXISTS via column check)
+-- ─────────────────────────────────────────────────────────────
+ALTER TABLE `mp_service_products`
+  ADD COLUMN IF NOT EXISTS `partner_commission_rate` DECIMAL(5,2) NOT NULL DEFAULT 0.00
+    COMMENT 'Commission % paid to the Growth Partner on this product (e.g. 15.00 = 15%)';
