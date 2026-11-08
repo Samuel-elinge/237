@@ -551,7 +551,24 @@ function tabUrl(string $t, int $lid): string {
       <div style="font-size:.75rem; color:var(--muted); margin-top:.3rem;">
         <?= $listing['status'] ?? 'Active' ?>
       </div>
-      <a href="<?= SITE_URL ?>/partner/portfolio" style="font-size:.78rem; color:var(--muted); text-decoration:none; display:block; margin-top:.4rem;">← Portfolio</a>
+      <div style="display:flex; flex-direction:column; gap:.45rem; margin-top:.6rem; align-items:flex-end;">
+        <a href="<?= SITE_URL ?>/partner/marketplace?listing_id=<?= $listingId ?>"
+           style="display:inline-flex; align-items:center; gap:.35rem; padding:.42rem .95rem;
+                  background:#00A878; color:#fff; border-radius:8px; font-size:.8rem; font-weight:700;
+                  text-decoration:none; white-space:nowrap; transition:opacity .15s;"
+           onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+          🛒 Order Services
+        </a>
+        <a href="<?= SITE_URL ?>/edit-listing?id=<?= $listingId ?>"
+           style="display:inline-flex; align-items:center; gap:.35rem; padding:.42rem .95rem;
+                  background:var(--card); color:var(--text); border:1px solid var(--border);
+                  border-radius:8px; font-size:.8rem; font-weight:600;
+                  text-decoration:none; white-space:nowrap; transition:border-color .15s;"
+           onmouseover="this.style.borderColor='#00A878'" onmouseout="this.style.borderColor='var(--border)'">
+          ✏️ Edit Listing
+        </a>
+      </div>
+      <a href="<?= SITE_URL ?>/partner/portfolio" style="font-size:.78rem; color:var(--muted); text-decoration:none; display:block; margin-top:.5rem; text-align:right;">← Portfolio</a>
     </div>
   </div>
 
