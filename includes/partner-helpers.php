@@ -31,12 +31,8 @@ if (!function_exists('getFlash')) {
  */
 if (!function_exists('csrfField')) {
     function csrfField(): string {
-        if (!isset($_SESSION)) session_start();
-        // Use $_SESSION['csrf_token'] — the key config.php sets and validates on every POST
-        if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
-        $token = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8');
+        // Read the token set by config.php — do NOT generate a new one here
+        $token = htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8');
         return '<input type="hidden" name="csrf_token" value="' . $token . '">';
     }
 }

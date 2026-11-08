@@ -18,7 +18,10 @@ function slugify(string $s): string {
 
 /* ── POST handlers ───────────────────────────────────────────── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    verifyCsrf();
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
+        http_response_code(403);
+        exit('Invalid CSRF token.');
+    }
     $action = $_POST['action'] ?? '';
 
     /* ── CATEGORY: create ── */
