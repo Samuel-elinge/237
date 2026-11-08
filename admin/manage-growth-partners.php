@@ -128,12 +128,13 @@ if (isset($_GET['pid'])) {
 
     if ($viewPartner) {
         $asgSt = $pdo->prepare("
-            SELECT pba.*, l.title AS listing_title, c.name_en AS cat_en, loc.name_en AS city,
+            SELECT pba.*, l.title AS listing_title, l.slug AS listing_slug,
+                   c.name_en AS cat_en, loc.name_en AS city,
                    u2.name AS assigned_by_name
             FROM partner_business_assignments pba
             JOIN listings l ON l.id = pba.listing_id
-            JOIN categories c ON c.id = l.category_id
-            JOIN locations loc ON loc.id = l.location_id
+            LEFT JOIN categories c ON c.id = l.category_id
+            LEFT JOIN locations loc ON loc.id = l.location_id
             LEFT JOIN users u2 ON u2.id = pba.assigned_by
             WHERE pba.partner_id = ? AND pba.status='active'
             ORDER BY pba.assigned_at DESC
@@ -362,7 +363,7 @@ require_once __DIR__ . '/../includes/header.php';
               <div style="font-weight:600;"><?= e($asg['listing_title']) ?></div>
               <div style="font-size:0.78rem; color:var(--muted);"><?= e($asg['cat_en']) ?> · <?= e($asg['city']) ?> · <?= ucfirst($asg['role']) ?></div>
             </div>
-            <a href="<?= SITE_URL ?>/admin/listings?id=<?= $asg['listing_id'] ?>" class="action-link" style="flex-shrink:0;">View</a>
+            <a href="<?= SITE_URL ?>/listing.php?slug=<?= urlencode($asg['listing_slug']) ?>" target="_blank" class="action-link" style="flex-shrink:0;">View ↗</a>
             <form method="POST" style="display:inline; flex-shrink:0;">
               <?= csrfField() ?>
               <input type="hidden" name="action" value="unassign_business">
