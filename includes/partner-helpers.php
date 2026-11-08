@@ -28,14 +28,18 @@ if (!function_exists('getFlash')) {
 
 /**
  * Generate a CSRF token hidden input field.
+ *
+ * Uses $_SESSION['_gp_csrf'] — a key config.php does not touch — so the token
+ * survives POST requests even if config.php regenerates $_SESSION['csrf_token'].
  */
 if (!function_exists('csrfField')) {
     function csrfField(): string {
-        // Generate token if config.php hasn't set one yet (fallback)
-        if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        if (!isset($_SESSION)) session_start();
+        // Generate a stable token in our own key that config.php won't overwrite.
+        if (empty($_SESSION['_gp_csrf'])) {
+            $_SESSION['_gp_csrf'] = bin2hex(random_bytes(32));
         }
-        $token = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8');
+        $token = htmlspecialchars($_SESSION['_gp_csrf'], ENT_QUOTES, 'UTF-8');
         return '<input type="hidden" name="csrf_token" value="' . $token . '">';
     }
 }
@@ -47,7 +51,8 @@ if (!function_exists('csrfCheck')) {
     function csrfCheck(): bool {
         if (!isset($_SESSION)) session_start();
         $posted = $_POST['csrf_token'] ?? '';
-        $stored = $_SESSION['csrf_token'] ?? '';   // align with config.php's session key
+        // Check our stable key first; fall back to config.php's key.
+        $stored = $_SESSION['_gp_csrf'] ?? $_SESSION['csrf_token'] ?? '';
         return $stored && hash_equals($stored, $posted);
     }
 }

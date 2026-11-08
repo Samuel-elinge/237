@@ -390,7 +390,7 @@ require_once __DIR__ . '/../includes/header.php';
 
           <div style="margin-bottom:0.75rem;">
             <label style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.3rem;">Business</label>
-            <select name="listing_id" required style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);">
+            <select name="listing_id" required style="width:100%;padding:0.5rem;border:1px solid #2a4a3a;border-radius:8px;background:#0a1e15;color:#e0e0e0;">
               <option value="">Select business…</option>
               <?php foreach ($availableListings as $l): ?>
               <option value="<?= $l['id'] ?>"><?= e($l['title']) ?> — <?= e($l['city']) ?></option>
@@ -400,7 +400,7 @@ require_once __DIR__ . '/../includes/header.php';
 
           <div style="margin-bottom:0.75rem;">
             <label style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.3rem;">Role</label>
-            <select name="assign_role" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);">
+            <select name="assign_role" style="width:100%;padding:0.5rem;border:1px solid #2a4a3a;border-radius:8px;background:#0a1e15;color:#e0e0e0;">
               <option value="primary">Primary Partner</option>
               <option value="supporting">Supporting Partner</option>
             </select>
@@ -408,7 +408,7 @@ require_once __DIR__ . '/../includes/header.php';
 
           <div style="margin-bottom:1rem;">
             <label style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.3rem;">Notes (optional)</label>
-            <textarea name="notes" rows="2" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);resize:vertical;font-size:0.875rem;"></textarea>
+            <textarea name="notes" rows="2" style="width:100%;padding:0.5rem;border:1px solid #2a4a3a;border-radius:8px;background:#0a1e15;color:#e0e0e0;resize:vertical;font-size:0.875rem;"></textarea>
           </div>
 
           <button type="submit" class="btn btn-primary" style="width:100%;">Assign Business</button>
