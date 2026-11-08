@@ -12,16 +12,22 @@ $user      = currentUser();
 $pdo       = db();
 $userId    = (int)($_SESSION['user_id'] ?? 0);
 
-/* ── Portfolio ──────────────────────────────────────────────────── */
+/* ── Portfolio — assigned listings + own listings ───────────────── */
 $st = $pdo->prepare("
     SELECT COUNT(*) AS total,
-           SUM(l.status = 'approved') AS active,
-           SUM(pba.assigned_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS onboarding
-    FROM partner_business_assignments pba
-    JOIN listings l ON l.id = pba.listing_id
-    WHERE pba.partner_id = ? AND pba.status = 'active'
+           SUM(l.status IN ('active','approved')) AS active,
+           SUM(l.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS onboarding
+    FROM listings l
+    WHERE l.status IN ('active','approved')
+      AND (
+        EXISTS (
+            SELECT 1 FROM partner_business_assignments pba
+            WHERE pba.listing_id = l.id AND pba.partner_id = ? AND pba.status = 'active'
+        )
+        OR l.user_id = (SELECT user_id FROM partner_profiles WHERE id = ?)
+      )
 ");
-$st->execute([$pid]); $portfolio = $st->fetch();
+$st->execute([$pid, $pid]); $portfolio = $st->fetch();
 
 /* ── Tasks ──────────────────────────────────────────────────────── */
 $st = $pdo->prepare("SELECT COUNT(*) FROM growth_tasks WHERE partner_id=? AND status IN ('todo','in_progress')");

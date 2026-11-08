@@ -53,18 +53,13 @@ function partnerNav(string $activePage = ''): void {
     $activeOrders = (int)($GLOBALS['_pnav_active_orders'] ?? 0);
 
     $items = [
-        ['dashboard',          '&#x1F3E0;', 'Dashboard',       $base . '/partner/dashboard',          0,            false],
-        ['marketplace',        '&#x1F6D2;', 'Order Services',  $base . '/partner/marketplace',        0,            false],
-        ['marketplace-orders',  '&#x1F4E6;', 'My Orders',       $base . '/partner/marketplace-orders', $activeOrders, false],
-        ['portfolio',          '&#x1F4CB;', 'Portfolio',        $base . '/partner/portfolio',          0,            false],
-        ['tasks',              '&#x2705;',  'Tasks',            $base . '/partner/tasks',              $overdueT,    false],
-        ['leads',              '&#x1F4AC;', 'Leads',            $base . '/partner/leads',              $overdueL,    false],
-        ['campaigns',          '&#x1F4E3;', 'Campaigns',        $base . '/partner/campaigns',          0,            false],
-        ['content',            '&#x1F4C5;', 'Content',          $base . '/partner/content',            0,            false],
-        ['reports',            '&#x1F4CA;', 'Reports',          $base . '/partner/reports',            0,            false],
-        ['recommendations',    '&#x2736;',  'Recommendations',  $base . '/partner/recommendations',    $recs,        false],
-        ['alerts',             '&#x1F514;', 'Alerts',           $base . '/partner/alerts',             $alerts,      $urgent > 0],
-        ['commissions',        '&#x1F4B0;', 'Commissions',      $base . '/partner/commissions',        0,            false],
+        ['dashboard',          '&#x1F3E0;', 'Dashboard',       $base . '/partner/dashboard',          0,             false],
+        ['marketplace',        '&#x1F6D2;', 'Order Services',  $base . '/partner/marketplace',        0,             false],
+        ['marketplace-orders', '&#x1F4E6;', 'My Orders',       $base . '/partner/marketplace-orders', $activeOrders, false],
+        ['portfolio',          '&#x1F4CB;', 'Portfolio',        $base . '/partner/portfolio',          0,             false],
+        ['leads',              '&#x1F4AC;', 'Leads',            $base . '/partner/leads',              $overdueL,     false],
+        ['tasks',              '&#x1F4DD;', 'Notes',            $base . '/partner/tasks',              $overdueT,     false],
+        ['commissions',        '&#x1F4B0;', 'Commissions',      $base . '/partner/commissions',        0,             false],
     ];
 
     echo '<nav class="partner-nav" role="navigation" aria-label="Partner navigation">' . "\n";
