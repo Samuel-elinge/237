@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $pdo->prepare("INSERT INTO mp_service_categories (`key`,name_en,name_fr,icon,sort_order,active,orderable) VALUES (?,?,?,?,?,1,0)")
                 ->execute([$key, $nameEn, $nameFr, $icon, $sort]);
-            flash('success', "Category "{$nameEn}" created.");
+            flash('success', "Category '{$nameEn}' created.");
         } else {
             flash('error', 'Category name is required.');
         }
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $pdo->prepare("INSERT INTO mp_service_products (category_id,`key`,name_en,name_fr,description_en,description_fr,service_type,terms_en,terms_fr,sort_order,active,orderable) VALUES (?,?,?,?,?,?,?,?,?,?,1,0)")
                 ->execute([$catId, $key, $nameEn, $nameFr, $descEn, $descFr, $type, $termsEn, $termsFr, $sort]);
-            flash('success', "Product "{$nameEn}" created.");
+            flash('success', "Product '{$nameEn}' created.");
         } else {
             flash('error', 'Product name and category are required.');
         }
