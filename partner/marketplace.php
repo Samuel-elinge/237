@@ -757,8 +757,8 @@ partnerNavBadges($partnerId, $pdo);
   margin-top: .75rem;
   display: none;
 }
-.mp-cart-commission-total .label { font-size: .72rem; color: var(--muted); }
-.mp-cart-commission-total .amount { font-size: 1.1rem; font-weight: 700; color: var(--g); }
+.mp-cart-commission-total .label { font-size: .75rem; font-weight: 600; color: var(--g); text-transform: uppercase; letter-spacing: .04em; }
+.mp-cart-commission-total .amount { font-size: 1.15rem; font-weight: 700; color: var(--g); }
 
 /* Checkout button */
 .mp-checkout-btn {
@@ -1202,7 +1202,7 @@ foreach ($catalogue as $cat) {
         <span class="val" id="cart-total-amount"></span>
       </div>
       <div class="mp-cart-commission-total" id="mp-cart-comm-block">
-        <div class="label">💰 <?= mpT('Partner Commission', 'Commission Partenaire') ?></div>
+        <div class="label">💰 <?= mpT('Commission', 'Commission') ?></div>
         <div class="amount" id="cart-commission-amount"></div>
       </div>
       <div class="mp-approval-notice">
@@ -1261,7 +1261,7 @@ foreach ($catalogue as $cat) {
       <span class="val" id="drawer-total-amount"></span>
     </div>
     <div class="mp-cart-commission-total" id="mp-drawer-comm-block">
-      <div class="label">💰 <?= mpT('Partner Commission', 'Commission Partenaire') ?></div>
+      <div class="label">💰 <?= mpT('Commission', 'Commission') ?></div>
       <div class="amount" id="drawer-commission-amount"></div>
     </div>
     <div class="mp-approval-notice">
@@ -1451,12 +1451,8 @@ function mpRender() {
   if (count) {
     document.getElementById('cart-total-amount').textContent = FMT(totalDue);
     const commBlock = document.getElementById('mp-cart-comm-block');
-    if (totalComm > 0) {
-      commBlock.style.display = '';
-      document.getElementById('cart-commission-amount').textContent = FMT(totalComm);
-    } else {
-      commBlock.style.display = 'none';
-    }
+    commBlock.style.display = '';
+    document.getElementById('cart-commission-amount').textContent = totalComm > 0 ? FMT(totalComm) : '—';
   }
   const noteEl = document.getElementById('mp-partner-note');
   noteEl.style.display = count ? '' : 'none';
@@ -1475,12 +1471,8 @@ function mpRender() {
   if (count) {
     document.getElementById('drawer-total-amount').textContent = FMT(totalDue);
     const dCommBlock = document.getElementById('mp-drawer-comm-block');
-    if (totalComm > 0) {
-      dCommBlock.style.display = '';
-      document.getElementById('drawer-commission-amount').textContent = FMT(totalComm);
-    } else {
-      dCommBlock.style.display = 'none';
-    }
+    dCommBlock.style.display = '';
+    document.getElementById('drawer-commission-amount').textContent = totalComm > 0 ? FMT(totalComm) : '—';
   }
   document.getElementById('mp-drawer-note').style.display = count ? '' : 'none';
   document.getElementById('mp-drawer-checkout-btn').disabled = !count;
