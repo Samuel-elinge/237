@@ -1196,14 +1196,15 @@ foreach ($catalogue as $cat) {
       </div>
     </div>
 
+    <div class="mp-cart-commission-total" id="mp-cart-comm-block">
+      <div class="label">💰 <?= mpT('Commission', 'Commission') ?></div>
+      <div class="amount" id="cart-commission-amount">—</div>
+    </div>
+
     <div id="mp-cart-totals" style="display:none;">
       <div class="mp-cart-total-row">
         <span><?= mpT('Subtotal', 'Sous-total') ?></span>
         <span class="val" id="cart-total-amount"></span>
-      </div>
-      <div class="mp-cart-commission-total" id="mp-cart-comm-block">
-        <div class="label">💰 <?= mpT('Commission', 'Commission') ?></div>
-        <div class="amount" id="cart-commission-amount"></div>
       </div>
       <div class="mp-approval-notice">
         <i class="bi bi-info-circle-fill" style="flex-shrink:0;"></i>
@@ -1255,14 +1256,14 @@ foreach ($catalogue as $cat) {
     <span class="mp-cart-badge" id="drawer-count-badge">0</span>
   </div>
   <div id="mp-drawer-items"></div>
+  <div class="mp-cart-commission-total" id="mp-drawer-comm-block">
+    <div class="label">💰 <?= mpT('Commission', 'Commission') ?></div>
+    <div class="amount" id="drawer-commission-amount">—</div>
+  </div>
   <div id="mp-drawer-totals" style="display:none;">
     <div class="mp-cart-total-row main">
       <span><?= mpT('Total due now', 'Total à payer') ?></span>
       <span class="val" id="drawer-total-amount"></span>
-    </div>
-    <div class="mp-cart-commission-total" id="mp-drawer-comm-block">
-      <div class="label">💰 <?= mpT('Commission', 'Commission') ?></div>
-      <div class="amount" id="drawer-commission-amount"></div>
     </div>
     <div class="mp-approval-notice">
       <i class="bi bi-info-circle-fill" style="flex-shrink:0;"></i>
