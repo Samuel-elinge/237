@@ -72,6 +72,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = 'Business unassigned.';
     }
 
+    if ($action === 'set_commission_rate') {
+        $pid  = (int)$_POST['partner_id'];
+        $rate = min(100, max(0, (float)($_POST['commission_rate'] ?? 10)));
+        $pdo->prepare("UPDATE partner_profiles SET marketplace_commission_rate=? WHERE id=?")
+            ->execute([$rate, $pid]);
+        opsAuditLog('partner.commission_rate_set', 'partner_profile', $pid, ['rate' => $rate]);
+        $msg = 'Commission rate updated to ' . $rate . '%.';
+    }
+
     header('Location: ?tab=' . urlencode($tab) . ($pid ?? '' ? '&pid=' . ($pid ?? '') : '') . '&msg=' . urlencode($msg));
     exit;
 }
@@ -276,6 +285,23 @@ require_once __DIR__ . '/../includes/header.php';
         <?php if ($viewPartner['region']): ?>
         <div class="detail-item"><div class="dl">Region</div><div class="dv"><?= e($viewPartner['region']) ?></div></div>
         <?php endif; ?>
+        <div class="detail-item">
+          <div class="dl">Marketplace Commission</div>
+          <div class="dv" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+            <strong style="color:var(--accent);"><?= number_format((float)($viewPartner['marketplace_commission_rate'] ?? 10), 1) ?>%</strong>
+            <form method="POST" style="display:flex;gap:.4rem;align-items:center;">
+              <?= csrfField() ?>
+              <input type="hidden" name="action" value="set_commission_rate">
+              <input type="hidden" name="partner_id" value="<?= $viewPartner['id'] ?>">
+              <input type="number" name="commission_rate"
+                     value="<?= number_format((float)($viewPartner['marketplace_commission_rate'] ?? 10), 1) ?>"
+                     min="0" max="100" step="0.5"
+                     style="width:70px;padding:.2rem .4rem;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.8rem;">
+              <span style="font-size:.8rem;color:var(--muted);">%</span>
+              <button type="submit" style="font-size:.75rem;padding:.2rem .6rem;border-radius:6px;background:var(--accent);color:#fff;border:none;cursor:pointer;">Save</button>
+            </form>
+          </div>
+        </div>
         <div class="detail-item"><div class="dl">Businesses Managed</div><div class="dv"><?= (int)$viewPartner['businesses_managed_count'] ?></div></div>
         <div class="detail-item"><div class="dl">Applied</div><div class="dv"><?= date('j M Y', strtotime($viewPartner['created_at'])) ?></div></div>
         <?php if ($viewPartner['approved_at']): ?>

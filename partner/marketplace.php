@@ -280,6 +280,10 @@ if ($listingId) {
 
 /* ── READ: service catalogue ─────────────────────────────────── */
 $catalogue = [];
+// Partner's personal marketplace commission rate (default 10% if column not yet set)
+$partnerCommRate = (float)($partnerProfile['marketplace_commission_rate'] ?? 10.0);
+if ($partnerCommRate <= 0) $partnerCommRate = 10.0;
+
 if ($selectedBusiness) {
     $stCat = $pdo->prepare("
         SELECT cat.id AS cat_id, cat.`key` AS cat_key,
@@ -321,7 +325,10 @@ if ($selectedBusiness) {
                 'service_type'    => $row['service_type'],
                 'form_schema'     => json_decode($row['form_schema'] ?? '{}', true) ?: [],
                 'terms'           => $lang === 'fr' ? $row['terms_fr'] : $row['terms_en'],
-                'commission_rate' => (float)($row['partner_commission_rate'] ?? 0),
+                // Use partner's personal rate; fall back to product rate; then 10%
+                'commission_rate' => $partnerCommRate > 0
+                    ? $partnerCommRate
+                    : ((float)($row['partner_commission_rate'] ?? 0) ?: 10.0),
                 'sort_order'      => (int)$row['prod_sort'],
                 'prices'          => [],
             ];
