@@ -8,7 +8,7 @@ require_once __DIR__ . '/../includes/partner-lang.php';
 
 $partnerProfile = requireGrowthPartner();
 $partnerId      = (int)$partnerProfile['id'];
-$userId         = currentUser()['id'];
+$userId         = (int)($_SESSION['user_id'] ?? 0);
 $pdo            = db();
 
 $listingId = (int)($_GET['id'] ?? 0);
