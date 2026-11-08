@@ -288,7 +288,7 @@ require_once __DIR__ . '/../includes/header.php';
               <button class="btn btn-primary" style="font-size:0.85rem;" onclick="adminConfirm('Reactivate this partner?', this.closest('form')); return false;" >↺ Reactivate</button>
             </form>
           <?php endif; ?>
-          <form method="POST" action="<?= SITE_URL ?>/admin/login-as.php" style="display:inline;" target="_blank">
+          <form method="POST" action="<?= SITE_URL ?>/admin/login-as.php" style="display:inline;">
             <?= csrfField() ?>
             <input type="hidden" name="user_id" value="<?= (int)$viewPartner['user_id'] ?>">
             <button class="btn btn-outline" style="font-size:0.85rem;color:#8ab4f8;border-color:#8ab4f8;">👁 View Partner Portal</button>
@@ -464,7 +464,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <td style="white-space:nowrap;">
                   <?php if ($p['pp_id']): ?><a href="?pid=<?= $p['pp_id'] ?>" class="action-link">View →</a><?php endif; ?>
                   &nbsp;
-                  <form method="POST" action="<?= SITE_URL ?>/admin/login-as.php" style="display:inline;" target="_blank">
+                  <form method="POST" action="<?= SITE_URL ?>/admin/login-as.php" style="display:inline;">
                     <?= csrfField() ?>
                     <input type="hidden" name="user_id" value="<?= (int)$p['uid'] ?>">
                     <button style="background:none;border:none;color:#8ab4f8;cursor:pointer;font-size:0.8rem;font-weight:700;"
