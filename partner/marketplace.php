@@ -359,543 +359,981 @@ partnerNavBadges($partnerId, $pdo);
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
-/* ── Marketplace Styles ─────────────────────────── */
+/* ══════════════════════════════════════════════════
+   Marketplace — clean, premium, mobile-first
+   Site is always dark (#081410 bg), so we design
+   for dark and let light surfaces be explicit cards.
+   ══════════════════════════════════════════════════ */
 :root {
-  --mp-green: #00A878;
-  --mp-green-dim: rgba(0,168,120,0.12);
-  --mp-green-border: rgba(0,168,120,0.3);
-  --mp-bg-dark: #081410;
-  --mp-radius: 12px;
-  --mp-panel-bg: #ffffff;
-  --mp-panel-fg: #212529;
-  --mp-card-bg: #ffffff;
-  --mp-card-border: #dee2e6;
-}
-/* Dark mode — the site uses a dark background so detect it */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --mp-panel-bg: #0d1f1a;
-    --mp-panel-fg: #e8f5f1;
-    --mp-card-bg: #0d1f1a;
-    --mp-card-border: rgba(0,168,120,0.25);
-  }
-}
-/* Also support explicit data-theme on <html> if the site sets it */
-[data-theme="dark"] {
-  --mp-panel-bg: #0d1f1a;
-  --mp-panel-fg: #e8f5f1;
-  --mp-card-bg: #0d1f1a;
-  --mp-card-border: rgba(0,168,120,0.25);
+  --g:      #00A878;
+  --g-dim:  rgba(0,168,120,0.14);
+  --g-glow: rgba(0,168,120,0.25);
+  --g-str:  rgba(0,168,120,0.9);
+  --bg:     #081410;
+  --surface: #0f201b;
+  --surface2: #162920;
+  --border:  rgba(255,255,255,0.08);
+  --border-g: rgba(0,168,120,0.3);
+  --text:   #e4ede9;
+  --muted:  rgba(228,237,233,0.55);
+  --radius: 14px;
+  --radius-sm: 9px;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
-/* Cart panel */
-#mp-cart-panel {
-  position: sticky;
-  top: 80px;
-  max-height: calc(100vh - 100px);
-  overflow-y: auto;
-  border-radius: var(--mp-radius);
-  border: 1.5px solid var(--mp-green-border);
-  background: var(--mp-panel-bg);
-  color: var(--mp-panel-fg);
+/* ── Layout shell ── */
+#mp-wrap {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 7rem;
 }
 
-/* Category accordion */
-.mp-cat-header {
-  background: linear-gradient(135deg, var(--mp-green-dim), transparent);
-  border-left: 4px solid var(--mp-green);
-  border-radius: 8px;
-  padding: 1rem 1.25rem;
+/* ── Commission hero banner ── */
+#mp-hero {
+  background: linear-gradient(135deg, #0a2318 0%, #0f2e20 50%, #061a10 100%);
+  border: 1px solid var(--border-g);
+  border-radius: var(--radius);
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+#mp-hero::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 180px; height: 180px;
+  background: radial-gradient(circle, rgba(0,168,120,0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+.mp-hero-stat {
+  text-align: center;
+  padding: 0.5rem 1.5rem;
+  border-right: 1px solid var(--border-g);
+}
+.mp-hero-stat:last-child { border-right: none; }
+.mp-hero-stat .value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--g);
+  line-height: 1;
+}
+.mp-hero-stat .label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-top: .25rem;
+}
+
+/* ── Business pill ── */
+#mp-biz-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50px;
+  padding: .35rem .9rem .35rem .5rem;
+  font-size: .82rem;
+  color: var(--text);
+  margin-bottom: 1.25rem;
+}
+#mp-biz-pill .dot {
+  width: 8px; height: 8px;
+  background: var(--g);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Category tabs ── */
+.mp-tabs {
+  display: flex;
+  gap: .5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 1.5rem;
+  padding-bottom: 2px;
+}
+.mp-tabs::-webkit-scrollbar { display: none; }
+.mp-tab {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .5rem 1.1rem;
+  border-radius: 50px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: .82rem;
+  font-weight: 500;
   cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.mp-tab:hover { border-color: var(--border-g); color: var(--text); }
+.mp-tab.active {
+  background: var(--g);
+  border-color: var(--g);
+  color: #fff;
+  font-weight: 600;
+}
+.mp-tab .icon { font-size: 1rem; }
+.mp-tab .count {
+  background: rgba(255,255,255,0.2);
+  border-radius: 50px;
+  padding: .05rem .4rem;
+  font-size: .68rem;
+}
+.mp-tab.active .count { background: rgba(0,0,0,0.2); }
+
+/* ── Product card grid ── */
+.mp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+/* ── Product card ── */
+.mp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  transition: border-color .2s, transform .15s, box-shadow .15s;
+  position: relative;
+  overflow: hidden;
+}
+.mp-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--tier-color, transparent);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.mp-card:hover {
+  border-color: var(--border-g);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+.mp-card.in-cart {
+  border-color: var(--g);
+  background: linear-gradient(135deg, #0d2419 0%, #112e1f 100%);
+}
+.mp-card.in-cart::after { background: var(--g); }
+
+/* Tier colours */
+.mp-card[data-prod-sort="0"] { --tier-color: #00A878; }
+.mp-card[data-prod-sort="1"] { --tier-color: #f59e0b; }
+.mp-card[data-prod-sort="2"] { --tier-color: #3b82f6; }
+.mp-card[data-prod-sort="3"] { --tier-color: #8b5cf6; }
+
+.mp-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  font-size: .68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  padding: .2rem .6rem;
+  border-radius: 50px;
+  border: 1px solid;
+}
+.mp-tier-0 { color: #00A878; border-color: rgba(0,168,120,.35); background: rgba(0,168,120,.12); }
+.mp-tier-1 { color: #f59e0b; border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.1); }
+.mp-tier-2 { color: #60a5fa; border-color: rgba(96,165,250,.35); background: rgba(96,165,250,.1); }
+.mp-tier-3 { color: #a78bfa; border-color: rgba(167,139,250,.35); background: rgba(167,139,250,.1); }
+
+.mp-card-name {
+  font-size: .95rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+.mp-card-desc {
+  font-size: .78rem;
+  color: var(--muted);
+  line-height: 1.5;
+  flex-grow: 1;
+}
+.mp-price-block { margin-top: auto; }
+.mp-price-main {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--g);
+  line-height: 1;
+}
+.mp-price-sub { font-size: .75rem; color: var(--muted); margin-top: .2rem; }
+
+/* Commission chip on card */
+.mp-comm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  background: rgba(0,168,120,.15);
+  border: 1px solid rgba(0,168,120,.3);
+  color: var(--g);
+  border-radius: 50px;
+  padding: .22rem .65rem;
+  font-size: .72rem;
+  font-weight: 600;
+}
+
+/* Add to order button */
+.mp-btn-add {
+  width: 100%;
+  padding: .6rem;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--g);
+  background: transparent;
+  color: var(--g);
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+}
+.mp-btn-add:hover { background: var(--g); color: #fff; }
+.mp-btn-add.added { background: var(--g); color: #fff; }
+.mp-btn-add.added:hover { background: #c0392b; border-color: #c0392b; }
+
+/* In-cart tick */
+.mp-in-cart-tick {
+  position: absolute;
+  top: .75rem; right: .75rem;
+  width: 22px; height: 22px;
+  background: var(--g);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem;
+  color: #fff;
+  opacity: 0;
+  transform: scale(.5);
+  transition: all .2s;
+}
+.mp-card.in-cart .mp-in-cart-tick { opacity: 1; transform: scale(1); }
+
+/* Upsell banner */
+.mp-upsell {
+  background: linear-gradient(135deg, rgba(245,158,11,.12), rgba(245,158,11,.06));
+  border: 1px dashed rgba(245,158,11,.4);
+  border-radius: var(--radius-sm);
+  padding: .65rem .9rem;
+  font-size: .78rem;
+  color: #fcd34d;
+  display: none;
+  gap: .5rem;
+  align-items: flex-start;
+  margin-top: .25rem;
+}
+.mp-upsell.show { display: flex; }
+.mp-upsell-btn {
+  flex-shrink: 0;
+  background: rgba(245,158,11,.2);
+  border: 1px solid rgba(245,158,11,.4);
+  color: #fcd34d;
+  border-radius: 6px;
+  padding: .2rem .6rem;
+  font-size: .72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.mp-upsell-btn:hover { background: rgba(245,158,11,.35); }
+
+/* ── CART PANEL (desktop sidebar) ── */
+#mp-cart {
+  position: sticky;
+  top: 72px;
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-g);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  color: var(--text);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.mp-cart-title {
+  font-size: .82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--muted);
+  margin-bottom: 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: background 0.15s;
 }
-.mp-cat-header:hover { background: rgba(0,168,120,0.18); }
-
-/* Product cards */
-.mp-product-card {
-  border: 1.5px solid var(--mp-card-border);
-  border-radius: var(--mp-radius);
-  background: var(--mp-card-bg);
-  color: var(--mp-panel-fg);
-  transition: border-color 0.2s, transform 0.15s, box-shadow 0.15s;
-  cursor: default;
-}
-.mp-product-card:hover {
-  border-color: var(--mp-green);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0,168,120,0.15);
-}
-.mp-product-card.in-cart {
-  border-color: var(--mp-green);
-  background: var(--mp-green-dim);
-}
-
-/* Badge for in-cart */
-.mp-in-cart-badge {
-  display: none;
-  font-size: 0.7rem;
-  background: var(--mp-green);
+.mp-cart-badge {
+  background: var(--g);
   color: #fff;
-  padding: 2px 8px;
-  border-radius: 20px;
-  vertical-align: middle;
+  border-radius: 50px;
+  padding: .05rem .5rem;
+  font-size: .72rem;
+  font-weight: 700;
 }
-.mp-product-card.in-cart .mp-in-cart-badge { display: inline; }
-
-/* Price display */
-.mp-price-big { font-size: 1.3rem; font-weight: 700; color: var(--mp-green); }
-.mp-price-sub { font-size: 0.78rem; color: #6c757d; }
-
-/* Upsell banner */
-.mp-upsell-banner {
-  border: 1.5px dashed var(--mp-green);
-  background: var(--mp-green-dim);
-  border-radius: 10px;
-  padding: 0.75rem 1rem;
-  margin-top: 0.5rem;
-  font-size: 0.84rem;
-  display: none;
+.mp-cart-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--muted);
+  font-size: .82rem;
 }
-
-/* Cart item row */
+.mp-cart-empty i { font-size: 2rem; display: block; margin-bottom: .5rem; opacity: .4; }
 .mp-cart-item {
-  border-bottom: 1px solid rgba(0,168,120,0.15);
-  padding: 0.6rem 0;
-  font-size: 0.85rem;
+  display: flex;
+  align-items: flex-start;
+  gap: .6rem;
+  padding: .6rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: .82rem;
 }
 .mp-cart-item:last-child { border-bottom: none; }
+.mp-cart-item-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+  color: var(--text);
+}
+.mp-cart-item-cat { font-size: .68rem; color: var(--muted); }
+.mp-cart-item-price {
+  text-align: right;
+  flex-shrink: 0;
+}
+.mp-cart-item-price .amount { color: var(--g); font-weight: 600; }
+.mp-cart-item-price .comm { font-size: .68rem; color: var(--g); opacity: .75; }
+.mp-cart-remove {
+  background: none; border: none; color: var(--muted);
+  cursor: pointer; font-size: .8rem; padding: 0; line-height: 1;
+  transition: color .15s;
+}
+.mp-cart-remove:hover { color: #ef4444; }
 
-/* Sticky total bar (mobile) */
-#mp-sticky-bar {
+/* Cart totals */
+.mp-cart-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .4rem 0;
+  font-size: .82rem;
+  color: var(--muted);
+}
+.mp-cart-total-row.main {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  border-top: 1px solid var(--border);
+  padding-top: .75rem;
+  margin-top: .25rem;
+}
+.mp-cart-total-row .val { color: var(--g); }
+.mp-cart-commission-total {
+  background: var(--g-dim);
+  border: 1px solid var(--border-g);
+  border-radius: var(--radius-sm);
+  padding: .6rem .9rem;
+  margin-top: .75rem;
   display: none;
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  background: var(--mp-panel-bg);
-  color: var(--mp-panel-fg);
-  border-top: 2px solid var(--mp-green);
-  padding: 0.75rem 1.25rem;
-  z-index: 1030;
-  box-shadow: 0 -4px 16px rgba(0,0,0,0.12);
 }
-@media (max-width: 991px) { #mp-sticky-bar { display: block; } }
+.mp-cart-commission-total .label { font-size: .72rem; color: var(--muted); }
+.mp-cart-commission-total .amount { font-size: 1.1rem; font-weight: 700; color: var(--g); }
 
-/* Commission tag */
-.mp-commission-tag {
-  font-size: 0.75rem;
-  background: var(--mp-green-dim);
-  border: 1px solid var(--mp-green-border);
-  border-radius: 20px;
-  padding: 2px 10px;
-  color: var(--mp-green);
-  font-weight: 600;
-}
-
-/* Tier badge colors */
-.mp-tier-starter  { background: #e8f8f4; color: #00A878; border-color: #aeddd1; }
-.mp-tier-pro      { background: #fff3cd; color: #856404; border-color: #ffe187; }
-.mp-tier-premium  { background: #cff4fc; color: #055160; border-color: #9eeaf9; }
-.mp-tier-enterprise { background: #f8d7da; color: #842029; border-color: #f5c2c7; }
-
-.btn-mp {
-  background: var(--mp-green);
+/* Checkout button */
+.mp-checkout-btn {
+  width: 100%;
+  background: var(--g);
   color: #fff;
   border: none;
-  border-radius: 8px;
-  padding: 0.45rem 1rem;
-  font-weight: 600;
-  font-size: 0.85rem;
-  transition: opacity 0.15s;
+  border-radius: var(--radius-sm);
+  padding: .75rem;
+  font-size: .9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .15s;
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
 }
-.btn-mp:hover { opacity: 0.88; color: #fff; }
-.btn-mp-outline {
-  background: transparent;
-  color: var(--mp-green);
-  border: 1.5px solid var(--mp-green);
-  border-radius: 8px;
-  padding: 0.4rem 1rem;
-  font-weight: 600;
-  font-size: 0.85rem;
-  transition: background 0.15s;
-}
-.btn-mp-outline:hover { background: var(--mp-green-dim); }
+.mp-checkout-btn:hover { opacity: .88; }
+.mp-checkout-btn:disabled { opacity: .4; cursor: not-allowed; }
 
-.mp-empty-cart {
-  text-align: center;
-  padding: 1.5rem 1rem;
-  color: #adb5bd;
-  font-size: 0.85rem;
+/* ── MOBILE BOTTOM BAR ── */
+#mp-mobile-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: #0d2419;
+  border-top: 1px solid var(--border-g);
+  padding: .75rem 1rem;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  z-index: 1040;
+  box-shadow: 0 -4px 20px rgba(0,0,0,.4);
+}
+@media (max-width: 991px) { #mp-mobile-bar { display: flex; } }
+#mp-mobile-bar .summary { flex: 1; }
+#mp-mobile-bar .total-label { font-size: .68rem; color: var(--muted); }
+#mp-mobile-bar .total-amount { font-size: 1.1rem; font-weight: 700; color: var(--g); line-height: 1; }
+#mp-mobile-bar .btn-cart-open {
+  background: var(--g);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: .6rem 1.2rem;
+  font-size: .85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; gap: .4rem;
+  flex-shrink: 0;
+}
+
+/* ── MOBILE CART DRAWER ── */
+#mp-drawer-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 1045;
+}
+#mp-drawer-backdrop.open { display: block; }
+#mp-drawer {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: #0d2419;
+  border-top: 2px solid var(--border-g);
+  border-radius: 20px 20px 0 0;
+  padding: 1.25rem 1.25rem 2.5rem;
+  z-index: 1050;
+  max-height: 85vh;
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform .3s cubic-bezier(.32,0,.67,0);
+}
+#mp-drawer.open { transform: translateY(0); }
+.mp-drawer-handle {
+  width: 36px; height: 4px;
+  background: var(--border);
+  border-radius: 50px;
+  margin: 0 auto .75rem;
+}
+
+/* Partner note field */
+.mp-note-field {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: .6rem .75rem;
+  font-size: .82rem;
+  resize: none;
+  margin-top: .75rem;
+}
+.mp-note-field:focus { outline: none; border-color: var(--border-g); }
+.mp-note-field::placeholder { color: var(--muted); }
+
+/* Approval notice */
+.mp-approval-notice {
+  background: rgba(245,158,11,.1);
+  border: 1px solid rgba(245,158,11,.25);
+  border-radius: var(--radius-sm);
+  padding: .6rem .8rem;
+  font-size: .75rem;
+  color: #fcd34d;
+  margin-top: .75rem;
+  display: flex;
+  gap: .4rem;
+  align-items: flex-start;
+}
+
+/* ── Success screen ── */
+.mp-success { text-align: center; padding: 4rem 1rem; }
+.mp-success .icon { font-size: 3.5rem; }
+.mp-success h2 { color: var(--text); font-weight: 700; margin-top: 1rem; }
+.mp-success p { color: var(--muted); }
+.mp-ref-pill {
+  display: inline-block;
+  background: var(--surface);
+  border: 1px solid var(--border-g);
+  border-radius: 50px;
+  padding: .3rem 1rem;
+  font-size: .82rem;
+  color: var(--g);
+  font-weight: 600;
+  margin: .2rem;
+}
+
+/* ── Step 1: Business list ── */
+.mp-biz-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color .15s, background .15s;
+  margin-bottom: .6rem;
+}
+.mp-biz-card:hover {
+  border-color: var(--border-g);
+  background: var(--surface2);
+  color: var(--text);
+}
+.mp-biz-card .arrow { color: var(--g); font-size: 1.1rem; }
+
+/* ── Responsive ── */
+@media (max-width: 575px) {
+  .mp-grid { grid-template-columns: 1fr; }
+  #mp-hero { padding: 1rem; }
+  .mp-hero-stat .value { font-size: 1.3rem; }
+  #mp-wrap { padding: 1rem .75rem 7rem; }
+}
+@media (min-width: 576px) and (max-width: 767px) {
+  .mp-grid { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
 
-<div style="max-width:1200px; margin:0 auto; padding:2rem 1.5rem 5rem;">
+<div id="mp-wrap">
 
 <?php if ($orderSubmitted): ?>
-<!-- ── ORDER SUCCESS ───────────────────────────────────────────── -->
-<div class="text-center py-5">
-  <div style="font-size:4rem;">✅</div>
-  <h2 class="mt-3"><?= count($submittedRefs) > 1
+<!-- ── ORDER SUCCESS ── -->
+<div class="mp-success">
+  <div class="icon">✅</div>
+  <h2><?= count($submittedRefs) > 1
       ? mpT('Orders Submitted!', 'Commandes soumises !')
       : mpT('Order Submitted!', 'Commande soumise !') ?></h2>
-  <p class="text-muted"><?= mpT(
-      count($submittedRefs) > 1 ? 'References:' : 'Reference:',
-      count($submittedRefs) > 1 ? 'Références :' : 'Référence :'
-  ) ?>
-  <?php foreach ($submittedRefs as $r): ?>
-    <strong class="ms-1"><?= e($r) ?></strong>
-  <?php endforeach; ?>
-  </p>
-  <p class="text-muted"><?= mpT(
+  <p><?= mpT(
       'The business owner has been notified and must approve before payment is collected.',
       'Le propriétaire de l\'entreprise a été notifié et doit approuver avant que le paiement soit collecté.'
   ) ?></p>
-  <div class="d-flex gap-2 justify-content-center flex-wrap mt-3">
+  <div style="margin:1.25rem 0;">
     <?php foreach ($submittedRefs as $r): ?>
-    <a href="<?= SITE_URL ?>/partner/marketplace-order?ref=<?= e($r) ?>" class="btn btn-success">
+    <span class="mp-ref-pill"><?= e($r) ?></span>
+    <?php endforeach; ?>
+  </div>
+  <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:1rem;">
+    <?php foreach ($submittedRefs as $r): ?>
+    <a href="<?= SITE_URL ?>/partner/marketplace-order?ref=<?= e($r) ?>"
+       style="background:var(--g);color:#fff;padding:.6rem 1.2rem;border-radius:9px;text-decoration:none;font-weight:600;font-size:.85rem;">
       <?= mpT('Track', 'Suivre') ?> <?= e($r) ?> →
     </a>
     <?php endforeach; ?>
-    <a href="<?= SITE_URL ?>/partner/marketplace?listing_id=<?= $listingId ?>" class="btn btn-outline-secondary">
+    <a href="<?= SITE_URL ?>/partner/marketplace?listing_id=<?= $listingId ?>"
+       style="border:1px solid var(--border-g);color:var(--g);padding:.6rem 1.2rem;border-radius:9px;text-decoration:none;font-weight:600;font-size:.85rem;">
       <?= mpT('Place Another Order', 'Passer une autre commande') ?>
     </a>
   </div>
 </div>
 
 <?php elseif ($selectedBusiness): ?>
-<!-- ── STEP 2: Catalogue + Cart ───────────────────────────────── -->
-
-<!-- Page header -->
-<div class="d-flex align-items-start gap-3 mb-4 flex-wrap">
-  <div class="flex-grow-1">
-    <h1 style="font-family:'Fraunces',serif;font-size:1.8rem;font-weight:900;margin:0;">
-      🛒 <?= mpT('Services Marketplace', 'Marketplace de Services') ?>
-    </h1>
-    <div class="text-muted mt-1 small">
-      <?= mpT('Ordering for:', 'Commander pour :') ?>
-      <strong><?= e($selectedBusiness['title']) ?></strong>
-      <span class="text-muted">&bull; <?= e($selectedBusiness['cat_en']) ?> · <?= e($selectedBusiness['city']) ?></span>
-      <a href="<?= SITE_URL ?>/partner/marketplace" class="ms-2 text-secondary">(<?= mpT('change business', 'changer d\'entreprise') ?>)</a>
-    </div>
-  </div>
-</div>
+<!-- ── STEP 2: Commission Hero + Catalogue + Cart ── -->
 
 <?php if ($errors): ?>
-<div class="alert alert-danger mb-3">
+<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:9px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#fca5a5;">
   <?php foreach ($errors as $err): ?><div>⚠ <?= e($err) ?></div><?php endforeach; ?>
 </div>
 <?php endif; ?>
 
-<?php if (empty($catalogue)): ?>
-<div class="text-center py-5 card"><div class="card-body">
-  <div style="font-size:3rem;">🏗️</div>
-  <h4 class="mt-3"><?= mpT('Marketplace coming soon', 'Marketplace bientôt disponible') ?></h4>
-  <p class="text-muted"><?= mpT(
-      'The admin is currently configuring the service catalogue. Please check back shortly.',
-      'L\'administrateur configure actuellement le catalogue de services. Veuillez revenir bientôt.'
-  ) ?></p>
-</div></div>
-<?php else: ?>
+<?php
+/* ─── Compute commission stats for hero ─── */
+$heroCommMin = null; $heroCommMax = null; $heroCommPct = null;
+foreach ($catalogue as $cat) {
+  foreach ($cat['products'] as $prod) {
+    if ($prod['commission_rate'] > 0) {
+      if ($heroCommPct === null) $heroCommPct = $prod['commission_rate'];
+      foreach ($prod['prices'] as $pr) {
+        $dn = $pr['price_type'] === 'setup' ? $pr['setup_amount'] : $pr['recurring_amount'];
+        $cm = (int)round($dn * $prod['commission_rate'] / 100);
+        if ($heroCommMin === null || $cm < $heroCommMin) $heroCommMin = $cm;
+        if ($heroCommMax === null || $cm > $heroCommMax) $heroCommMax = $cm;
+      }
+    }
+  }
+}
+?>
 
-<div class="row g-4">
-  <!-- LEFT: Catalogue -->
-  <div class="col-lg-8">
-
-    <?php $catIndex = 0; foreach ($catalogue as $cat): $catIndex++; ?>
-    <div class="mb-4">
-      <!-- Category header -->
-      <div class="mp-cat-header mb-3" data-bs-toggle="collapse" data-bs-target="#cat-<?= e($cat['key']) ?>" aria-expanded="true">
-        <div class="d-flex align-items-center gap-2">
-          <span style="font-size:1.5rem;"><?= e($cat['icon']) ?></span>
-          <div>
-            <div class="fw-bold" style="font-size:1.1rem;"><?= e($cat['name']) ?></div>
-            <div class="text-muted small"><?= count($cat['products']) ?> <?= mpT('service', 'service') ?><?= count($cat['products']) > 1 ? 's' : '' ?></div>
-          </div>
-        </div>
-        <i class="bi bi-chevron-down text-muted" style="transition:transform 0.2s;" id="chevron-<?= e($cat['key']) ?>"></i>
+<!-- Commission hero -->
+<div id="mp-hero">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+    <div>
+      <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.3rem;">
+        <?= mpT('Your Earning Opportunity', 'Votre opportunité de revenus') ?>
       </div>
-
-      <!-- Products grid -->
-      <div class="collapse show" id="cat-<?= e($cat['key']) ?>">
-        <div class="row g-3">
-          <?php
-          $products = array_values($cat['products']);
-          // Sort by sort_order
-          usort($products, fn($a, $b) => $a['sort_order'] <=> $b['sort_order']);
-          $prodCount = count($products);
-          foreach ($products as $prodIdx => $prod):
-            // Pick primary price
-            $mainPrice = null;
-            $renewalPrice = null;
-            foreach ($prod['prices'] as $pr) {
-                if ($pr['price_type'] === 'setup' && !$mainPrice) $mainPrice = $pr;
-                if ($pr['price_type'] === 'recurring' && !$renewalPrice) $renewalPrice = $pr;
-            }
-            if (!$mainPrice) $mainPrice = $renewalPrice;
-            if (!$mainPrice) continue;
-
-            $dueNow    = $mainPrice['price_type'] === 'setup' ? $mainPrice['setup_amount'] : $mainPrice['recurring_amount'];
-            $commRate  = $prod['commission_rate'];
-            $commAmt   = $commRate > 0 ? (int)round($dueNow * $commRate / 100) : 0;
-
-            // Tier detection for styling (by sort order position)
-            $tierClass = match($prodIdx) {
-                0 => 'mp-tier-starter',
-                1 => 'mp-tier-pro',
-                2 => 'mp-tier-premium',
-                default => 'mp-tier-enterprise',
-            };
-          ?>
-          <div class="col-md-6 col-xl-4">
-            <div class="card mp-product-card h-100"
-                 id="card-<?= $prod['id'] ?>"
-                 data-product-id="<?= $prod['id'] ?>"
-                 data-price-id="<?= $mainPrice['id'] ?>"
-                 data-product-name="<?= e($prod['name']) ?>"
-                 data-cat-key="<?= e($cat['key']) ?>"
-                 data-cat-name="<?= e($cat['name']) ?>"
-                 data-due-now="<?= $dueNow ?>"
-                 data-price-type="<?= e($mainPrice['price_type']) ?>"
-                 data-setup-amount="<?= $mainPrice['setup_amount'] ?>"
-                 data-recurring-amount="<?= $mainPrice['recurring_amount'] ?>"
-                 data-billing-interval="<?= e($mainPrice['billing_interval'] ?? '') ?>"
-                 data-mailbox-limit="<?= (int)($mainPrice['mailbox_limit'] ?? 0) ?>"
-                 data-comm-rate="<?= $commRate ?>"
-                 data-comm-amt="<?= $commAmt ?>"
-                 data-prod-sort="<?= $prodIdx ?>"
-                 data-prod-count="<?= $prodCount ?>">
-              <div class="card-body d-flex flex-column p-3">
-                <!-- Name + badge -->
-                <div class="d-flex align-items-start justify-content-between mb-1 gap-2">
-                  <div>
-                    <span class="badge <?= $tierClass ?> mb-1" style="font-size:0.68rem;">
-                      <?= mpT(
-                          match($prodIdx){ 0=>'Starter', 1=>'Professional', 2=>'Premium', default=>'Enterprise' },
-                          match($prodIdx){ 0=>'Démarrage', 1=>'Professionnel', 2=>'Premium', default=>'Entreprise' }
-                      ) ?>
-                    </span>
-                    <span class="mp-in-cart-badge">✓ <?= mpT('In cart', 'Dans le panier') ?></span>
-                  </div>
-                </div>
-
-                <h6 class="card-title mb-1" style="font-size:0.95rem;"><?= e($prod['name']) ?></h6>
-                <?php if ($prod['description']): ?>
-                <p class="card-text text-muted" style="font-size:0.78rem; flex-grow:1;"><?= e($prod['description']) ?></p>
-                <?php endif; ?>
-
-                <!-- Price -->
-                <div class="mt-auto">
-                  <div class="mp-price-big">
-                    <?= mpFmt($dueNow) ?>
-                  </div>
-                  <?php if ($mainPrice['price_type'] === 'setup'): ?>
-                  <div class="mp-price-sub"><?= mpT('one-time setup', 'mise en place unique') ?></div>
-                  <?php if ($renewalPrice && $renewalPrice['recurring_amount'] > 0): ?>
-                  <div class="mp-price-sub">+ <?= mpFmt($renewalPrice['recurring_amount']) ?> <?= mpInterval($renewalPrice['billing_interval']) ?></div>
-                  <?php endif; ?>
-                  <?php else: ?>
-                  <div class="mp-price-sub"><?= mpInterval($mainPrice['billing_interval']) ?></div>
-                  <?php if ($mainPrice['mailbox_limit']): ?>
-                  <div class="mp-price-sub"><?= mpT('up to', 'jusqu\'à') ?> <?= (int)$mainPrice['mailbox_limit'] ?> <?= mpT('mailboxes', 'boîtes mail') ?></div>
-                  <?php endif; ?>
-                  <?php endif; ?>
-
-                  <?php if ($commRate > 0): ?>
-                  <div class="mt-1">
-                    <span class="mp-commission-tag">💰 +<?= mpFmt($commAmt) ?> <?= mpT('commission', 'commission') ?></span>
-                  </div>
-                  <?php endif; ?>
-
-                  <!-- Add/Remove cart button -->
-                  <button type="button"
-                          class="btn btn-mp w-100 mt-3 mp-cart-btn"
-                          data-product-id="<?= $prod['id'] ?>"
-                          onclick="mpToggleCart(<?= $prod['id'] ?>)">
-                    <i class="bi bi-cart-plus me-1"></i> <?= mpT('Add to Order', 'Ajouter à la commande') ?>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Upsell banner (shown below the card if a lower tier is in cart) -->
-            <div class="mp-upsell-banner" id="upsell-<?= $prod['id'] ?>">
-              <span class="fw-semibold">⚡ <?= mpT('Upgrade suggestion', 'Suggestion de mise à niveau') ?></span><br>
-              <span id="upsell-text-<?= $prod['id'] ?>"></span>
-              <button class="btn btn-mp-outline btn-sm mt-1" onclick="mpUpsellSwitch(<?= $prod['id'] ?>)">
-                <?= mpT('Upgrade →', 'Mettre à niveau →') ?>
-              </button>
-            </div>
-          </div>
-          <?php endforeach; ?>
-        </div>
+      <div style="font-size:1.15rem;font-weight:700;color:var(--text);">
+        💰 <?= mpT('Earn commission on every service you sell', 'Gagnez une commission sur chaque service vendu') ?>
       </div>
-    </div>
-    <?php endforeach; ?>
-
-  </div><!-- /col-lg-8 -->
-
-  <!-- RIGHT: Cart panel -->
-  <div class="col-lg-4 d-none d-lg-block">
-    <div id="mp-cart-panel" class="p-3">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <h6 class="fw-bold mb-0">🛒 <?= mpT('Your Order', 'Votre commande') ?></h6>
-        <span class="badge bg-success" id="cart-count-badge">0</span>
-      </div>
-
-      <!-- Cart items list -->
-      <div id="mp-cart-items">
-        <div class="mp-empty-cart" id="mp-cart-empty">
-          <i class="bi bi-cart3 d-block mb-2" style="font-size:2rem;"></i>
-          <?= mpT('No services selected yet.<br>Browse the catalogue →', 'Aucun service sélectionné.<br>Parcourez le catalogue →') ?>
-        </div>
-      </div>
-
-      <!-- Totals -->
-      <div id="mp-cart-totals" class="d-none border-top pt-3 mt-2">
-        <div class="d-flex justify-content-between small mb-1">
-          <span><?= mpT('Subtotal due now', 'Sous-total à payer') ?></span>
-          <strong id="cart-total-amount" class="text-success"></strong>
-        </div>
-        <div class="d-flex justify-content-between small text-muted mb-2" id="cart-commission-row" style="display:none!important;">
-          <span>💰 <?= mpT('Your total commission', 'Votre commission totale') ?></span>
-          <strong id="cart-commission-amount" style="color:var(--mp-green);"></strong>
-        </div>
-        <div class="alert alert-warning p-2 mb-2" style="font-size:0.76rem;">
-          ⚠ <?= mpT('Owner approval required before payment.', 'Approbation du propriétaire requise avant paiement.') ?>
-        </div>
-      </div>
-
-      <!-- Note field -->
-      <div class="mt-2" id="mp-note-wrap" style="display:none;">
-        <label class="form-label small fw-semibold"><?= mpT('Note to admin (optional)', 'Note à l\'admin (facultatif)') ?></label>
-        <textarea id="mp-partner-note" class="form-control form-control-sm" rows="2" placeholder="<?= mpT('Any specific requirements...', 'Exigences spécifiques...') ?>"></textarea>
-      </div>
-
-      <!-- Checkout button -->
-      <div class="mt-3" id="mp-checkout-wrap" style="display:none;">
-        <button class="btn btn-mp w-100" id="mp-checkout-btn" onclick="mpCheckout()">
-          <i class="bi bi-check2-circle me-1"></i> <?= mpT('Submit Order Request', 'Soumettre la commande') ?>
-        </button>
-      </div>
-
-      <!-- Payment info -->
-      <?php if ($mtnNum || $orangeNum): ?>
-      <div class="mt-3 border-top pt-3 small text-muted" id="mp-payment-info" style="display:none;">
-        <?php if ($payInstruction): ?><div class="mb-1"><?= nl2br(e($payInstruction)) ?></div><?php endif; ?>
-        <?php if ($mtnNum): ?><div>📱 MTN MoMo: <strong><?= e($mtnNum) ?></strong></div><?php endif; ?>
-        <?php if ($orangeNum): ?><div>🍊 Orange Money: <strong><?= e($orangeNum) ?></strong></div><?php endif; ?>
+      <?php if ($heroCommPct): ?>
+      <div style="font-size:.82rem;color:var(--muted);margin-top:.3rem;">
+        <?= mpT('Commission is paid to you once the order is approved by the business owner.', 'La commission vous est versée une fois la commande approuvée par le propriétaire.') ?>
       </div>
       <?php endif; ?>
     </div>
-  </div><!-- /col-lg-4 -->
-</div><!-- /row -->
+    <div style="display:flex;align-items:stretch;gap:0;">
+      <?php if ($heroCommPct): ?>
+      <div class="mp-hero-stat">
+        <div class="value"><?= $heroCommPct ?>%</div>
+        <div class="label"><?= mpT('Commission rate', 'Taux de commission') ?></div>
+      </div>
+      <?php endif; ?>
+      <?php if ($heroCommMin !== null): ?>
+      <div class="mp-hero-stat">
+        <div class="value"><?= number_format($heroCommMin, 0, '.', ' ') ?></div>
+        <div class="label">FCFA <?= mpT('min/order', 'min/commande') ?></div>
+      </div>
+      <div class="mp-hero-stat">
+        <div class="value"><?= number_format($heroCommMax, 0, '.', ' ') ?></div>
+        <div class="label">FCFA <?= mpT('max/order', 'max/commande') ?></div>
+      </div>
+      <?php endif; ?>
+    </div>
+  </div>
+</div>
+
+<!-- Business pill + change link -->
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:1.25rem;">
+  <div id="mp-biz-pill">
+    <span class="dot"></span>
+    <strong><?= e($selectedBusiness['title']) ?></strong>
+    <span style="color:var(--muted);">· <?= e($selectedBusiness['city']) ?></span>
+  </div>
+  <a href="<?= SITE_URL ?>/partner/marketplace"
+     style="font-size:.78rem;color:var(--muted);text-decoration:none;"><?= mpT('← Change business', '← Changer d\'entreprise') ?></a>
+</div>
+
+<?php if (empty($catalogue)): ?>
+<div style="text-align:center;padding:4rem 1rem;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);">
+  <div style="font-size:3rem;">🏗️</div>
+  <h4 style="color:var(--text);margin:.75rem 0 .5rem;"><?= mpT('Marketplace coming soon', 'Marketplace bientôt disponible') ?></h4>
+  <p style="color:var(--muted);font-size:.85rem;"><?= mpT(
+      'The admin is currently configuring the service catalogue. Please check back shortly.',
+      'L\'administrateur configure actuellement le catalogue de services. Veuillez revenir bientôt.'
+  ) ?></p>
+</div>
+<?php else: ?>
+
+<!-- Two-column layout: catalogue + cart -->
+<div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;" id="mp-layout">
+
+  <!-- ── LEFT: Catalogue ── -->
+  <div>
+    <!-- Category tabs -->
+    <div class="mp-tabs" id="mp-tabs">
+      <?php $firstCat = true; foreach ($catalogue as $cat):
+        $catProdCount = count($cat['products']); ?>
+      <button class="mp-tab <?= $firstCat ? 'active' : '' ?>"
+              data-cat="<?= e($cat['key']) ?>"
+              onclick="mpSwitchTab('<?= e($cat['key']) ?>')">
+        <span class="icon"><?= e($cat['icon']) ?></span>
+        <?= e($cat['name']) ?>
+        <span class="count"><?= $catProdCount ?></span>
+      </button>
+      <?php $firstCat = false; endforeach; ?>
+    </div>
+
+    <!-- Category panels -->
+    <?php $firstCat = true; foreach ($catalogue as $cat):
+      $products = array_values($cat['products']);
+      usort($products, fn($a, $b) => $a['sort_order'] <=> $b['sort_order']);
+      $prodCount = count($products);
+    ?>
+    <div class="mp-cat-panel" id="panel-<?= e($cat['key']) ?>" style="display:<?= $firstCat ? 'block' : 'none' ?>;">
+      <div class="mp-grid">
+        <?php foreach ($products as $prodIdx => $prod):
+          $mainPrice = null; $renewalPrice = null;
+          foreach ($prod['prices'] as $pr) {
+            if ($pr['price_type'] === 'setup' && !$mainPrice) $mainPrice = $pr;
+            if ($pr['price_type'] === 'recurring' && !$renewalPrice) $renewalPrice = $pr;
+          }
+          if (!$mainPrice) $mainPrice = $renewalPrice;
+          if (!$mainPrice) continue;
+
+          $dueNow   = $mainPrice['price_type'] === 'setup' ? $mainPrice['setup_amount'] : $mainPrice['recurring_amount'];
+          $commRate = $prod['commission_rate'];
+          $commAmt  = $commRate > 0 ? (int)round($dueNow * $commRate / 100) : 0;
+          $tierLabels = ['Starter','Professional','Premium','Enterprise'];
+          $tierLabelsFr = ['Démarrage','Professionnel','Premium','Entreprise'];
+          $tierLabel = $tierLabels[$prodIdx] ?? 'Enterprise';
+          $tierLabelFr = $tierLabelsFr[$prodIdx] ?? 'Entreprise';
+        ?>
+        <div class="mp-card"
+             id="card-<?= $prod['id'] ?>"
+             data-product-id="<?= $prod['id'] ?>"
+             data-price-id="<?= $mainPrice['id'] ?>"
+             data-product-name="<?= e($prod['name']) ?>"
+             data-cat-key="<?= e($cat['key']) ?>"
+             data-cat-name="<?= e($cat['name']) ?>"
+             data-due-now="<?= $dueNow ?>"
+             data-price-type="<?= e($mainPrice['price_type']) ?>"
+             data-setup-amount="<?= $mainPrice['setup_amount'] ?>"
+             data-recurring-amount="<?= $mainPrice['recurring_amount'] ?>"
+             data-billing-interval="<?= e($mainPrice['billing_interval'] ?? '') ?>"
+             data-mailbox-limit="<?= (int)($mainPrice['mailbox_limit'] ?? 0) ?>"
+             data-comm-rate="<?= $commRate ?>"
+             data-comm-amt="<?= $commAmt ?>"
+             data-prod-sort="<?= $prodIdx ?>"
+             data-prod-count="<?= $prodCount ?>">
+
+          <!-- In-cart tick -->
+          <div class="mp-in-cart-tick"><i class="bi bi-check"></i></div>
+
+          <!-- Tier badge -->
+          <div class="mp-tier-badge mp-tier-<?= $prodIdx <= 3 ? $prodIdx : 3 ?>">
+            <?= e(mpT($tierLabel, $tierLabelFr)) ?>
+          </div>
+
+          <!-- Name -->
+          <div class="mp-card-name"><?= e($prod['name']) ?></div>
+
+          <!-- Description -->
+          <?php if ($prod['description']): ?>
+          <div class="mp-card-desc"><?= e($prod['description']) ?></div>
+          <?php endif; ?>
+
+          <!-- Price + commission -->
+          <div class="mp-price-block">
+            <div class="mp-price-main"><?= mpFmt($dueNow) ?></div>
+            <?php if ($mainPrice['price_type'] === 'setup'): ?>
+            <div class="mp-price-sub"><?= mpT('one-time setup', 'mise en place unique') ?>
+              <?php if ($renewalPrice && $renewalPrice['recurring_amount'] > 0): ?>
+              · +<?= mpFmt($renewalPrice['recurring_amount']) ?> <?= mpInterval($renewalPrice['billing_interval']) ?>
+              <?php endif; ?>
+            </div>
+            <?php else: ?>
+            <div class="mp-price-sub"><?= mpInterval($mainPrice['billing_interval']) ?>
+              <?php if ($mainPrice['mailbox_limit']): ?>
+              · <?= mpT('up to', 'jusqu\'à') ?> <?= (int)$mainPrice['mailbox_limit'] ?> <?= mpT('mailboxes', 'boîtes mail') ?>
+              <?php endif; ?>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($commRate > 0): ?>
+            <div style="margin-top:.5rem;">
+              <span class="mp-comm-chip">
+                <i class="bi bi-currency-exchange"></i>
+                +<?= mpFmt($commAmt) ?> <?= mpT('commission', 'commission') ?>
+                <span style="opacity:.65;">(<?= $commRate ?>%)</span>
+              </span>
+            </div>
+            <?php endif; ?>
+          </div>
+
+          <!-- Add to order button -->
+          <button type="button" class="mp-btn-add" data-product-id="<?= $prod['id'] ?>"
+                  onclick="mpToggleCart(<?= $prod['id'] ?>)">
+            <i class="bi bi-cart-plus"></i>
+            <span><?= mpT('Add to Order', 'Ajouter à la commande') ?></span>
+          </button>
+
+          <!-- Upsell hint -->
+          <div class="mp-upsell" id="upsell-<?= $prod['id'] ?>">
+            <i class="bi bi-arrow-up-circle-fill" style="flex-shrink:0;margin-top:.1rem;"></i>
+            <div style="flex:1;">
+              <span id="upsell-text-<?= $prod['id'] ?>"></span>
+              <button class="mp-upsell-btn" onclick="mpUpsellSwitch(<?= $prod['id'] ?>)">
+                <?= mpT('Upgrade', 'Mettre à niveau') ?> →
+              </button>
+            </div>
+          </div>
+
+        </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+    <?php $firstCat = false; endforeach; ?>
+  </div><!-- /catalogue -->
+
+  <!-- ── RIGHT: Cart sidebar ── -->
+  <div id="mp-cart">
+    <div class="mp-cart-title">
+      <?= mpT('Your Order', 'Votre commande') ?>
+      <span class="mp-cart-badge" id="cart-count-badge">0</span>
+    </div>
+
+    <div id="mp-cart-items">
+      <div class="mp-cart-empty" id="mp-cart-empty">
+        <i class="bi bi-bag"></i>
+        <?= mpT('No services selected.<br>Browse the catalogue.', 'Aucun service sélectionné.<br>Parcourez le catalogue.') ?>
+      </div>
+    </div>
+
+    <div id="mp-cart-totals" style="display:none;">
+      <div class="mp-cart-total-row">
+        <span><?= mpT('Subtotal', 'Sous-total') ?></span>
+        <span class="val" id="cart-total-amount"></span>
+      </div>
+      <div class="mp-cart-commission-total" id="mp-cart-comm-block">
+        <div class="label">💰 <?= mpT('Your commission', 'Votre commission') ?></div>
+        <div class="amount" id="cart-commission-amount"></div>
+      </div>
+      <div class="mp-approval-notice">
+        <i class="bi bi-info-circle-fill" style="flex-shrink:0;"></i>
+        <?= mpT('Owner approval required before payment is collected.', 'Approbation du propriétaire requise avant collecte du paiement.') ?>
+      </div>
+
+      <?php if ($mtnNum || $orangeNum): ?>
+      <div id="mp-payment-info" style="margin-top:.75rem;padding:.6rem .8rem;background:var(--surface2);border-radius:var(--radius-sm);font-size:.75rem;color:var(--muted);">
+        <?php if ($payInstruction): ?><div style="margin-bottom:.35rem;"><?= nl2br(e($payInstruction)) ?></div><?php endif; ?>
+        <?php if ($mtnNum): ?><div>📱 MTN MoMo: <strong style="color:var(--text);"><?= e($mtnNum) ?></strong></div><?php endif; ?>
+        <?php if ($orangeNum): ?><div>🍊 Orange Money: <strong style="color:var(--text);"><?= e($orangeNum) ?></strong></div><?php endif; ?>
+      </div>
+      <?php endif; ?>
+    </div>
+
+    <textarea class="mp-note-field" id="mp-partner-note" rows="2"
+              placeholder="<?= mpT('Note to admin (optional)…', 'Note à l\'admin (facultatif)…') ?>"
+              style="display:none;"></textarea>
+
+    <button class="mp-checkout-btn" id="mp-checkout-btn" disabled onclick="mpCheckout()">
+      <i class="bi bi-check2-circle"></i>
+      <?= mpT('Submit Order Request', 'Soumettre la commande') ?>
+    </button>
+  </div><!-- /cart -->
+
+</div><!-- /mp-layout -->
+
+<!-- Mobile bottom bar -->
+<div id="mp-mobile-bar">
+  <div class="summary">
+    <div class="total-label"><?= mpT('Order total', 'Total commande') ?></div>
+    <div class="total-amount" id="mobile-total">—</div>
+  </div>
+  <button class="btn-cart-open" onclick="mpOpenDrawer()">
+    <i class="bi bi-bag-check"></i>
+    <span><?= mpT('Review Order', 'Voir la commande') ?></span>
+    <span style="background:rgba(255,255,255,.25);border-radius:50px;padding:.05rem .45rem;font-size:.7rem;" id="mobile-badge">0</span>
+  </button>
+</div>
+
+<!-- Mobile drawer backdrop -->
+<div id="mp-drawer-backdrop" onclick="mpCloseDrawer()"></div>
+
+<!-- Mobile cart drawer -->
+<div id="mp-drawer">
+  <div class="mp-drawer-handle"></div>
+  <div class="mp-cart-title">
+    <?= mpT('Your Order', 'Votre commande') ?>
+    <span class="mp-cart-badge" id="drawer-count-badge">0</span>
+  </div>
+  <div id="mp-drawer-items"></div>
+  <div id="mp-drawer-totals" style="display:none;">
+    <div class="mp-cart-total-row main">
+      <span><?= mpT('Total due now', 'Total à payer') ?></span>
+      <span class="val" id="drawer-total-amount"></span>
+    </div>
+    <div class="mp-cart-commission-total" id="mp-drawer-comm-block">
+      <div class="label">💰 <?= mpT('Your commission', 'Votre commission') ?></div>
+      <div class="amount" id="drawer-commission-amount"></div>
+    </div>
+    <div class="mp-approval-notice">
+      <i class="bi bi-info-circle-fill" style="flex-shrink:0;"></i>
+      <?= mpT('Owner must approve before payment.', 'Le propriétaire doit approuver avant paiement.') ?>
+    </div>
+  </div>
+  <textarea class="mp-note-field" id="mp-drawer-note" rows="2"
+            placeholder="<?= mpT('Note to admin (optional)…', 'Note à l\'admin (facultatif)…') ?>"
+            style="display:none;"></textarea>
+  <button class="mp-checkout-btn" id="mp-drawer-checkout-btn" disabled onclick="mpCheckout()">
+    <i class="bi bi-check2-circle"></i>
+    <?= mpT('Submit Order Request', 'Soumettre la commande') ?>
+  </button>
+</div>
 
 <!-- Hidden checkout form -->
 <form id="mp-checkout-form" method="POST" action="<?= SITE_URL ?>/partner/marketplace?listing_id=<?= $listingId ?>" style="display:none;">
   <?= csrfField() ?>
-  <input type="hidden" name="listing_id"   value="<?= $listingId ?>">
-  <input type="hidden" name="submit_order"  value="1">
-  <input type="hidden" name="partner_note"  id="form-partner-note">
-  <input type="hidden" name="cart_json"     id="form-cart-json">
+  <input type="hidden" name="listing_id"  value="<?= $listingId ?>">
+  <input type="hidden" name="submit_order" value="1">
+  <input type="hidden" name="partner_note" id="form-partner-note">
+  <input type="hidden" name="cart_json"    id="form-cart-json">
 </form>
-
-<!-- Mobile sticky bar -->
-<div id="mp-sticky-bar">
-  <div class="d-flex align-items-center justify-content-between">
-    <div>
-      <span class="fw-bold" id="sticky-total"></span>
-      <span class="text-muted small ms-1" id="sticky-items"></span>
-    </div>
-    <button class="btn btn-mp" onclick="mpCheckout()" id="mp-sticky-checkout" disabled>
-      <?= mpT('Submit Order', 'Soumettre') ?>
-    </button>
-  </div>
-</div>
 
 <?php endif; // catalogue not empty ?>
 
 <?php else: ?>
-<!-- ── STEP 1: Select Business ────────────────────────────────── -->
-<div class="mb-4">
-  <h1 style="font-family:'Fraunces',serif;font-size:2rem;font-weight:900;margin:0;">
-    🛒 <?= mpT('Services Marketplace', 'Marketplace de Services') ?>
+<!-- ── STEP 1: Select Business ── -->
+<div style="margin-bottom:2rem;">
+  <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:.5rem;">
+    <?= mpT('Partner Portal', 'Portail Partenaire') ?>
+  </div>
+  <h1 style="font-size:1.6rem;font-weight:700;color:var(--text);margin:0 0 .4rem;">
+    <?= mpT('Services Marketplace', 'Marketplace de Services') ?>
   </h1>
-  <p class="text-muted mt-1"><?= mpT(
-      'Request professional services for businesses in your portfolio.',
-      'Commandez des services professionnels pour les entreprises de votre portefeuille.'
-  ) ?></p>
+  <p style="color:var(--muted);font-size:.88rem;margin:0;">
+    <?= mpT('Request professional services for businesses in your portfolio — and earn commission on every sale.', 'Commandez des services pour les entreprises de votre portefeuille et gagnez une commission sur chaque vente.') ?>
+  </p>
 </div>
 
 <?php if (!$businessList): ?>
-<div class="text-center py-5 card"><div class="card-body">
+<div style="text-align:center;padding:3rem 1rem;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);">
   <div style="font-size:3rem;">📭</div>
-  <h4 class="mt-3"><?= mpT('No businesses in your portfolio', 'Aucune entreprise dans votre portefeuille') ?></h4>
-  <p class="text-muted"><?= mpT(
+  <h4 style="color:var(--text);margin:.75rem 0 .5rem;"><?= mpT('No businesses in your portfolio', 'Aucune entreprise dans votre portefeuille') ?></h4>
+  <p style="color:var(--muted);font-size:.82rem;"><?= mpT(
       'You need an actively assigned business to place a service order.',
       'Vous avez besoin d\'une entreprise assignée active pour passer une commande.'
   ) ?></p>
-</div></div>
-<?php else: ?>
-<div class="card shadow-sm mb-4">
-  <div class="card-header fw-bold"><?= mpT('Select a Business', 'Sélectionner une entreprise') ?></div>
-  <div class="list-group list-group-flush">
-    <?php foreach ($businessList as $biz): ?>
-    <a href="<?= SITE_URL ?>/partner/marketplace?listing_id=<?= $biz['id'] ?>"
-       class="list-group-item list-group-item-action d-flex align-items-center justify-content-between py-3">
-      <div>
-        <strong><?= e($biz['title']) ?></strong>
-        <div class="text-muted small"><?= e($biz['cat_en']) ?> · <?= e($biz['city']) ?></div>
-      </div>
-      <span class="text-success">→</span>
-    </a>
-    <?php endforeach; ?>
-  </div>
 </div>
+<?php else: ?>
+<div style="font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.75rem;">
+  <?= mpT('Select a Business', 'Sélectionner une entreprise') ?>
+</div>
+<?php foreach ($businessList as $biz): ?>
+<a href="<?= SITE_URL ?>/partner/marketplace?listing_id=<?= $biz['id'] ?>" class="mp-biz-card">
+  <div>
+    <div style="font-weight:600;font-size:.9rem;"><?= e($biz['title']) ?></div>
+    <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem;"><?= e($biz['cat_en']) ?> · <?= e($biz['city']) ?></div>
+  </div>
+  <i class="bi bi-arrow-right arrow"></i>
+</a>
+<?php endforeach; ?>
 <?php endif; ?>
 <?php endif; ?>
 
-</div><!-- /main container -->
+</div><!-- /#mp-wrap -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 
 <?php if ($selectedBusiness && !$orderSubmitted && !empty($catalogue)): ?>
 <script>
-/* ── Marketplace Cart Engine ─────────────────────────── */
-const LISTING_ID  = <?= $listingId ?>;
-const LANG        = <?= json_encode($lang) ?>;
-const CATALOGUE   = <?= $catalogueJson ?>;
-const FMT_FCFA    = n => new Intl.NumberFormat('fr-FR').format(n) + ' FCFA';
-
-// Cart: { productId: { product_id, price_id, product_name, cat_key, cat_name,
-//                       due_now, price_type, setup_amount, recurring_amount,
-//                       billing_interval, mailbox_limit, comm_rate, comm_amt,
-//                       prod_sort, prod_count } }
+/* ═══════════════════════════════════════════════════
+   Marketplace Cart Engine — v2 (clean redesign)
+   ═══════════════════════════════════════════════════ */
+const LANG      = <?= json_encode($lang) ?>;
+const CATALOGUE = <?= $catalogueJson ?>;
+const FMT       = n => new Intl.NumberFormat('fr-FR').format(n) + ' FCFA';
 let cart = {};
 
-// --- Chevron toggle on accordion ---
-document.querySelectorAll('[data-bs-target]').forEach(btn => {
-  const targetId = btn.getAttribute('data-bs-target');
-  const collapse = document.querySelector(targetId);
-  if (!collapse) return;
-  collapse.addEventListener('show.bs.collapse', () => {
-    const ch = btn.querySelector('[id^="chevron-"]');
-    if (ch) ch.style.transform = 'rotate(0deg)';
-  });
-  collapse.addEventListener('hide.bs.collapse', () => {
-    const ch = btn.querySelector('[id^="chevron-"]');
-    if (ch) ch.style.transform = 'rotate(-90deg)';
-  });
-});
+/* ── Category tabs ── */
+function mpSwitchTab(catKey) {
+  document.querySelectorAll('.mp-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.cat === catKey));
+  document.querySelectorAll('.mp-cat-panel').forEach(p =>
+    p.style.display = p.id === 'panel-' + catKey ? 'block' : 'none');
+}
 
+/* ── Cart logic ── */
 function mpToggleCart(productId) {
-  if (cart[productId]) {
-    mpRemoveFromCart(productId);
-  } else {
-    mpAddToCart(productId);
-  }
+  cart[productId] ? mpRemoveFromCart(productId) : mpAddToCart(productId);
 }
 
 function mpAddToCart(productId) {
@@ -903,221 +1341,217 @@ function mpAddToCart(productId) {
   if (!card) return;
   const d = card.dataset;
   cart[productId] = {
-    product_id:        parseInt(d.productId),
-    price_id:          parseInt(d.priceId),
-    product_name:      d.productName,
-    cat_key:           d.catKey,
-    cat_name:          d.catName,
-    due_now:           parseInt(d.dueNow),
-    price_type:        d.priceType,
-    setup_amount:      parseInt(d.setupAmount),
-    recurring_amount:  parseInt(d.recurringAmount),
-    billing_interval:  d.billingInterval,
-    mailbox_limit:     parseInt(d.mailboxLimit) || 0,
-    comm_rate:         parseFloat(d.commRate) || 0,
-    comm_amt:          parseInt(d.commAmt) || 0,
-    prod_sort:         parseInt(d.prodSort),
-    prod_count:        parseInt(d.prodCount),
+    product_id:       parseInt(d.productId),
+    price_id:         parseInt(d.priceId),
+    product_name:     d.productName,
+    cat_key:          d.catKey,
+    cat_name:         d.catName,
+    due_now:          parseInt(d.dueNow),
+    price_type:       d.priceType,
+    setup_amount:     parseInt(d.setupAmount),
+    recurring_amount: parseInt(d.recurringAmount),
+    billing_interval: d.billingInterval,
+    mailbox_limit:    parseInt(d.mailboxLimit) || 0,
+    comm_rate:        parseFloat(d.commRate) || 0,
+    comm_amt:         parseInt(d.commAmt) || 0,
+    prod_sort:        parseInt(d.prodSort),
+    prod_count:       parseInt(d.prodCount),
   };
   mpRender();
-  mpCheckUpsell(productId);
+  mpCheckCategoryUpsells();
 }
 
 function mpRemoveFromCart(productId) {
   delete cart[productId];
   mpRender();
-  mpCheckUpsell(productId);
-  // Also hide upsell for items in same category
   mpCheckCategoryUpsells();
 }
 
+/* ── Render ── */
 function mpRender() {
-  const items      = Object.values(cart);
-  const count      = items.length;
-  const totalDue   = items.reduce((s, i) => s + i.due_now, 0);
-  const totalComm  = items.reduce((s, i) => s + i.comm_amt, 0);
+  const items     = Object.values(cart);
+  const count     = items.length;
+  const totalDue  = items.reduce((s, i) => s + i.due_now, 0);
+  const totalComm = items.reduce((s, i) => s + i.comm_amt, 0);
 
-  // Badge
-  document.getElementById('cart-count-badge').textContent = count;
-
-  // Cart items HTML
-  const itemsEl = document.getElementById('mp-cart-items');
-  const emptyEl = document.getElementById('mp-cart-empty');
-  if (count === 0) {
-    // Reset items list to just the empty message
-    itemsEl.innerHTML = '';
-    itemsEl.appendChild(Object.assign(document.createElement('div'), {
-      className: 'mp-empty-cart',
-      id: 'mp-cart-empty',
-      innerHTML: '<i class="bi bi-cart3 d-block mb-2" style="font-size:2rem;"></i>' +
-        (LANG === 'fr'
-          ? 'Aucun service sélectionné.<br>Parcourez le catalogue →'
-          : 'No services selected yet.<br>Browse the catalogue →')
-    }));
-  } else {
-    let html = '';
-    for (const item of items) {
-      const intervalLabel = item.billing_interval === 'MONTH'
-        ? (LANG === 'fr' ? '/ mois' : '/ month')
-        : item.billing_interval === 'YEAR' ? (LANG === 'fr' ? '/ an' : '/ year') : '';
-      const priceLabel = item.price_type === 'setup'
-        ? FMT_FCFA(item.setup_amount) + (LANG === 'fr' ? ' (mise en place)' : ' (setup)')
-        : FMT_FCFA(item.recurring_amount) + ' ' + intervalLabel;
-      html += `<div class="mp-cart-item d-flex justify-content-between align-items-start gap-2">
-        <div style="flex:1;min-width:0;">
-          <div class="fw-semibold text-truncate" title="${item.product_name}">${item.product_name}</div>
-          <div class="text-muted" style="font-size:0.72rem;">${item.cat_name}</div>
-        </div>
-        <div class="text-end" style="white-space:nowrap;">
-          <div class="fw-bold text-success" style="font-size:0.85rem;">${priceLabel}</div>
-          ${item.comm_amt > 0 ? `<div style="font-size:0.68rem;color:var(--mp-green);">+${FMT_FCFA(item.comm_amt)}</div>` : ''}
-          <button class="btn btn-link btn-sm text-danger p-0" style="font-size:0.72rem;" onclick="mpRemoveFromCart(${item.product_id})">
-            <i class="bi bi-x-circle"></i> ${LANG === 'fr' ? 'Retirer' : 'Remove'}
-          </button>
-        </div>
-      </div>`;
-    }
-    itemsEl.innerHTML = html;
-  }
-
-  // Totals
-  const totalsEl = document.getElementById('mp-cart-totals');
-  if (count > 0) {
-    totalsEl.classList.remove('d-none');
-    document.getElementById('cart-total-amount').textContent = FMT_FCFA(totalDue);
-    const commRow = document.getElementById('cart-commission-row');
-    if (totalComm > 0) {
-      commRow.style.removeProperty('display');
-      document.getElementById('cart-commission-amount').textContent = FMT_FCFA(totalComm);
-    } else {
-      commRow.style.display = 'none';
-    }
-  } else {
-    totalsEl.classList.add('d-none');
-  }
-
-  // Note + checkout
-  document.getElementById('mp-note-wrap').style.display    = count > 0 ? '' : 'none';
-  document.getElementById('mp-checkout-wrap').style.display = count > 0 ? '' : 'none';
-  const piEl = document.getElementById('mp-payment-info');
-  if (piEl) piEl.style.display = count > 0 ? '' : 'none';
-
-  // Sticky bar (mobile)
-  const stickyBtn = document.getElementById('mp-sticky-checkout');
-  document.getElementById('sticky-total').textContent  = count > 0 ? FMT_FCFA(totalDue) : '';
-  document.getElementById('sticky-items').textContent  = count > 0
-    ? `(${count} ${LANG === 'fr' ? (count > 1 ? 'services' : 'service') : (count > 1 ? 'services' : 'service')})`
-    : '';
-  stickyBtn.disabled = count === 0;
-
-  // Card state (in-cart highlight + button label)
-  document.querySelectorAll('.mp-product-card').forEach(card => {
+  /* Card states */
+  document.querySelectorAll('.mp-card[data-product-id]').forEach(card => {
     const pid = parseInt(card.dataset.productId);
     const inCart = !!cart[pid];
     card.classList.toggle('in-cart', inCart);
-    const btn = card.querySelector('.mp-cart-btn');
+    const btn = card.querySelector('.mp-btn-add');
+    const icon = btn ? btn.querySelector('i') : null;
+    const lbl  = btn ? btn.querySelector('span') : null;
     if (btn) {
-      if (inCart) {
-        btn.innerHTML = '<i class="bi bi-cart-dash me-1"></i>' + (LANG === 'fr' ? 'Retirer' : 'Remove');
-        btn.style.background = '#6c757d';
-      } else {
-        btn.innerHTML = '<i class="bi bi-cart-plus me-1"></i>' + (LANG === 'fr' ? 'Ajouter à la commande' : 'Add to Order');
-        btn.style.background = '';
-      }
+      btn.classList.toggle('added', inCart);
+      if (icon) icon.className = inCart ? 'bi bi-cart-dash' : 'bi bi-cart-plus';
+      if (lbl)  lbl.textContent = inCart
+        ? (LANG === 'fr' ? 'Retirer' : 'Remove')
+        : (LANG === 'fr' ? 'Ajouter à la commande' : 'Add to Order');
     }
   });
+
+  /* Build cart HTML */
+  const renderCartHTML = () => {
+    if (!count) return `<div class="mp-cart-empty">
+      <i class="bi bi-bag"></i>
+      ${LANG === 'fr' ? 'Aucun service sélectionné.' : 'No services selected.'}
+    </div>`;
+    return items.map(item => {
+      const itvl = item.billing_interval === 'MONTH' ? (LANG==='fr'?'/ mois':'/ month')
+                 : item.billing_interval === 'YEAR'  ? (LANG==='fr'?'/ an':'/ year') : '';
+      const price = item.price_type === 'setup'
+        ? FMT(item.setup_amount) + (LANG==='fr'?' (mise en place)':' (setup)')
+        : FMT(item.recurring_amount) + ' ' + itvl;
+      return `<div class="mp-cart-item">
+        <div class="mp-cart-item-name">
+          ${item.product_name}
+          <div class="mp-cart-item-cat">${item.cat_name}</div>
+        </div>
+        <div class="mp-cart-item-price">
+          <div class="amount">${price}</div>
+          ${item.comm_amt > 0 ? `<div class="comm">+${FMT(item.comm_amt)}</div>` : ''}
+        </div>
+        <button class="mp-cart-remove" onclick="mpRemoveFromCart(${item.product_id})" title="Remove">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>`;
+    }).join('');
+  };
+
+  /* Desktop cart */
+  document.getElementById('mp-cart-items').innerHTML = renderCartHTML();
+  document.getElementById('cart-count-badge').textContent = count;
+  const totals = document.getElementById('mp-cart-totals');
+  totals.style.display = count ? '' : 'none';
+  if (count) {
+    document.getElementById('cart-total-amount').textContent = FMT(totalDue);
+    const commBlock = document.getElementById('mp-cart-comm-block');
+    if (totalComm > 0) {
+      commBlock.style.display = '';
+      document.getElementById('cart-commission-amount').textContent = FMT(totalComm);
+    } else {
+      commBlock.style.display = 'none';
+    }
+  }
+  const noteEl = document.getElementById('mp-partner-note');
+  noteEl.style.display = count ? '' : 'none';
+  const checkBtn = document.getElementById('mp-checkout-btn');
+  checkBtn.disabled = !count;
+
+  /* Mobile bar */
+  document.getElementById('mobile-total').textContent = count ? FMT(totalDue) : '—';
+  document.getElementById('mobile-badge').textContent = count;
+
+  /* Drawer */
+  document.getElementById('mp-drawer-items').innerHTML = renderCartHTML();
+  document.getElementById('drawer-count-badge').textContent = count;
+  const dTotals = document.getElementById('mp-drawer-totals');
+  dTotals.style.display = count ? '' : 'none';
+  if (count) {
+    document.getElementById('drawer-total-amount').textContent = FMT(totalDue);
+    const dCommBlock = document.getElementById('mp-drawer-comm-block');
+    if (totalComm > 0) {
+      dCommBlock.style.display = '';
+      document.getElementById('drawer-commission-amount').textContent = FMT(totalComm);
+    } else {
+      dCommBlock.style.display = 'none';
+    }
+  }
+  document.getElementById('mp-drawer-note').style.display = count ? '' : 'none';
+  document.getElementById('mp-drawer-checkout-btn').disabled = !count;
 }
 
-/* ── Upsell Logic ──────────────────────────────────────── */
-// If a lower-tier product is in cart and a higher tier exists in same category,
-// show upgrade prompt below the higher-tier card.
-function mpCheckUpsell(changedProductId) {
-  mpCheckCategoryUpsells();
-}
-
+/* ── Upsell logic ── */
 function mpCheckCategoryUpsells() {
-  // For each category, find if any product is in cart
-  // then show upsell banner on the NEXT tier up (if not already in cart)
   for (const catKey in CATALOGUE) {
-    const cat = CATALOGUE[catKey];
-    const prods = Object.values(cat.products).sort((a, b) => a.sort_order - b.sort_order);
-    // Find lowest-sort-order item in cart for this category
+    const prods = Object.values(CATALOGUE[catKey].products).sort((a, b) => a.sort_order - b.sort_order);
     let lowestInCart = null;
-    for (const prod of prods) {
-      if (cart[prod.id]) {
-        lowestInCart = prod;
-        break;
-      }
+    for (const p of prods) {
+      if (cart[p.id]) { lowestInCart = p; break; }
     }
-    // Hide all upsell banners for this category first
-    for (const prod of prods) {
-      const el = document.getElementById('upsell-' + prod.id);
-      if (el) el.style.display = 'none';
-    }
-    // Show upsell for the next tier up
-    if (lowestInCart !== null) {
-      const idx = prods.findIndex(p => p.id === lowestInCart.id);
-      if (idx < prods.length - 1) {
-        const nextProd = prods[idx + 1];
-        if (!cart[nextProd.id]) {
-          const el = document.getElementById('upsell-' + nextProd.id);
-          const textEl = document.getElementById('upsell-text-' + nextProd.id);
-          if (el && textEl) {
-            // Calculate upgrade price difference
-            const currentPrice = lowestInCart.prices[0] || {};
-            const nextPrice = nextProd.prices[0] || {};
-            const currentDue = currentPrice.price_type === 'setup' ? currentPrice.setup_amount : currentPrice.recurring_amount;
-            const nextDue = nextPrice.price_type === 'setup' ? nextPrice.setup_amount : nextPrice.recurring_amount;
-            const diff = nextDue - currentDue;
-
-            if (LANG === 'fr') {
-              textEl.innerHTML = `Passez à <strong>${nextProd.name}</strong> pour seulement <strong>+${FMT_FCFA(diff)}</strong> supplémentaire et bénéficiez de plus de fonctionnalités.`;
-            } else {
-              textEl.innerHTML = `Upgrade to <strong>${nextProd.name}</strong> for just <strong>+${FMT_FCFA(diff)}</strong> more and unlock more features.`;
-            }
-            el.style.display = 'block';
-          }
+    // Hide all upsells for this category
+    prods.forEach(p => {
+      const el = document.getElementById('upsell-' + p.id);
+      if (el) el.classList.remove('show');
+    });
+    if (!lowestInCart) continue;
+    const idx = prods.findIndex(p => p.id === lowestInCart.id);
+    if (idx < prods.length - 1) {
+      const next = prods[idx + 1];
+      if (!cart[next.id]) {
+        const el   = document.getElementById('upsell-' + next.id);
+        const txt  = document.getElementById('upsell-text-' + next.id);
+        if (el && txt) {
+          const curP  = lowestInCart.prices[0] || {};
+          const nxtP  = next.prices[0] || {};
+          const curD  = curP.price_type === 'setup' ? curP.setup_amount : curP.recurring_amount;
+          const nxtD  = nxtP.price_type === 'setup' ? nxtP.setup_amount : nxtP.recurring_amount;
+          const diff  = nxtD - curD;
+          txt.innerHTML = LANG === 'fr'
+            ? `Passez à <strong>${next.name}</strong> pour +<strong>${FMT(diff)}</strong> seulement.`
+            : `Upgrade to <strong>${next.name}</strong> for just +<strong>${FMT(diff)}</strong> more.`;
+          el.classList.add('show');
         }
       }
     }
   }
 }
 
-function mpUpsellSwitch(upgradedProductId) {
-  // Find what's in cart in same category and remove it, add this one
-  const upgradeCard = document.getElementById('card-' + upgradedProductId);
-  if (!upgradeCard) return;
-  const catKey = upgradeCard.dataset.catKey;
-
-  // Remove any cart items in same category
+function mpUpsellSwitch(upgradedId) {
+  const card = document.getElementById('card-' + upgradedId);
+  if (!card) return;
+  const catKey = card.dataset.catKey;
   for (const pid in cart) {
-    if (cart[pid].cat_key === catKey) {
-      delete cart[pid];
-    }
+    if (cart[pid].cat_key === catKey) delete cart[pid];
   }
-  mpAddToCart(upgradedProductId);
+  mpAddToCart(upgradedId);
 }
 
-/* ── Checkout ──────────────────────────────────────────── */
+/* ── Drawer (mobile) ── */
+function mpOpenDrawer() {
+  document.getElementById('mp-drawer').classList.add('open');
+  document.getElementById('mp-drawer-backdrop').classList.add('open');
+}
+function mpCloseDrawer() {
+  document.getElementById('mp-drawer').classList.remove('open');
+  document.getElementById('mp-drawer-backdrop').classList.remove('open');
+}
+
+/* ── Responsive cart hide on desktop ── */
+function mpHandleResize() {
+  const layout = document.getElementById('mp-layout');
+  if (!layout) return;
+  if (window.innerWidth < 992) {
+    layout.style.gridTemplateColumns = '1fr';
+    document.getElementById('mp-cart').style.display = 'none';
+  } else {
+    layout.style.gridTemplateColumns = '1fr 320px';
+    document.getElementById('mp-cart').style.display = '';
+    mpCloseDrawer();
+  }
+}
+window.addEventListener('resize', mpHandleResize);
+mpHandleResize();
+
+/* ── Checkout ── */
 function mpCheckout() {
   const items = Object.values(cart);
   if (!items.length) return;
-
-  const note = document.getElementById('mp-partner-note').value;
-  document.getElementById('form-partner-note').value = note;
-
-  // Build cart JSON for server
-  const cartData = items.map(i => ({
+  // Sync notes from whichever field is visible
+  const noteDesktop = document.getElementById('mp-partner-note').value;
+  const noteDrawer  = document.getElementById('mp-drawer-note').value;
+  document.getElementById('form-partner-note').value = noteDesktop || noteDrawer;
+  document.getElementById('form-cart-json').value = JSON.stringify(items.map(i => ({
     product_id:   i.product_id,
     price_id:     i.price_id,
     mailbox_count: i.mailbox_limit > 0 ? 1 : 0,
     fields: {}
-  }));
-  document.getElementById('form-cart-json').value = JSON.stringify(cartData);
+  })));
   document.getElementById('mp-checkout-form').submit();
 }
 
-// Init
+/* Init */
 mpRender();
 </script>
 <?php endif; ?>
