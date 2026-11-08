@@ -164,9 +164,21 @@ function fetchPartnerListings(int $partnerId): array {
 
 /**
  * Check partner has access to a specific listing.
+ * Covers both: assigned listings (partner_business_assignments) and
+ * listings the partner owns directly via their user account.
  */
 function partnerCanAccessListing(int $partnerId, int $listingId): bool {
-    $st = db()->prepare("SELECT id FROM partner_business_assignments WHERE partner_id = ? AND listing_id = ? AND status = 'active'");
+    $pdo = db();
+    // Direct assignment check
+    $st = $pdo->prepare("SELECT id FROM partner_business_assignments WHERE partner_id = ? AND listing_id = ? AND status = 'active'");
+    $st->execute([$partnerId, $listingId]);
+    if ($st->fetch()) return true;
+    // Own listing check (listing belongs to the partner's user account)
+    $st = $pdo->prepare("
+        SELECT l.id FROM listings l
+        JOIN partner_profiles pp ON pp.user_id = l.user_id
+        WHERE pp.id = ? AND l.id = ? AND l.status IN ('active','approved')
+    ");
     $st->execute([$partnerId, $listingId]);
     return (bool)$st->fetch();
 }
