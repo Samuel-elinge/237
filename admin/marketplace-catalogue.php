@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/flash-helpers.php';
+require_once __DIR__ . '/../includes/partner-helpers.php';
 requireAdmin();
 
 $pdo = db();
