@@ -426,7 +426,11 @@ require_once __DIR__ . '/../includes/header.php';
           <tbody>
             <!-- DEBUG: partners_count=<?= count($partners) ?> ob_level=<?= ob_get_level() ?> -->
             <?php if ($partners): ?>
-              <?php set_error_handler(function($no,$str,$f,$l){ echo "<!-- PHP_ERR e=$no msg=".htmlspecialchars($str)." line=$l -->"; return true; }); ?>
+              <?php
+              set_error_handler(function($no,$str,$f,$l){ echo "<!-- PHP_ERR e=$no msg=".htmlspecialchars($str)." line=$l -->"; return true; });
+              set_exception_handler(function($ex){ echo "<!-- PHP_EX class=".get_class($ex)." msg=".htmlspecialchars($ex->getMessage())." line=".$ex->getLine()." -->"; });
+              register_shutdown_function(function(){ $e=error_get_last(); if($e && in_array($e['type'],[E_ERROR,E_PARSE,E_CORE_ERROR,E_COMPILE_ERROR])){ echo "<!-- PHP_FATAL type={$e['type']} msg=".htmlspecialchars($e['message'])." line={$e['line']} -->"; } });
+              ?>
               <?php $__i=0; foreach ($partners as $p): $__i++; ?>
               <!-- DEBUG_ROW_<?= $__i ?> uid=<?= $p['uid'] ?> -->
               <tr>
