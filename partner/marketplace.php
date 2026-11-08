@@ -13,8 +13,13 @@ require_once __DIR__ . '/../includes/partner-helpers.php';
 
 $partnerProfile = requireGrowthPartner();
 $partnerId      = (int)$partnerProfile['id'];   // partner_profiles.id
-$user           = currentUser();
+$userId         = (int)($_SESSION['user_id'] ?? 0);
 $pdo            = db();
+
+// Build a minimal $user array for lang + id (used in order logic below)
+$userRow = $pdo->prepare("SELECT id, lang FROM users WHERE id = ? LIMIT 1");
+$userRow->execute([$userId]);
+$user = $userRow->fetch() ?: ['id' => $userId, 'lang' => 'en'];
 
 $lang = $user['lang'] ?? 'en';
 
@@ -269,11 +274,17 @@ if ($listingId) {
         JOIN categories c   ON c.id  = l.category_id
         JOIN locations  loc ON loc.id = l.location_id
         JOIN users u        ON u.id   = l.user_id
-        JOIN partner_business_assignments pba ON pba.listing_id = l.id AND pba.partner_id = ? AND pba.status = 'active'
         WHERE l.id = ? AND l.status IN ('active','approved')
+          AND (
+            EXISTS (
+                SELECT 1 FROM partner_business_assignments pba
+                WHERE pba.listing_id = l.id AND pba.partner_id = ? AND pba.status = 'active'
+            )
+            OR l.user_id = (SELECT user_id FROM partner_profiles WHERE id = ?)
+          )
         LIMIT 1
     ");
-    $stSB->execute([$partnerId, $listingId]);
+    $stSB->execute([$listingId, $partnerId, $partnerId]);
     $selectedBusiness = $stSB->fetch();
 }
 
@@ -364,11 +375,18 @@ $mtnNum   = getSettingCached('mtn_momo_number')    ?: '';
 $orangeNum = getSettingCached('orange_money_number') ?: '';
 
 /* ── Page ─────────────────────────────────────────────────────── */
-$pageTitle = mpT('Services Marketplace', 'Marketplace de Services');
-require_once __DIR__ . '/../includes/partner-header.php';
+$pageTitle = mpT('Services Marketplace', 'Marketplace de Services') . ' — Growth Workspace';
+require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/includes/nav.php';
+partnerNavBadges($partnerId, $pdo);
 ?>
+<?php partnerNavAssets(); ?>
+<?php partnerNav('marketplace'); ?>
 
-<div class="container py-4" style="max-width:1100px;">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+
+<div style="max-width:1100px; margin:0 auto; padding:2rem 1.5rem;">
 
 <?php if ($orderSubmitted): ?>
   <div class="text-center py-5">
@@ -678,4 +696,5 @@ require_once __DIR__ . '/../includes/partner-header.php';
 <?php endif; ?>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
