@@ -424,8 +424,10 @@ require_once __DIR__ . '/../includes/header.php';
             </tr>
           </thead>
           <tbody>
+            <!-- DEBUG: partners_count=<?= count($partners) ?> -->
             <?php if ($partners): ?>
               <?php foreach ($partners as $p): ?>
+              <!-- DEBUG_ROW uid=<?= $p['uid'] ?> -->
               <tr>
                 <td>
                   <div style="font-weight:600;"><?= e($p['user_name']) ?></div>
