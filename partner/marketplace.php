@@ -13,13 +13,8 @@ require_once __DIR__ . '/../includes/partner-helpers.php';
 
 $partnerProfile = requireGrowthPartner();
 $partnerId      = (int)$partnerProfile['id'];   // partner_profiles.id
-$userId         = (int)($_SESSION['user_id'] ?? 0);
+$user           = currentUser();
 $pdo            = db();
-
-// Build a minimal $user array for lang + id (used in order logic below)
-$userRow = $pdo->prepare("SELECT id, lang FROM users WHERE id = ? LIMIT 1");
-$userRow->execute([$userId]);
-$user = $userRow->fetch() ?: ['id' => $userId, 'lang' => 'en'];
 
 $lang = $user['lang'] ?? 'en';
 
