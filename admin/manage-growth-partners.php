@@ -95,13 +95,11 @@ $partners = $pdo->query("
     SELECT pp.id, pp.user_id, pp.status, pp.organisation, pp.region, pp.phone,
            pp.display_name, pp.tagline, pp.created_at,
            COALESCE(pp.marketplace_commission_rate, 10) AS marketplace_commission_rate,
-           u.name AS user_name, u.email AS user_email,
-           COUNT(DISTINCT pba.id) AS assigned_count
+           COALESCE(pp.businesses_managed_count, 0) AS assigned_count,
+           u.id AS uid, u.name AS user_name, u.email AS user_email
     FROM users u
     LEFT JOIN partner_profiles pp ON pp.user_id = u.id
-    LEFT JOIN partner_business_assignments pba ON pba.partner_id = pp.id AND pba.status='active'
     WHERE u.role = 'growth_partner'
-    GROUP BY u.id
     ORDER BY COALESCE(pp.created_at, u.created_at) DESC
 ")->fetchAll();
 
@@ -148,11 +146,13 @@ if (isset($_GET['pid'])) {
 // Summary stats for overview tab
 $overviewStats = $pdo->query("
     SELECT
-        COUNT(*) AS total,
-        SUM(status IN ('approved','active')) AS active,
-        SUM(status='pending') AS pending,
-        SUM(status='suspended') AS suspended
-    FROM partner_profiles
+        COUNT(DISTINCT u.id) AS total,
+        SUM(COALESCE(pp.status,'') IN ('approved','active')) AS active,
+        SUM(COALESCE(pp.status,'') = 'pending') AS pending,
+        SUM(COALESCE(pp.status,'') = 'suspended') AS suspended
+    FROM users u
+    LEFT JOIN partner_profiles pp ON pp.user_id = u.id
+    WHERE u.role = 'growth_partner'
 ")->fetch();
 
 $pageTitle = 'Manage Growth Partners — Admin';
@@ -455,7 +455,7 @@ require_once __DIR__ . '/../includes/header.php';
                   &nbsp;
                   <form method="POST" action="<?= SITE_URL ?>/admin/login-as.php" style="display:inline;" target="_blank">
                     <?= csrfField() ?>
-                    <input type="hidden" name="user_id" value="<?= (int)$p['user_id'] ?>">
+                    <input type="hidden" name="user_id" value="<?= (int)$p['uid'] ?>">
                     <button style="background:none;border:none;color:#8ab4f8;cursor:pointer;font-size:0.8rem;font-weight:700;"
                       title="View partner portal as <?= e(addslashes($p['user_name'])) ?>">👁 Login as</button>
                   </form>
