@@ -31,23 +31,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ][$type] ?? 'General';
 
         $body = "
-<h2>New Contact Form Submission — 237Biz</h2>
-<table style='border-collapse:collapse;width:100%;'>
-<tr><td style='padding:8px;border-bottom:1px solid #eee;font-weight:bold;width:120px;'>Type</td><td style='padding:8px;border-bottom:1px solid #eee;'>" . htmlspecialchars($typeLabel) . "</td></tr>
-<tr><td style='padding:8px;border-bottom:1px solid #eee;font-weight:bold;'>Name</td><td style='padding:8px;border-bottom:1px solid #eee;'>" . htmlspecialchars($name) . "</td></tr>
-<tr><td style='padding:8px;border-bottom:1px solid #eee;font-weight:bold;'>Email</td><td style='padding:8px;border-bottom:1px solid #eee;'>" . htmlspecialchars($email) . "</td></tr>
-<tr><td style='padding:8px;border-bottom:1px solid #eee;font-weight:bold;'>Subject</td><td style='padding:8px;border-bottom:1px solid #eee;'>" . htmlspecialchars($subject) . "</td></tr>
-<tr><td style='padding:8px;font-weight:bold;'>Message</td><td style='padding:8px;'>" . nl2br(htmlspecialchars($message)) . "</td></tr>
-</table>";
+<div style='font-family:Arial,sans-serif;background:#ffffff;color:#111111;padding:24px;max-width:600px;margin:0 auto;'>
+  <div style='background:#00A878;padding:16px 24px;border-radius:8px 8px 0 0;'>
+    <span style='color:#fff;font-size:18px;font-weight:bold;'>237Biz.net</span>
+    <span style='color:rgba(255,255,255,0.75);font-size:13px;margin-left:8px;'>New Contact Form Submission</span>
+  </div>
+  <div style='border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;padding:24px;'>
+    <table style='border-collapse:collapse;width:100%;color:#111111;font-size:14px;'>
+      <tr><td style='padding:10px 8px;border-bottom:1px solid #eee;font-weight:bold;width:100px;color:#555;'>Type</td><td style='padding:10px 8px;border-bottom:1px solid #eee;'>" . htmlspecialchars($typeLabel) . "</td></tr>
+      <tr><td style='padding:10px 8px;border-bottom:1px solid #eee;font-weight:bold;color:#555;'>Name</td><td style='padding:10px 8px;border-bottom:1px solid #eee;'>" . htmlspecialchars($name) . "</td></tr>
+      <tr><td style='padding:10px 8px;border-bottom:1px solid #eee;font-weight:bold;color:#555;'>Email</td><td style='padding:10px 8px;border-bottom:1px solid #eee;'><a href='mailto:" . htmlspecialchars($email) . "' style='color:#00A878;'>" . htmlspecialchars($email) . "</a></td></tr>
+      <tr><td style='padding:10px 8px;border-bottom:1px solid #eee;font-weight:bold;color:#555;'>Subject</td><td style='padding:10px 8px;border-bottom:1px solid #eee;'>" . htmlspecialchars($subject) . "</td></tr>
+      <tr><td style='padding:10px 8px;font-weight:bold;color:#555;vertical-align:top;'>Message</td><td style='padding:10px 8px;line-height:1.6;'>" . nl2br(htmlspecialchars($message)) . "</td></tr>
+    </table>
+  </div>
+</div>";
 
         try {
             sendMail(SITE_EMAIL, "[237Biz Contact] {$typeLabel}: " . htmlspecialchars($subject), $body);
             // Auto-reply to sender
-            $autoReply = '<h2 style="color:#fff;font-family:Georgia,serif;">✅ ' . t('Message received','Message reçu') . '</h2>
-<p style="color:rgba(255,255,255,0.7);">' . t('Hi','Bonjour') . ' ' . htmlspecialchars($name) . ',</p>
-<p style="color:rgba(255,255,255,0.7);">' . t('Thank you for contacting 237Biz. We have received your message and will respond within 24–48 hours.','Merci de contacter 237Biz. Nous avons bien reçu votre message et vous répondrons dans les 24–48 heures.') . '</p>
-<p style="color:rgba(255,255,255,0.7);"><strong>' . t('Your message','Votre message') . ':</strong><br>' . nl2br(htmlspecialchars($message)) . '</p>
-<a href="' . SITE_URL . '" style="display:inline-block;margin:1rem 0;background:#00A878;color:#fff;padding:0.75rem 1.5rem;border-radius:5px;text-decoration:none;">← 237Biz.net</a>';
+            $autoReply = '
+<div style="font-family:Arial,sans-serif;background:#ffffff;color:#111111;padding:24px;max-width:600px;margin:0 auto;">
+  <div style="background:#00A878;padding:16px 24px;border-radius:8px 8px 0 0;">
+    <span style="color:#fff;font-size:18px;font-weight:bold;">237Biz.net</span>
+  </div>
+  <div style="border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;padding:24px;">
+    <h2 style="color:#00A878;font-size:18px;margin:0 0 16px;">✅ ' . t('Message received','Message reçu') . '</h2>
+    <p style="color:#333;margin:0 0 12px;">' . t('Hi','Bonjour') . ' ' . htmlspecialchars($name) . ',</p>
+    <p style="color:#333;margin:0 0 12px;">' . t('Thank you for contacting 237Biz. We have received your message and will respond within 24–48 hours.','Merci de contacter 237Biz. Nous avons bien reçu votre message et vous répondrons dans les 24–48 heures.') . '</p>
+    <div style="background:#f5f5f5;border-left:3px solid #00A878;padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0;">
+      <p style="color:#555;font-size:13px;margin:0 0 8px;font-weight:bold;">' . t('Your message','Votre message') . ':</p>
+      <p style="color:#333;font-size:14px;margin:0;line-height:1.6;">' . nl2br(htmlspecialchars($message)) . '</p>
+    </div>
+    <a href="' . SITE_URL . '" style="display:inline-block;margin-top:16px;background:#00A878;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:14px;">← 237Biz.net</a>
+  </div>
+</div>';
             sendMail($email, t('We received your message — 237Biz', 'Nous avons reçu votre message — 237Biz'), $autoReply);
             $sent = true;
         } catch(Exception $e) {
