@@ -1,7 +1,14 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
 
-if (isLoggedIn()) redirect(SITE_URL . '/dashboard.php');
+if (isLoggedIn()) {
+    $r = currentUser()['role'] ?? '';
+    if ($r === 'growth_partner')                        redirect(SITE_URL . '/partner/dashboard');
+    elseif ($r === 'sales_staff')                       redirect(SITE_URL . '/agent/dashboard');
+    elseif ($r === 'creator')                           redirect(SITE_URL . '/creator/dashboard');
+    elseif (in_array($r, ['admin','operations_admin'])) redirect(SITE_URL . '/admin/');
+    else                                                redirect(SITE_URL . '/dashboard.php');
+}
 
 $mode   = $_GET['mode'] ?? 'login';
 $errors = [];
@@ -58,6 +65,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // ─────────────────────────────────────────
 
                 flash('success', t('Welcome back, ', 'Bienvenue, ') . $user['name'] . '!');
+                // Role-based default redirect (only when no ?next= was given)
+                if ($next === SITE_URL . '/dashboard') {
+                    if ($user['role'] === 'growth_partner') {
+                        $next = SITE_URL . '/partner/dashboard';
+                    } elseif ($user['role'] === 'sales_staff') {
+                        $next = SITE_URL . '/agent/dashboard';
+                    } elseif ($user['role'] === 'creator') {
+                        $next = SITE_URL . '/creator/dashboard';
+                    } elseif (in_array($user['role'], ['admin', 'operations_admin'])) {
+                        $next = SITE_URL . '/admin/';
+                    }
+                }
                 redirect($next);
             }
         } else {
