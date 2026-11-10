@@ -93,10 +93,16 @@ $st->execute([$pid]); $urgentAlertsCount = (int)$st->fetchColumn();
 /* ── Attention queue ────────────────────────────────────────────── */
 $attentionQueue = getAttentionQueue($pid);
 
+/* ── Audit link ─────────────────────────────────────────────────── */
+$slugSt = $pdo->prepare("SELECT slug FROM partner_profiles WHERE id=?");
+$slugSt->execute([$pid]);
+$partnerSlug = $slugSt->fetchColumn() ?: $pid;
+$auditUrl = SITE_URL . '/audit/' . urlencode($partnerSlug);
+
 /* ── Active leads list ──────────────────────────────────────────── */
 $leadSt = $pdo->prepare("
     SELECT pl.*, l.title AS biz_name FROM partner_leads pl
-    JOIN listings l ON l.id=pl.listing_id
+    LEFT JOIN listings l ON l.id=pl.listing_id
     WHERE pl.partner_id=? AND pl.status IN ('new','contacted','follow_up')
     ORDER BY pl.follow_up_date ASC, pl.created_at DESC LIMIT 5
 ");
@@ -325,6 +331,22 @@ body { background: var(--gbg); color: var(--text); }
     </div>
   </div>
   <a href="<?= SITE_URL ?>/partner/marketplace" class="btn-sm btn-primary">🛍️ <?= pt('Order Services') ?></a>
+</div>
+
+<!-- ── Audit Link Banner ── -->
+<div style="background:linear-gradient(135deg,#003d2a,#005a3a);border:1px solid rgba(0,168,120,.4);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+  <div>
+    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#00d49a;font-weight:700;margin-bottom:4px;">📋 Business Visibility Audit</div>
+    <div style="font-size:.88rem;color:#8db8a8;">Share this link with leads — they fill in the audit and appear instantly as a lead on your dashboard.</div>
+    <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <code style="background:rgba(0,0,0,.35);border:1px solid rgba(0,168,120,.3);border-radius:6px;padding:5px 10px;font-size:.82rem;color:#e8f4ee;word-break:break-all;"><?= e($auditUrl) ?></code>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-shrink:0;">
+    <button onclick="navigator.clipboard.writeText('<?= e($auditUrl) ?>').then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='📋 Copy Link',2000)})" style="background:#00A878;color:#fff;border:none;border-radius:7px;padding:9px 16px;font-size:.82rem;font-weight:700;cursor:pointer;">📋 Copy Link</button>
+    <a href="https://wa.me/?text=<?= urlencode('Hi! Please fill in this quick Business Visibility Audit so I can understand your needs: ' . $auditUrl) ?>" target="_blank" style="background:#25D366;color:#fff;border-radius:7px;padding:9px 16px;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;">💬 WhatsApp</a>
+    <a href="<?= e($auditUrl) ?>" target="_blank" style="background:rgba(255,255,255,.1);color:#e8f4ee;border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:9px 16px;font-size:.82rem;font-weight:700;text-decoration:none;">Preview</a>
+  </div>
 </div>
 
 <!-- ── Summary strip ── -->
@@ -572,6 +594,7 @@ body { background: var(--gbg); color: var(--text); }
       <a href="<?= SITE_URL ?>/partner/leads"              class="quick-link">💬 <?= pt('Leads') ?></a>
       <a href="<?= SITE_URL ?>/partner/tasks"              class="quick-link">✅ <?= pt('Tasks') ?></a>
       <a href="<?= SITE_URL ?>/partner/reports"            class="quick-link">📊 <?= pt('Reports') ?></a>
+      <a href="<?= e($auditUrl) ?>" target="_blank"        class="quick-link">🔍 <?= pt('My Audit Link') ?></a>
     </div>
   </div>
 
