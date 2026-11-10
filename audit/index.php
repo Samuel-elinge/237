@@ -6,6 +6,7 @@
  * partner-slug = partner_profiles.slug  OR  users.email prefix  OR  pp.id
  */
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/partner-helpers.php';
 
 $pdo = db();
 
