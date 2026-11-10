@@ -283,6 +283,24 @@ textarea{resize:vertical;min-height:80px;}
 /* Lang hide/show */
 .fr{display:none;}.en{display:block;}
 body.lang-fr .fr{display:block;}body.lang-fr .en{display:none;}
+/* ── Marketing pitch section ── */
+.pitch-section{background:linear-gradient(160deg,#001a10 0%,#002e1a 60%,#003d22 100%);padding:2.5rem 1.5rem 3rem;margin-top:0;}
+.pitch-inner{max-width:720px;margin:0 auto;}
+.pitch-heading{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:700;color:#fff;text-align:center;margin-bottom:0.5rem;}
+.pitch-sub{text-align:center;color:#8db8a8;font-size:0.9rem;margin-bottom:2rem;line-height:1.6;}
+.pitch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:2rem;}
+.pitch-card{background:rgba(255,255,255,0.05);border:1px solid rgba(0,168,120,0.25);border-radius:12px;padding:1.25rem 1rem;position:relative;}
+.pitch-card-featured{background:rgba(0,168,120,0.1);border-color:var(--green);}
+.pitch-badge{position:absolute;top:-10px;right:12px;background:var(--green);color:#fff;font-size:0.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:20px;letter-spacing:.05em;}
+.pitch-icon{font-size:1.6rem;margin-bottom:0.6rem;}
+.pitch-card-title{font-weight:700;color:#e8f4ee;font-size:0.95rem;margin-bottom:0.75rem;}
+.pitch-list{list-style:none;padding:0;margin:0;}
+.pitch-list li{color:#8db8a8;font-size:0.82rem;line-height:1.5;padding:0.2rem 0 0.2rem 1.2rem;position:relative;}
+.pitch-list li::before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:700;}
+.pitch-cta{text-align:center;}
+.pitch-cta p{color:#8db8a8;font-size:0.88rem;margin-bottom:1rem;line-height:1.6;}
+.pitch-wa-btn{display:inline-flex;align-items:center;gap:8px;background:#25D366;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:700;font-size:0.88rem;}
+.pitch-wa-btn:hover{background:#1ebe5d;}
 </style>
 </head>
 <body id="audit-body">
@@ -371,33 +389,40 @@ body.lang-fr .fr{display:block;}body.lang-fr .en{display:none;}
     'Your Next Step'                  => 'Votre Prochaine Étape',
   ];
   // French question texts (keyed by sort_order)
+  // sort_order 1-3 = original "Know Your Business" questions
+  // sort_order 4-5 = new questions (years in business, number of staff)
+  // sort_order 6+ = original questions 4-15 (bumped +2 by migration)
   $frQuestions = [
     1  => 'Quel produit ou service proposez-vous ?',
     2  => 'Qui est votre client idéal ?',
     3  => 'Qu\'est-ce qui distingue votre entreprise ?',
-    4  => 'Où les clients peuvent-ils actuellement trouver votre entreprise ? (cochez tout ce qui s\'applique)',
-    5  => 'Si un nouveau client cherche votre produit ou service en ligne dans votre ville, peut-il facilement vous trouver ?',
-    6  => 'Avez-vous un profil d\'entreprise en ligne complet avec votre adresse, vos coordonnées, une description et des photos ?',
-    7  => 'À quelle fréquence faites-vous la promotion active de votre entreprise en ligne ?',
-    8  => 'Comment la plupart de vos clients découvrent-ils votre entreprise ?',
-    9  => 'Quel est votre plus grand défi ? (cochez tout ce qui s\'applique)',
-    10 => 'Avez-vous un moyen clair pour les clients intéressés de vous contacter, de demander un service ou de faire une réservation ?',
-    11 => 'Qu\'avez-vous essayé jusqu\'à présent pour attirer plus de clients ? Qu\'est-ce qui a fonctionné, et qu\'est-ce qui n\'a pas fonctionné ?',
-    12 => 'Quelle est la seule chose que vous aimeriez améliorer concernant la visibilité de votre entreprise dans les 30 prochains jours ?',
-    13 => 'Quel type d\'aide vous serait le plus utile ? (cochez tout ce qui s\'applique)',
-    14 => 'Souhaitez-vous en savoir plus sur les services proposés par 237Biz.net ou The Tahirih Effect ?',
-    15 => 'Une action concrète que je prendrai cette semaine est :',
+    4  => 'Depuis combien de temps êtes-vous en activité ?',
+    5  => 'Combien d\'employés avez-vous (vous y compris) ?',
+    6  => 'Où les clients peuvent-ils actuellement trouver votre entreprise ? (cochez tout ce qui s\'applique)',
+    7  => 'Si un nouveau client cherche votre produit ou service en ligne dans votre ville, peut-il facilement vous trouver ?',
+    8  => 'Avez-vous un profil d\'entreprise en ligne complet avec votre adresse, vos coordonnées, une description et des photos ?',
+    9  => 'À quelle fréquence faites-vous la promotion active de votre entreprise en ligne ?',
+    10 => 'Comment la plupart de vos clients découvrent-ils votre entreprise ?',
+    11 => 'Quel est votre plus grand défi ? (cochez tout ce qui s\'applique)',
+    12 => 'Avez-vous un moyen clair pour les clients intéressés de vous contacter, de demander un service ou de faire une réservation ?',
+    13 => 'Qu\'avez-vous essayé jusqu\'à présent pour attirer plus de clients ? Qu\'est-ce qui a fonctionné, et qu\'est-ce qui n\'a pas fonctionné ?',
+    14 => 'Quelle est la seule chose que vous aimeriez améliorer concernant la visibilité de votre entreprise dans les 30 prochains jours ?',
+    15 => 'Quel type d\'aide vous serait le plus utile ? (cochez tout ce qui s\'applique)',
+    16 => 'Souhaitez-vous en savoir plus sur les services proposés par 237Biz.net ?',
+    17 => 'Une action concrète que je prendrai cette semaine est :',
   ];
   // French options (keyed by sort_order)
   $frOptions = [
-    4  => ['WhatsApp','Facebook','TikTok','Instagram','Recherche Google / Google Maps','Annuaire en ligne','Emplacement physique / bouche-à-oreille uniquement'],
-    5  => ['Oui','Non','Je ne suis pas sûr(e)'],
-    6  => ['Oui','Partiellement','Non'],
-    7  => ['Tous les jours','Plusieurs fois par semaine','Occasionnellement','Presque jamais'],
-    9  => ['Pas assez de gens connaissent mon entreprise','Les gens voient mon entreprise mais me contactent rarement','Je peine à créer du contenu régulièrement','J\'ai besoin d\'un meilleur marketing et d\'une meilleure promotion','J\'ai du mal à transformer les demandes en ventes','Je ne sais pas quelle stratégie marketing utiliser'],
-    10 => ['Oui','Partiellement','Non'],
-    13 => ['Référencer mon entreprise en ligne','Améliorer mon profil d\'entreprise en ligne','Créer des vidéos et du contenu promotionnel','Faire connaître et promouvoir mon entreprise','Développer une stratégie marketing','Être aidé sur plusieurs de ces points'],
-    14 => ['237Biz.net','The Tahirih Effect','Les deux','Pas pour l\'instant'],
+    4  => ['Moins d\'1 an', '1–3 ans', '3–5 ans', '5–10 ans', 'Plus de 10 ans'],
+    5  => ['Juste moi', '2–5', '6–10', '11–25', 'Plus de 25'],
+    6  => ['WhatsApp','Facebook','TikTok','Instagram','Recherche Google / Google Maps','Annuaire en ligne','Emplacement physique / bouche-à-oreille uniquement'],
+    7  => ['Oui','Non','Je ne suis pas sûr(e)'],
+    8  => ['Oui','Partiellement','Non'],
+    9  => ['Tous les jours','Plusieurs fois par semaine','Occasionnellement','Presque jamais'],
+    11 => ['Pas assez de gens connaissent mon entreprise','Les gens voient mon entreprise mais me contactent rarement','Je peine à créer du contenu régulièrement','J\'ai besoin d\'un meilleur marketing et d\'une meilleure promotion','J\'ai du mal à transformer les demandes en ventes','Je ne sais pas quelle stratégie marketing utiliser'],
+    12 => ['Oui','Partiellement','Non'],
+    15 => ['Référencer mon entreprise en ligne','Améliorer mon profil d\'entreprise en ligne','Créer des vidéos et du contenu promotionnel','Faire connaître et promouvoir mon entreprise','Développer une stratégie marketing','Être aidé sur plusieurs de ces points'],
+    16 => ['237Biz.net','Oui, les deux','Pas pour l\'instant'],
   ];
 
   $sectionNum = 1;
@@ -478,6 +503,93 @@ body.lang-fr .fr{display:block;}body.lang-fr .en{display:none;}
 <?php endif; ?>
 
 </div><!-- .audit-wrap -->
+
+<!-- ── Why Your Business Needs a Digital Presence ── -->
+<div class="pitch-section">
+  <div class="pitch-inner">
+
+    <div class="pitch-heading">
+      <span class="en">Your Business Deserves to Be Found</span>
+      <span class="fr">Votre Entreprise Mérite d'Être Trouvée</span>
+    </div>
+    <p class="pitch-sub en">Every day, potential customers search online for exactly what you offer — and go to whoever shows up first. Here's how we can help.</p>
+    <p class="pitch-sub fr">Chaque jour, des clients potentiels cherchent en ligne exactement ce que vous proposez — et vont chez celui qui apparaît en premier. Voici comment nous pouvons vous aider.</p>
+
+    <div class="pitch-grid">
+
+      <!-- Website -->
+      <div class="pitch-card">
+        <div class="pitch-icon">🌐</div>
+        <div class="pitch-card-title en">Professional Website</div>
+        <div class="pitch-card-title fr">Site Web Professionnel</div>
+        <ul class="pitch-list en">
+          <li>Open for business 24/7 — even when you sleep</li>
+          <li>Looks great on every phone and screen</li>
+          <li>Customers find you on Google Maps &amp; Search</li>
+          <li>Build trust before the first call</li>
+        </ul>
+        <ul class="pitch-list fr">
+          <li>Ouvert 24h/24, 7j/7 — même pendant votre sommeil</li>
+          <li>Beau sur chaque téléphone et écran</li>
+          <li>Les clients vous trouvent sur Google Maps et Search</li>
+          <li>Inspirez confiance avant le premier appel</li>
+        </ul>
+      </div>
+
+      <!-- Business Email -->
+      <div class="pitch-card">
+        <div class="pitch-icon">✉️</div>
+        <div class="pitch-card-title en">Business Email</div>
+        <div class="pitch-card-title fr">Email Professionnel</div>
+        <ul class="pitch-list en">
+          <li>yourname@yourbusiness.com — not Gmail or Yahoo</li>
+          <li>Looks professional to every client &amp; supplier</li>
+          <li>Separate business and personal easily</li>
+          <li>Builds brand trust with every message you send</li>
+        </ul>
+        <ul class="pitch-list fr">
+          <li>votrenam@votreentreprise.com — pas Gmail ni Yahoo</li>
+          <li>Sérieux aux yeux de chaque client et fournisseur</li>
+          <li>Séparez facilement le pro du personnel</li>
+          <li>Renforcez la confiance à chaque message envoyé</li>
+        </ul>
+      </div>
+
+      <!-- Chatbot -->
+      <div class="pitch-card pitch-card-featured">
+        <div class="pitch-badge en">New</div>
+        <div class="pitch-badge fr">Nouveau</div>
+        <div class="pitch-icon">🤖</div>
+        <div class="pitch-card-title en">AI Chatbot on Your Website</div>
+        <div class="pitch-card-title fr">Chatbot IA sur Votre Site</div>
+        <ul class="pitch-list en">
+          <li>Answers customer questions instantly — day and night</li>
+          <li>Works perfectly on mobile (WhatsApp-style chat)</li>
+          <li>Collects leads while you focus on your work</li>
+          <li>Speaks English and French — just like your customers</li>
+        </ul>
+        <ul class="pitch-list fr">
+          <li>Répond aux questions des clients instantanément — jour et nuit</li>
+          <li>Fonctionne parfaitement sur mobile (style WhatsApp)</li>
+          <li>Collecte des prospects pendant que vous travaillez</li>
+          <li>Parle anglais et français — comme vos clients</li>
+        </ul>
+      </div>
+
+    </div><!-- .pitch-grid -->
+
+    <div class="pitch-cta">
+      <p class="en">Interested? <?= htmlspecialchars($partnerName) ?> will walk you through the right options for your business after reviewing your audit.</p>
+      <p class="fr">Intéressé(e) ? <?= htmlspecialchars($partnerName) ?> vous présentera les meilleures options pour votre entreprise après avoir examiné votre audit.</p>
+      <a href="https://wa.me/?text=<?= urlencode('Hi! I just completed the Business Visibility Audit and I\'d like to know more about getting a website, business email or chatbot.') ?>" target="_blank" class="pitch-wa-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        <span class="en">Ask about these services</span>
+        <span class="fr">Renseignez-vous sur ces services</span>
+      </a>
+    </div>
+
+  </div>
+</div>
 
 <?php if (!empty($blogPosts)): ?>
 <!-- ── Marketing Tips ── -->
