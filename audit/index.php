@@ -40,6 +40,18 @@ $partnerId    = (int)$partner['pp_id'];
 $partnerName  = $partner['display_name'] ?: $partner['user_name'];
 $partnerEmail = $partner['user_email'];
 
+// ── Load published blog posts (marketing tips) ───────────────────────────
+$blogPosts = [];
+try {
+    $blogPosts = $pdo->query("
+        SELECT id, slug, title_en, title_fr, category, published_at
+        FROM blog_posts
+        WHERE status = 'published'
+        ORDER BY published_at DESC
+        LIMIT 6
+    ")->fetchAll();
+} catch (Exception $e) { /* table may not exist on dev */ }
+
 // ── Load active questions ─────────────────────────────────────────────────
 $questions = $pdo->query("
     SELECT * FROM audit_questions
@@ -197,10 +209,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .audit-header .logo span{color:var(--green);}
 .audit-header .partner-tag{font-size:0.75rem;color:rgba(255,255,255,0.55);border-left:1px solid rgba(255,255,255,0.15);padding-left:1rem;margin-left:auto;}
 
+/* Lang toggle */
+.lang-toggle{display:flex;gap:0;border:1px solid rgba(255,255,255,0.2);border-radius:6px;overflow:hidden;flex-shrink:0;}
+.lang-btn{background:transparent;color:rgba(255,255,255,0.55);border:none;padding:4px 10px;font-size:0.75rem;font-weight:700;cursor:pointer;transition:background .15s,color .15s;font-family:'Inter',sans-serif;}
+.lang-btn.active{background:var(--green);color:#fff;}
+
 /* Hero */
 .audit-hero{background:linear-gradient(135deg,#0a1e15 0%,#0d2b1d 100%);padding:2.5rem 1.5rem 2rem;text-align:center;}
 .audit-hero h1{font-family:'Fraunces',serif;font-size:1.8rem;color:#fff;margin-bottom:0.5rem;line-height:1.2;}
-.audit-hero p{color:rgba(255,255,255,0.65);font-size:0.9rem;max-width:480px;margin:0 auto;}
 .audit-hero .tagline{color:var(--green);font-style:italic;font-size:0.85rem;margin-top:0.5rem;}
 
 /* Form */
@@ -249,22 +265,42 @@ textarea{resize:vertical;min-height:80px;}
 .thankyou p{color:var(--muted);font-size:0.95rem;max-width:420px;margin:0 auto 1rem;}
 .thankyou .wa-btn{display:inline-flex;align-items:center;gap:0.5rem;background:#25D366;color:#fff;padding:0.8rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:600;font-size:0.9rem;margin-top:0.5rem;}
 
+/* Blog tips section */
+.tips-section{max-width:680px;margin:0 auto;padding:0 1.5rem 2rem;}
+.tips-heading{font-family:'Fraunces',serif;font-size:1.2rem;color:var(--text);font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;}
+.tips-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:500px){.tips-grid{grid-template-columns:1fr;}}
+.tip-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.1rem;text-decoration:none;display:block;transition:border-color .15s,box-shadow .15s;}
+.tip-card:hover{border-color:var(--green);box-shadow:0 4px 12px rgba(0,168,120,0.1);}
+.tip-cat{font-size:0.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--green);font-weight:700;margin-bottom:0.35rem;}
+.tip-title{font-size:0.875rem;font-weight:600;color:var(--text);line-height:1.4;}
+.tip-date{font-size:0.72rem;color:var(--muted);margin-top:0.4rem;}
+
 /* Footer */
 .audit-footer{text-align:center;padding:1.5rem;font-size:0.75rem;color:var(--muted);}
 .audit-footer a{color:var(--green);text-decoration:none;}
+
+/* Lang hide/show */
+.fr{display:none;}.en{display:block;}
+body.lang-fr .fr{display:block;}body.lang-fr .en{display:none;}
 </style>
 </head>
-<body>
+<body id="audit-body">
 
 <div class="audit-header">
   <a class="logo" href="<?= SITE_URL ?>"><span>237</span>Biz.net</a>
   <div class="partner-tag">Shared by <?= htmlspecialchars($partnerName) ?></div>
+  <div class="lang-toggle" style="margin-left:1rem;">
+    <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" id="btn-fr" onclick="setLang('fr')">FR</button>
+  </div>
 </div>
 
 <div class="audit-hero">
-  <h1>The Business Visibility Audit</h1>
-  <p>237Biz.net × The Tahirih Effect</p>
-  <p class="tagline">Your business cannot attract customers who cannot find you.</p>
+  <h1 class="en">The Business Visibility Audit</h1>
+  <h1 class="fr">L'Audit de Visibilité de Votre Entreprise</h1>
+  <p class="tagline en">Your business cannot attract customers who cannot find you.</p>
+  <p class="tagline fr">Votre entreprise ne peut pas attirer des clients qui ne peuvent pas vous trouver.</p>
 </div>
 
 <div class="audit-wrap">
@@ -272,14 +308,17 @@ textarea{resize:vertical;min-height:80px;}
 <?php if ($submitted): ?>
 <div class="audit-card thankyou">
   <div class="icon">🎉</div>
-  <h2>Thank you, <?= htmlspecialchars($ownerName) ?>!</h2>
-  <p>Your Business Visibility Audit has been received. <strong><?= htmlspecialchars($partnerName) ?></strong> will be in touch with you soon to discuss how to make your business easier to find online.</p>
+  <h2 class="en">Thank you, <?= htmlspecialchars($ownerName) ?>!</h2>
+  <h2 class="fr">Merci, <?= htmlspecialchars($ownerName) ?> !</h2>
+  <p class="en">Your Business Visibility Audit has been received. <strong><?= htmlspecialchars($partnerName) ?></strong> will be in touch with you soon to discuss how to make your business easier to find online.</p>
+  <p class="fr">Votre Audit de Visibilité a bien été reçu. <strong><?= htmlspecialchars($partnerName) ?></strong> vous contactera bientôt pour vous aider à améliorer la visibilité de votre entreprise en ligne.</p>
   <?php if ($email): ?>
-  <p style="font-size:0.85rem;">A confirmation has been sent to <strong><?= htmlspecialchars($email) ?></strong>.</p>
+  <p class="en" style="font-size:0.85rem;">A confirmation has been sent to <strong><?= htmlspecialchars($email) ?></strong>.</p>
+  <p class="fr" style="font-size:0.85rem;">Une confirmation a été envoyée à <strong><?= htmlspecialchars($email) ?></strong>.</p>
   <?php endif; ?>
   <a class="wa-btn" href="https://wa.me/<?= preg_replace('/\D/', '', $phone) ?>?text=<?= urlencode("Hi " . $ownerName . "! I've received your Business Visibility Audit for " . $bizName . ". I'll be in touch shortly.") ?>" target="_blank">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-    Chat on WhatsApp
+    <span class="en">Chat on WhatsApp</span><span class="fr">Discuter sur WhatsApp</span>
   </a>
   <div style="margin-top:1.5rem;">
     <a href="<?= SITE_URL ?>" style="color:var(--green);font-size:0.875rem;text-decoration:none;">← Visit 237Biz.net</a>
@@ -301,45 +340,88 @@ textarea{resize:vertical;min-height:80px;}
 
   <!-- Contact info -->
   <div class="audit-card">
-    <div class="section-heading">Your Details</div>
+    <div class="section-heading en">Your Details</div>
+    <div class="section-heading fr">Vos Coordonnées</div>
     <div class="contact-grid">
       <div class="form-group">
-        <label>Business name <span class="required-star">*</span></label>
+        <label><span class="en">Business name</span><span class="fr">Nom de l'entreprise</span> <span class="required-star">*</span></label>
         <input type="text" name="business_name" value="<?= htmlspecialchars($_POST['business_name'] ?? '') ?>" placeholder="e.g. Nyaga Store Kids" required>
       </div>
       <div class="form-group">
-        <label>Your name <span class="required-star">*</span></label>
+        <label><span class="en">Your name</span><span class="fr">Votre nom</span> <span class="required-star">*</span></label>
         <input type="text" name="owner_name" value="<?= htmlspecialchars($_POST['owner_name'] ?? '') ?>" placeholder="e.g. Penga Geraldine" required>
       </div>
       <div class="form-group">
-        <label>Phone / WhatsApp <span class="required-star">*</span></label>
+        <label><span class="en">Phone / WhatsApp</span><span class="fr">Téléphone / WhatsApp</span> <span class="required-star">*</span></label>
         <input type="tel" name="phone" value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>" placeholder="e.g. 693848431" required>
       </div>
       <div class="form-group">
-        <label>Email <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+        <label><span class="en">Email</span><span class="fr">E-mail</span> <span style="color:var(--muted);font-weight:400;" class="en">(optional)</span><span style="color:var(--muted);font-weight:400;" class="fr">(facultatif)</span></label>
         <input type="email" name="email" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" placeholder="yourname@email.com">
       </div>
     </div>
   </div>
 
   <?php
+  // French section titles
+  $frSectionTitles = [
+    'Know Your Business'              => 'Votre Entreprise',
+    'How Visible Is Your Business?'   => 'Quelle est la Visibilité de Votre Entreprise ?',
+    'Turn Visibility Into Customers'  => 'Transformer la Visibilité en Clients',
+    'Your Next Step'                  => 'Votre Prochaine Étape',
+  ];
+  // French question texts (keyed by sort_order)
+  $frQuestions = [
+    1  => 'Quel produit ou service proposez-vous ?',
+    2  => 'Qui est votre client idéal ?',
+    3  => 'Qu\'est-ce qui distingue votre entreprise ?',
+    4  => 'Où les clients peuvent-ils actuellement trouver votre entreprise ? (cochez tout ce qui s\'applique)',
+    5  => 'Si un nouveau client cherche votre produit ou service en ligne dans votre ville, peut-il facilement vous trouver ?',
+    6  => 'Avez-vous un profil d\'entreprise en ligne complet avec votre adresse, vos coordonnées, une description et des photos ?',
+    7  => 'À quelle fréquence faites-vous la promotion active de votre entreprise en ligne ?',
+    8  => 'Comment la plupart de vos clients découvrent-ils votre entreprise ?',
+    9  => 'Quel est votre plus grand défi ? (cochez tout ce qui s\'applique)',
+    10 => 'Avez-vous un moyen clair pour les clients intéressés de vous contacter, de demander un service ou de faire une réservation ?',
+    11 => 'Qu\'avez-vous essayé jusqu\'à présent pour attirer plus de clients ? Qu\'est-ce qui a fonctionné, et qu\'est-ce qui n\'a pas fonctionné ?',
+    12 => 'Quelle est la seule chose que vous aimeriez améliorer concernant la visibilité de votre entreprise dans les 30 prochains jours ?',
+    13 => 'Quel type d\'aide vous serait le plus utile ? (cochez tout ce qui s\'applique)',
+    14 => 'Souhaitez-vous en savoir plus sur les services proposés par 237Biz.net ou The Tahirih Effect ?',
+    15 => 'Une action concrète que je prendrai cette semaine est :',
+  ];
+  // French options (keyed by sort_order)
+  $frOptions = [
+    4  => ['WhatsApp','Facebook','TikTok','Instagram','Recherche Google / Google Maps','Annuaire en ligne','Emplacement physique / bouche-à-oreille uniquement'],
+    5  => ['Oui','Non','Je ne suis pas sûr(e)'],
+    6  => ['Oui','Partiellement','Non'],
+    7  => ['Tous les jours','Plusieurs fois par semaine','Occasionnellement','Presque jamais'],
+    9  => ['Pas assez de gens connaissent mon entreprise','Les gens voient mon entreprise mais me contactent rarement','Je peine à créer du contenu régulièrement','J\'ai besoin d\'un meilleur marketing et d\'une meilleure promotion','J\'ai du mal à transformer les demandes en ventes','Je ne sais pas quelle stratégie marketing utiliser'],
+    10 => ['Oui','Partiellement','Non'],
+    13 => ['Référencer mon entreprise en ligne','Améliorer mon profil d\'entreprise en ligne','Créer des vidéos et du contenu promotionnel','Faire connaître et promouvoir mon entreprise','Développer une stratégie marketing','Être aidé sur plusieurs de ces points'],
+    14 => ['237Biz.net','The Tahirih Effect','Les deux','Pas pour l\'instant'],
+  ];
+
   $sectionNum = 1;
   foreach ($sections as $secId => $sec):
+    $frTitle = $frSectionTitles[$sec['title']] ?? $sec['title'];
   ?>
   <div class="audit-card">
     <div class="section-heading">
       <span class="section-num"><?= $sectionNum ?></span>
-      <?= htmlspecialchars($sec['title']) ?>
+      <span class="en"><?= htmlspecialchars($sec['title']) ?></span>
+      <span class="fr"><?= htmlspecialchars($frTitle) ?></span>
     </div>
     <?php foreach ($sec['questions'] as $q):
-      $qKey = 'q' . $q['id'];
-      $opts = $q['options_json'] ? json_decode($q['options_json'], true) : [];
+      $qKey   = 'q' . $q['id'];
+      $opts   = $q['options_json'] ? json_decode($q['options_json'], true) : [];
+      $frOpts = $frOptions[$q['sort_order']] ?? $opts;
       $prevVal = $_POST[$qKey] ?? null;
+      $frQText = $frQuestions[$q['sort_order']] ?? $q['question_text'];
     ?>
     <div class="q-block">
       <label class="q-label" for="<?= $qKey ?>">
         <span class="q-num"><?= $q['sort_order'] ?>.</span>
-        <?= htmlspecialchars($q['question_text']) ?>
+        <span class="en"><?= htmlspecialchars($q['question_text']) ?></span>
+        <span class="fr"><?= htmlspecialchars($frQText) ?></span>
         <?php if ($q['is_required']): ?><span class="required-star"> *</span><?php endif; ?>
       </label>
 
@@ -352,11 +434,12 @@ textarea{resize:vertical;min-height:80px;}
 
       <?php elseif ($q['question_type'] === 'radio'): ?>
         <div class="opt-list" role="radiogroup">
-          <?php foreach ($opts as $opt): ?>
+          <?php foreach ($opts as $i => $opt): ?>
           <label class="opt-item<?= ($prevVal === $opt) ? ' checked' : '' ?>">
             <input type="radio" name="<?= $qKey ?>" value="<?= htmlspecialchars($opt) ?>"
                    <?= ($prevVal === $opt) ? 'checked' : '' ?>>
-            <span><?= htmlspecialchars($opt) ?></span>
+            <span class="en"><?= htmlspecialchars($opt) ?></span>
+            <span class="fr"><?= htmlspecialchars($frOpts[$i] ?? $opt) ?></span>
           </label>
           <?php endforeach; ?>
         </div>
@@ -365,13 +448,14 @@ textarea{resize:vertical;min-height:80px;}
         <div class="opt-list" role="group">
           <?php
           $prevArr = is_array($prevVal) ? $prevVal : [];
-          foreach ($opts as $opt):
+          foreach ($opts as $i => $opt):
             $checked = in_array($opt, $prevArr);
           ?>
           <label class="opt-item<?= $checked ? ' checked' : '' ?>">
             <input type="checkbox" name="<?= $qKey ?>[]" value="<?= htmlspecialchars($opt) ?>"
                    <?= $checked ? 'checked' : '' ?>>
-            <span><?= htmlspecialchars($opt) ?></span>
+            <span class="en"><?= htmlspecialchars($opt) ?></span>
+            <span class="fr"><?= htmlspecialchars($frOpts[$i] ?? $opt) ?></span>
           </label>
           <?php endforeach; ?>
         </div>
@@ -382,8 +466,12 @@ textarea{resize:vertical;min-height:80px;}
   <?php $sectionNum++; endforeach; ?>
 
   <div class="audit-card" style="text-align:center;border-color:var(--green);">
-    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">By submitting, you agree that your information may be shared with <?= htmlspecialchars($partnerName) ?> to help you improve your business visibility.</p>
-    <button type="submit" class="submit-btn">Submit My Audit →</button>
+    <p class="en" style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">By submitting, you agree that your information may be shared with <?= htmlspecialchars($partnerName) ?> to help you improve your business visibility.</p>
+    <p class="fr" style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">En soumettant ce formulaire, vous acceptez que vos informations soient partagées avec <?= htmlspecialchars($partnerName) ?> afin d'améliorer la visibilité de votre entreprise.</p>
+    <button type="submit" class="submit-btn">
+      <span class="en">Submit My Audit →</span>
+      <span class="fr">Soumettre Mon Audit →</span>
+    </button>
   </div>
 </form>
 
@@ -391,12 +479,57 @@ textarea{resize:vertical;min-height:80px;}
 
 </div><!-- .audit-wrap -->
 
+<?php if (!empty($blogPosts)): ?>
+<!-- ── Marketing Tips ── -->
+<div class="tips-section">
+  <div class="tips-heading">
+    <span>💡</span>
+    <span class="en">Marketing Tips</span>
+    <span class="fr">Conseils Marketing</span>
+  </div>
+  <div class="tips-grid">
+    <?php foreach ($blogPosts as $post):
+      $title = trim($post['title_en'] ?? '');
+      $titleFr = trim($post['title_fr'] ?? '');
+      if (!$titleFr) $titleFr = $title;
+      $url = SITE_URL . '/blog/' . urlencode($post['slug']);
+      $date = $post['published_at'] ? date('j M Y', strtotime($post['published_at'])) : '';
+    ?>
+    <a class="tip-card" href="<?= htmlspecialchars($url) ?>" target="_blank">
+      <?php if ($post['category']): ?>
+      <div class="tip-cat"><?= htmlspecialchars($post['category']) ?></div>
+      <?php endif; ?>
+      <div class="tip-title en"><?= htmlspecialchars($title) ?></div>
+      <div class="tip-title fr"><?= htmlspecialchars($titleFr) ?></div>
+      <?php if ($date): ?><div class="tip-date"><?= $date ?></div><?php endif; ?>
+    </a>
+    <?php endforeach; ?>
+  </div>
+  <div style="text-align:center;margin-top:1rem;">
+    <a href="<?= SITE_URL ?>/blog" target="_blank" style="color:var(--green);font-size:0.85rem;font-weight:600;text-decoration:none;">
+      <span class="en">Read all articles →</span>
+      <span class="fr">Lire tous les articles →</span>
+    </a>
+  </div>
+</div>
+<?php endif; ?>
+
 <div class="audit-footer">
-  <p>237Biz.net helps customers discover businesses. The Tahirih Effect supports business visibility through marketing and content services.</p>
+  <p class="en">237Biz.net helps customers discover businesses across Africa and the diaspora.</p>
+  <p class="fr">237Biz.net aide les clients à découvrir des entreprises en Afrique et dans la diaspora.</p>
   <p style="margin-top:0.5rem;"><a href="<?= SITE_URL ?>">Visit 237Biz.net</a></p>
 </div>
 
 <script>
+function setLang(lang) {
+  document.getElementById('audit-body').className = lang === 'fr' ? 'lang-fr' : '';
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.getElementById('btn-fr').classList.toggle('active', lang === 'fr');
+  try { localStorage.setItem('audit_lang', lang); } catch(e){}
+}
+// Restore saved preference
+(function(){ try { var l = localStorage.getItem('audit_lang'); if (l === 'fr') setLang('fr'); } catch(e){} })();
+
 // Visual feedback on option select
 document.querySelectorAll('.opt-item input').forEach(function(inp) {
   inp.addEventListener('change', function() {
