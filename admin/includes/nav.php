@@ -27,6 +27,7 @@ function adminNav(string $activePage = ''): void {
             ['Agents',          '&#x1F454;', $base . '/admin/manage-agents.php',            ['manage-agents']],
             ['Creators',        '&#x1F3AC;', $base . '/admin/manage-creators.php',          ['manage-creators']],
             ['Growth Partners', '&#x1F91D;', $base . '/admin/manage-growth-partners.php',   ['manage-growth-partners']],
+            ['Audit Questions', '&#x1F3AF;', $base . '/admin/gp-audit-questions.php',      ['gp-audit-questions']],
             ['Referrals',       '&#x1F4B0;', $base . '/admin/manage-referrals.php',         ['manage-referrals']],
         ]],
         ['Commerce', '&#x1F4B3;', [
