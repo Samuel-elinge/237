@@ -335,7 +335,7 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
         <select class="form-select" name="listing_id">
           <option value="">— Not assigned —</option>
           <?php foreach ($listings as $biz): ?>
-          <option value="<?= $biz['id'] ?>" <?= ($filterListing === $biz['id']) ? 'selected' : '' ?>><?= htmlspecialchars($biz['name']) ?></option>
+          <option value="<?= $biz['id'] ?>" <?= ($filterListing === $biz['id']) ? 'selected' : '' ?>><?= htmlspecialchars($biz['title']) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
@@ -508,7 +508,7 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
     <a href="?<?= $filterListing ? '' : 'biz=0' ?>" class="biz-pill <?= !$filterListing ? 'active' : '' ?>">All Businesses</a>
     <?php foreach ($listings as $biz): ?>
     <a href="?biz=<?= $biz['id'] ?>" class="biz-pill <?= $filterListing === $biz['id'] ? 'active' : '' ?>">
-      <?= htmlspecialchars($biz['name']) ?>
+      <?= htmlspecialchars($biz['title']) ?>
     </a>
     <?php endforeach; ?>
   </div>
