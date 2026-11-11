@@ -108,6 +108,18 @@ $leadSt = $pdo->prepare("
 ");
 $leadSt->execute([$pid]); $activeLeadList = $leadSt->fetchAll();
 
+/* ── Phase 5 — Pipeline / WA ───────────────────────────────────── */
+$st = $pdo->prepare("SELECT COUNT(*) FROM partner_leads WHERE partner_id=? AND status IN ('interested','proposal_sent','negotiation')");
+$st->execute([$pid]); $hotLeadsCount = (int)$st->fetchColumn();
+
+$st = $pdo->prepare("SELECT COUNT(*) FROM partner_leads WHERE partner_id=? AND follow_up_date = CURDATE() AND status NOT IN ('converted','lost','closed','won')");
+$st->execute([$pid]); $followUpsTodayCount = (int)$st->fetchColumn();
+
+try {
+    $st = $pdo->prepare("SELECT COUNT(*) FROM partner_tracking_links WHERE partner_id=? AND clicks > 0");
+    $st->execute([$pid]); $trackingLinksWithClicks = (int)$st->fetchColumn();
+} catch (Exception $e) { $trackingLinksWithClicks = 0; }
+
 /* ── Active orders list ─────────────────────────────────────────── */
 $orderSt = $pdo->prepare("
     SELECT o.ref, o.order_state, o.created_at, l.title AS listing_title
@@ -591,12 +603,52 @@ body { background: var(--gbg); color: var(--text); }
       <a href="<?= SITE_URL ?>/partner/marketplace"        class="quick-link">🛍️ <?= pt('Order Services') ?></a>
       <a href="<?= SITE_URL ?>/partner/marketplace-orders" class="quick-link">📦 <?= pt('My Orders') ?></a>
       <a href="<?= SITE_URL ?>/partner/portfolio"          class="quick-link">📋 <?= pt('Portfolio') ?></a>
+      <a href="<?= SITE_URL ?>/partner/pipeline"            class="quick-link">📊 <?= pt('Pipeline') ?></a>
       <a href="<?= SITE_URL ?>/partner/leads"              class="quick-link">💬 <?= pt('Leads') ?></a>
+      <a href="<?= SITE_URL ?>/partner/whatsapp"           class="quick-link">📲 <?= pt('WhatsApp') ?></a>
+      <a href="<?= SITE_URL ?>/partner/saleskit"           class="quick-link">🗂️ <?= pt('Sales Kit') ?></a>
       <a href="<?= SITE_URL ?>/partner/tasks"              class="quick-link">✅ <?= pt('Tasks') ?></a>
-      <a href="<?= SITE_URL ?>/partner/reports"            class="quick-link">📊 <?= pt('Reports') ?></a>
+      <a href="<?= SITE_URL ?>/partner/reports"            class="quick-link">📈 <?= pt('Reports') ?></a>
       <a href="<?= e($auditUrl) ?>" target="_blank"        class="quick-link">🔍 <?= pt('My Audit Link') ?></a>
     </div>
   </div>
+
+  <!-- Phase 5 — Pipeline & Sales -->
+  <?php if ($hotLeadsCount > 0 || $followUpsTodayCount > 0 || $trackingLinksWithClicks > 0): ?>
+  <div class="panel">
+    <h2>🚀 <?= pt('Sales Activity') ?></h2>
+    <?php if ($followUpsTodayCount > 0): ?>
+    <a href="<?= SITE_URL ?>/partner/pipeline" class="row-item row-link" style="background:rgba(239,68,68,.07);border-radius:8px;padding:10px 12px;margin-bottom:4px">
+      <span style="font-size:1.1rem">📅</span>
+      <div style="flex:1;min-width:0">
+        <div class="row-title" style="color:#ef4444">Follow-ups Due Today</div>
+        <div class="row-meta"><?= $followUpsTodayCount ?> lead<?= $followUpsTodayCount !== 1 ? 's' : '' ?> need attention</div>
+      </div>
+      <span style="color:var(--sub);font-size:.8rem">View →</span>
+    </a>
+    <?php endif; ?>
+    <?php if ($hotLeadsCount > 0): ?>
+    <a href="<?= SITE_URL ?>/partner/pipeline" class="row-item row-link" style="padding:10px 12px;margin-bottom:4px">
+      <span style="font-size:1.1rem">🔥</span>
+      <div style="flex:1;min-width:0">
+        <div class="row-title">Hot Leads in Pipeline</div>
+        <div class="row-meta"><?= $hotLeadsCount ?> in negotiation / proposal stage</div>
+      </div>
+      <span style="color:var(--sub);font-size:.8rem">View →</span>
+    </a>
+    <?php endif; ?>
+    <?php if ($trackingLinksWithClicks > 0): ?>
+    <a href="<?= SITE_URL ?>/partner/saleskit" class="row-item row-link" style="padding:10px 12px">
+      <span style="font-size:1.1rem">🔗</span>
+      <div style="flex:1;min-width:0">
+        <div class="row-title">Tracking Links Active</div>
+        <div class="row-meta"><?= $trackingLinksWithClicks ?> link<?= $trackingLinksWithClicks !== 1 ? 's' : '' ?> receiving clicks</div>
+      </div>
+      <span style="color:var(--sub);font-size:.8rem">View →</span>
+    </a>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
 
   <!-- Growth score -->
   <?php

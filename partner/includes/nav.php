@@ -57,7 +57,10 @@ function partnerNav(string $activePage = ''): void {
         ['marketplace',        '&#x1F6D2;', 'Order Services',  $base . '/partner/marketplace',        0,             false],
         ['marketplace-orders', '&#x1F4E6;', 'My Orders',       $base . '/partner/marketplace-orders', $activeOrders, false],
         ['portfolio',          '&#x1F4CB;', 'Portfolio',        $base . '/partner/portfolio',          0,             false],
-        ['leads',              '&#x1F4AC;', 'Leads',            $base . '/partner/leads',              $overdueL,     false],
+        ['pipeline',           '&#x1F4CA;', 'Pipeline',         $base . '/partner/pipeline',           $overdueL,     false],
+        ['leads',              '&#x1F4AC;', 'Leads',            $base . '/partner/leads',              0,             false],
+        ['whatsapp',           '&#x1F4F2;', 'WhatsApp',         $base . '/partner/whatsapp',           0,             false],
+        ['saleskit',           '&#x1F5C2;', 'Sales Kit',        $base . '/partner/saleskit',           0,             false],
         ['tasks',              '&#x1F4DD;', 'Notes',            $base . '/partner/tasks',              $overdueT,     false],
         ['commissions',        '&#x1F4B0;', 'Commissions',      $base . '/partner/commissions',        0,             false],
     ];
