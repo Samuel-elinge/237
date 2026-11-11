@@ -128,7 +128,7 @@ $trackingLinks = $linkSt->fetchAll();
 // Campaigns for selected biz (for linking)
 $campaigns = [];
 if ($selectedId) {
-    $cst = $pdo->prepare("SELECT id, name FROM partner_campaigns WHERE partner_id=? AND listing_id=? AND status IN ('active','scheduled') ORDER BY created_at DESC");
+    $cst = $pdo->prepare("SELECT id, title AS name FROM partner_campaigns WHERE partner_id=? AND listing_id=? AND status IN ('active','scheduled') ORDER BY created_at DESC");
     $cst->execute([$partnerId, $selectedId]);
     $campaigns = $cst->fetchAll();
 }

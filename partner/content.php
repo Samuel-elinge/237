@@ -78,7 +78,7 @@ foreach ($listings as $l) $listingMap[$l['id']] = $l;
 /* ── Campaigns dropdown (filtered by listing) ──────────────────── */
 $campaigns = [];
 if ($filterLid) {
-    $cs = $pdo->prepare("SELECT id,name FROM partner_campaigns WHERE partner_id=? AND listing_id=? ORDER BY name");
+    $cs = $pdo->prepare("SELECT id,title AS name FROM partner_campaigns WHERE partner_id=? AND listing_id=? ORDER BY title");
     $cs->execute([$pid,$filterLid]);
     $campaigns = $cs->fetchAll();
 }
