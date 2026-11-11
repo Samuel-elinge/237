@@ -573,7 +573,7 @@ function trackWaSend() {
     fetch('<?= SITE_URL ?>/partner/templates', {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: 'action=use_template&template_id=' + sel.value + '&<?= gpCsrfToken() ?>=<?= gpCsrfValue() ?>'
+      body: 'action=use_template&template_id=' + sel.value + '&' + <?= json_encode(gpCsrfToken()) ?> + '=' + <?= json_encode(gpCsrfValue()) ?>
     }).catch(() => {});
   }
 }
