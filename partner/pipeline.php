@@ -7,6 +7,23 @@
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
 require_once __DIR__ . '/../includes/partner-lang.php';
+require_once __DIR__ . '/includes/nav.php';
+if (!function_exists('partnerNavBadges')) {
+    function partnerNavBadges(int $pid, PDO $pdo): void {
+        $st = $pdo->prepare("SELECT COUNT(*) FROM growth_tasks WHERE partner_id=? AND status IN ('todo','in_progress') AND due_date < CURDATE()");
+        $st->execute([$pid]); $GLOBALS['_pnav_overdue_tasks'] = (int)$st->fetchColumn();
+        $st = $pdo->prepare("SELECT COUNT(*) FROM partner_leads WHERE partner_id=? AND follow_up_date < CURDATE() AND status NOT IN ('converted','lost','closed')");
+        $st->execute([$pid]); $GLOBALS['_pnav_overdue_leads'] = (int)$st->fetchColumn();
+        $st = $pdo->prepare("SELECT COUNT(*) FROM growth_alerts WHERE partner_id=? AND status IN ('new','viewed')");
+        $st->execute([$pid]); $GLOBALS['_pnav_alerts'] = (int)$st->fetchColumn();
+        $st = $pdo->prepare("SELECT COUNT(*) FROM growth_alerts WHERE partner_id=? AND status IN ('new','viewed') AND priority='urgent'");
+        $st->execute([$pid]); $GLOBALS['_pnav_urgent'] = (int)$st->fetchColumn();
+        $st = $pdo->prepare("SELECT COUNT(*) FROM ai_recommendations WHERE partner_id=? AND status IN ('new','viewed')");
+        $st->execute([$pid]); $GLOBALS['_pnav_recs'] = (int)$st->fetchColumn();
+        $st = $pdo->prepare("SELECT COUNT(*) FROM marketplace_orders WHERE partner_profile_id=? AND order_state NOT IN ('COMPLETED','CANCELLED','REJECTED')");
+        $st->execute([$pid]); $GLOBALS['_pnav_active_orders'] = (int)$st->fetchColumn();
+    }
+}
 
 $partnerProfile = requireGrowthPartner();
 $partnerId      = (int)$partnerProfile['id'];
