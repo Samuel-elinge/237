@@ -73,6 +73,9 @@ RewriteRule ^business-listing/?$        business-listing.php         [L,QSA]
 # API
 RewriteRule ^api/track/?$               api/track.php                [L,QSA]
 
+# Tracking link redirects
+RewriteRule ^go/([A-Z0-9]+)/?$          go/index.php?ref=$1          [L,QSA]
+
 # Bookings
 RewriteRule ^booking/([a-z0-9-]+)/?$   booking.php?slug=$1          [L,QSA]
 RewriteRule ^booking/?$                 booking.php                  [L,QSA]
@@ -189,6 +192,9 @@ RewriteRule ^partner/offer-analytics/?$     partner/offer-analytics.php     [L,Q
 RewriteRule ^partner/events/?$           partner/events.php           [L,QSA]
 RewriteRule ^partner/bookings/?$         partner/bookings.php         [L,QSA]
 RewriteRule ^partner/communication/?$    partner/communication.php    [L,QSA]
+RewriteRule ^partner/whatsapp/?$         partner/whatsapp.php         [L,QSA]
+RewriteRule ^partner/saleskit/?$         partner/saleskit.php         [L,QSA]
+RewriteRule ^partner/pipeline/?$         partner/pipeline.php         [L,QSA]
 RewriteRule ^admin/regional-management/?$  admin/regional-management.php  [L,QSA]
 RewriteRule ^admin/market-penetration/?$   admin/market-penetration.php   [L,QSA]
 RewriteRule ^admin/network-analytics/?$    admin/network-analytics.php    [L,QSA]
