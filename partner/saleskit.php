@@ -115,7 +115,7 @@ if ($selectedId) {
 
 // Tracking links for this partner
 $linkSt = $pdo->prepare("
-    SELECT tl.*, l.name AS biz_name
+    SELECT tl.*, l.title AS biz_name
     FROM partner_tracking_links tl
     LEFT JOIN listings l ON l.id = tl.listing_id
     WHERE tl.partner_id = ?

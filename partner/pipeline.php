@@ -141,7 +141,7 @@ if ($filterListing) {
 }
 
 $leadsSt = $pdo->prepare("
-    SELECT pl.*, l.name AS biz_name, l.whatsapp AS biz_wa
+    SELECT pl.*, l.title AS biz_name, l.whatsapp AS biz_wa
     FROM partner_leads pl
     LEFT JOIN listings l ON l.id = pl.listing_id
     WHERE " . implode(' AND ', $where) . "
@@ -163,7 +163,7 @@ foreach ($allLeads as $lead) {
 $openLead = null;
 $openActivities = [];
 if ($openLeadId) {
-    $ost = $pdo->prepare("SELECT pl.*, l.name AS biz_name, l.whatsapp AS biz_wa FROM partner_leads pl LEFT JOIN listings l ON l.id=pl.listing_id WHERE pl.id=? AND pl.partner_id=?");
+    $ost = $pdo->prepare("SELECT pl.*, l.title AS biz_name, l.whatsapp AS biz_wa FROM partner_leads pl LEFT JOIN listings l ON l.id=pl.listing_id WHERE pl.id=? AND pl.partner_id=?");
     $ost->execute([$openLeadId, $partnerId]);
     $openLead = $ost->fetch() ?: null;
     if ($openLead) {
