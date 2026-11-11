@@ -33,7 +33,7 @@ $partnerId      = (int)$partnerProfile['id'];
 $userId         = currentUser()['id'];
 $pdo            = db();
 
-// ── POST handler ─────────────────────────────────────────────────
+// -- POST handler ----------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $action = $_POST['action'] ?? '';
@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect(SITE_URL . '/partner/whatsapp');
 }
 
-// ── Data ─────────────────────────────────────────────────────────
+// -- Data ------------------------------------------------------
 $listings = fetchPartnerListings($partnerId);
 
 // WA templates
@@ -498,7 +498,7 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
 </div>
 
 <script>
-// ── Tab switching ──────────────────────────────────────────────
+// -- Tab switching -------------------------------------------
 function showTab(tab) {
   document.querySelectorAll('.wa-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.wa-tab').forEach(t => t.classList.remove('active'));
@@ -513,7 +513,7 @@ function showTab(tab) {
 document.addEventListener('DOMContentLoaded', () => showTab('build'));
 <?php endif; ?>
 
-// ── Business selector ─────────────────────────────────────────
+// -- Business selector ------------------------------------------
 let selectedWa = '';
 let selectedBizName = '';
 
@@ -527,7 +527,7 @@ function selectBiz(id, name, wa) {
   updatePreview();
 }
 
-// ── Preview (send tab) ────────────────────────────────────────
+// -- Preview (send tab) -----------------------------------------
 function updatePreview() {
   const header = document.getElementById('msg-header')?.value || '';
   const body   = document.getElementById('msg-body')?.value || '';
@@ -591,7 +591,7 @@ function loadTemplate(id) {
   updatePreview();
 }
 
-// ── Build tab preview ─────────────────────────────────────────
+// -- Build tab preview ------------------------------------------
 function updateBuildPreview() {
   const headerEl = document.querySelector('[name="wa_header"]');
   const bodyEl   = document.querySelector('[name="body"]');
