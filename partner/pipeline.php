@@ -607,10 +607,10 @@ function previewDetailTpl(id) {
   if (!opt) return;
   const header = opt.dataset.header ? '*' + opt.dataset.header + '*\n\n' : '';
   const body   = opt.dataset.body || '';
-  const name   = '<?= addslashes(htmlspecialchars($openLead['customer_name'] ?? '')) ?>';
+  const name   = '<?= addslashes(htmlspecialchars($openLead["customer_name"] ?? "")) ?>';
   const filled = (header + body)
     .replace(/\{name\}/g, name)
-    .replace(/\{business\}/g, '<?= addslashes(htmlspecialchars($openLead['biz_name'] ?? '')) ?>')
+    .replace(/\{business\}/g, '<?= addslashes(htmlspecialchars($openLead["biz_name"] ?? "")) ?>')
     .replace(/\{date\}/g, new Date().toLocaleDateString('en-GB'));
   document.getElementById('detail-wa-msg').value = filled;
 }
