@@ -30,7 +30,7 @@ $partnerId      = (int)$partnerProfile['id'];
 $userId         = currentUser()['id'];
 $pdo            = db();
 
-// ── POST handler ─────────────────────────────────────────────────
+// -- POST handler -------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $action = $_POST['action'] ?? '';
@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect(SITE_URL . '/partner/pipeline');
 }
 
-// ── Data ─────────────────────────────────────────────────────────
+// -- Data ---------------------------------------------------------
 // Pipeline stages in order
 $stages = [
     'new'           => ['label' => 'New',           'icon' => '🆕', 'color' => '#6b7280'],
@@ -558,7 +558,7 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
 </div>
 
 <script>
-// ── Modals ────────────────────────────────────────────────────
+// -- Modals ----------------------------------------------------
 function openAddLead() { document.getElementById('add-lead-modal').classList.add('open'); }
 function closeAddLead() { document.getElementById('add-lead-modal').classList.remove('open'); }
 
@@ -573,7 +573,7 @@ function closeDetail(e) {
   }
 }
 
-// ── Move lead via AJAX ────────────────────────────────────────
+// -- Move lead via AJAX ----------------------------------------
 function moveLead(id, status) {
   const data = new FormData();
   data.append('action', 'move_lead');
@@ -594,13 +594,13 @@ function moveLead(id, status) {
         // Brief confirmation
         const btn = event.target;
         const orig = btn.textContent;
-        btn.textContent = '✅ Moved!';
+        btn.textContent = 'Moved!';
         setTimeout(() => { btn.textContent = orig; }, 1500);
       }
     }).catch(() => {});
 }
 
-// ── WA template preview ────────────────────────────────────────
+// -- WA template preview ----------------------------------------
 function previewDetailTpl(id) {
   if (!id) return;
   const opt = document.querySelector('#detail-wa-tpl option[value="' + id + '"]');

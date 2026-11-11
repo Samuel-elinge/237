@@ -32,7 +32,7 @@ $partnerId      = (int)$partnerProfile['id'];
 $userId         = currentUser()['id'];
 $pdo            = db();
 
-// ── POST handler ─────────────────────────────────────────────────
+// -- POST handler -------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $action = $_POST['action'] ?? '';
@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect(SITE_URL . '/partner/saleskit');
 }
 
-// ── Data ─────────────────────────────────────────────────────────
+// -- Data ---------------------------------------------------------
 $listings = fetchPartnerListings($partnerId);
 
 // Get selected business
@@ -503,13 +503,13 @@ function showToast() {
 function copyBusinessCard() {
   <?php if ($fullListing): ?>
   const info = [
-    "📍 <?= addslashes(htmlspecialchars($fullListing['title'])) ?>",
-    "🏷️ <?= addslashes(htmlspecialchars($fullListing['cat_name'] . ' · ' . $fullListing['city'])) ?>",
-    <?php if ($fullListing['phone']): ?>"📞 <?= addslashes(htmlspecialchars($fullListing['phone'])) ?>",<?php endif; ?>
+    "<?= addslashes(htmlspecialchars($fullListing['title'])) ?>",
+    "<?= addslashes(htmlspecialchars($fullListing['cat_name'] . ' - ' . $fullListing['city'])) ?>",
+    <?php if ($fullListing['phone']): ?>"Tel: <?= addslashes(htmlspecialchars($fullListing['phone'])) ?>",<?php endif; ?>
     <?php $wa2 = preg_replace('/\D/', '', $fullListing['whatsapp'] ?? ''); if ($wa2 && strlen($wa2) >= 8 && $wa2[0] !== '2') $wa2 = '237'.$wa2; ?>
-    <?php if ($wa2): ?>"💬 +<?= addslashes($wa2) ?>",<?php endif; ?>
-    <?php if ($fullListing['website']): ?>"🌐 <?= addslashes(htmlspecialchars($fullListing['website'])) ?>",<?php endif; ?>
-    "🔗 <?= addslashes($siteUrl . '/listing/' . ($fullListing['slug'] ?? $selectedId)) ?>"
+    <?php if ($wa2): ?>"WhatsApp: +<?= addslashes($wa2) ?>",<?php endif; ?>
+    <?php if ($fullListing['website']): ?>"Web: <?= addslashes(htmlspecialchars($fullListing['website'])) ?>",<?php endif; ?>
+    "Link: <?= addslashes($siteUrl . '/listing/' . ($fullListing['slug'] ?? $selectedId)) ?>"
   ].join("\n");
   copyText(info);
   <?php endif; ?>
