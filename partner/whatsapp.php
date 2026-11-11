@@ -278,8 +278,8 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
             $wa = preg_replace('/\D/', '', $biz['whatsapp'] ?? '');
             if ($wa && strlen($wa) >= 8 && $wa[0] !== '2') $wa = '237' . $wa;
           ?>
-          <div class="biz-card" id="biz-<?= $biz['id'] ?>" onclick="selectBiz(<?= $biz['id'] ?>, <?= htmlspecialchars(json_encode($biz['name']), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($wa), ENT_QUOTES) ?>)">
-            <div class="biz-name"><?= htmlspecialchars($biz['name']) ?></div>
+          <div class="biz-card" id="biz-<?= $biz['id'] ?>" onclick="selectBiz(<?= $biz['id'] ?>, <?= htmlspecialchars(json_encode($biz['title']), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($wa), ENT_QUOTES) ?>)">
+            <div class="biz-name"><?= htmlspecialchars($biz['title']) ?></div>
             <?php if ($wa): ?>
               <div class="biz-wa">📱 +<?= htmlspecialchars($wa) ?></div>
             <?php else: ?>
