@@ -1,4 +1,6 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 /**
  * partner/saleskit.php — Digital Sales Kit (Phase 5B)
  * - Business profile share card
