@@ -1,4 +1,6 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 /**
  * partner/whatsapp.php — WhatsApp Sales Toolkit (Phase 5A)
  * - Quick WA link generator per listing
