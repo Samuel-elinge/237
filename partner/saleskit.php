@@ -1,6 +1,4 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 /**
  * partner/saleskit.php — Digital Sales Kit (Phase 5B)
  * - Business profile share card
@@ -284,7 +282,7 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
   <div class="biz-picker">
     <?php foreach ($listings as $biz): ?>
     <a href="?biz=<?= $biz['id'] ?>" class="biz-pill <?= $biz['id'] === $selectedId ? 'active' : '' ?>">
-      <?= htmlspecialchars($biz['name']) ?>
+      <?= htmlspecialchars($biz['title']) ?>
     </a>
     <?php endforeach; ?>
   </div>
@@ -302,7 +300,7 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
             🏢
           <?php endif; ?>
         </div>
-        <div class="biz-name"><?= htmlspecialchars($fullListing['name']) ?></div>
+        <div class="biz-name"><?= htmlspecialchars($fullListing['title']) ?></div>
         <div class="biz-cat">📍 <?= htmlspecialchars($fullListing['cat_name']) ?> · <?= htmlspecialchars($fullListing['city']) ?></div>
 
         <div class="biz-contact">
@@ -324,7 +322,7 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
 
         <div class="share-actions">
           <?php if ($wa): ?>
-          <a href="https://wa.me/<?= $wa ?>?text=<?= urlencode("Hello! I'd like to know more about " . $fullListing['name']) ?>"
+          <a href="https://wa.me/<?= $wa ?>?text=<?= urlencode("Hello! I'd like to know more about " . $fullListing['title']) ?>"
              class="share-btn share-btn-wa" target="_blank">💬 WhatsApp</a>
           <?php endif; ?>
           <button class="share-btn share-btn-copy" onclick="copyText('<?= htmlspecialchars($siteUrl . '/listing/' . ($fullListing['slug'] ?? $fullListing['id'])) ?>')">
@@ -356,7 +354,7 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
           QR code not yet generated for this listing.<br>
           <a href="<?= SITE_URL ?>/admin/listings/<?= $selectedId ?>" style="color:var(--accent);">Generate in admin</a>
         </div>
-        <div class="qr-label">Scan to view <?= htmlspecialchars($fullListing['name']) ?>'s profile</div>
+        <div class="qr-label">Scan to view <?= htmlspecialchars($fullListing['title']) ?>'s profile</div>
         <div style="margin-top:0.75rem">
           <a href="<?= htmlspecialchars($qrUrl) ?>" download class="share-btn share-btn-copy" style="font-size:0.78rem; padding:0.4rem 0.8rem; display:inline-flex; justify-content:center; gap:0.3rem;">
             ⬇️ Download QR
@@ -449,7 +447,7 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
                 <select class="form-select" name="listing_id">
                   <option value="">— Any —</option>
                   <?php foreach ($listings as $biz): ?>
-                  <option value="<?= $biz['id'] ?>" <?= $biz['id'] === $selectedId ? 'selected' : '' ?>><?= htmlspecialchars($biz['name']) ?></option>
+                  <option value="<?= $biz['id'] ?>" <?= $biz['id'] === $selectedId ? 'selected' : '' ?>><?= htmlspecialchars($biz['title']) ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -505,7 +503,7 @@ function showToast() {
 function copyBusinessCard() {
   <?php if ($fullListing): ?>
   const info = [
-    "📍 <?= addslashes(htmlspecialchars($fullListing['name'])) ?>",
+    "📍 <?= addslashes(htmlspecialchars($fullListing['title'])) ?>",
     "🏷️ <?= addslashes(htmlspecialchars($fullListing['cat_name'] . ' · ' . $fullListing['city'])) ?>",
     <?php if ($fullListing['phone']): ?>"📞 <?= addslashes(htmlspecialchars($fullListing['phone'])) ?>",<?php endif; ?>
     <?php $wa2 = preg_replace('/\D/', '', $fullListing['whatsapp'] ?? ''); if ($wa2 && strlen($wa2) >= 8 && $wa2[0] !== '2') $wa2 = '237'.$wa2; ?>
