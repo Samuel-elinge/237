@@ -496,8 +496,7 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
     </div>
   </div>
 </div>
-<input type="hidden" id="js-csrf-token" value="<?= htmlspecialchars(gpCsrfToken()) ?>">
-<input type="hidden" id="js-csrf-value" value="<?= htmlspecialchars(gpCsrfValue()) ?>">
+<input type="hidden" id="js-csrf-value" value="<?= htmlspecialchars($_SESSION['_gp_csrf'] ?? '', ENT_QUOTES) ?>">
 
 <script>
 // -- Tab switching -------------------------------------------
@@ -572,9 +571,8 @@ function trackWaSend() {
   // Increment use_count if a template was loaded
   const sel = document.getElementById('tpl-select');
   if (sel && sel.value) {
-    const tok = document.getElementById('js-csrf-token');
     const val = document.getElementById('js-csrf-value');
-    const csrfPart = tok && val ? '&' + tok.value + '=' + val.value : '';
+    const csrfPart = val ? '&csrf_token=' + encodeURIComponent(val.value) : '';
     fetch('<?= SITE_URL ?>/partner/templates', {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
