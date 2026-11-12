@@ -89,10 +89,6 @@ partnerNavBadges($partnerId, $pdo);
 
 <style>
 .partner-wrap { max-width:1280px; margin:0 auto; padding:2rem 1.5rem; }
-.partner-nav { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:2rem; }
-.partner-nav a { padding:0.45rem 1rem; border-radius:9px; font-size:0.875rem; font-weight:600;
-  text-decoration:none; background:var(--card); border:1px solid var(--border); color:var(--text); transition:all .15s; }
-.partner-nav a:hover, .partner-nav a.active { background:var(--primary); color:#fff; border-color:var(--primary); }
 
 .status-tab { padding:0.35rem 0.9rem; border-radius:20px; border:1px solid var(--border);
   font-size:0.8rem; cursor:pointer; background:var(--card); color:var(--text); text-decoration:none; }
@@ -115,14 +111,6 @@ partnerNavBadges($partnerId, $pdo);
     <h1 style="font-family:'Fraunces',serif; font-size:2rem; font-weight:900; margin:0;">💬 <?= pt('Leads') ?></h1>
     <span style="color:var(--muted);"><?= count($leads) ?> <?= pt('lead(s)') ?></span>
   </div>
-
-  <nav class="partner-nav">
-    <a href="<?= SITE_URL ?>/partner/dashboard">🏠 <?= pt('Dashboard') ?></a>
-    <a href="<?= SITE_URL ?>/partner/portfolio">📋 <?= pt('Portfolio') ?></a>
-    <a href="<?= SITE_URL ?>/partner/tasks">✅ <?= pt('Tasks') ?></a>
-    <a href="<?= SITE_URL ?>/partner/leads" class="active">💬 <?= pt('Leads') ?></a>
-    <a href="<?= SITE_URL ?>/partner/commissions">💰 <?= pt('Commissions') ?></a>
-  </nav>
 
   <!-- Status tabs -->
   <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1rem;">
