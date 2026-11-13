@@ -453,6 +453,25 @@ require_once __DIR__ . '/includes/header.php';
                       'Vous voulez vous démarquer ? Passez à une <strong style="color:var(--yellow)">annonce vedette</strong> après soumission.') ?>
           </p>
         </div>
+
+        <!-- Web Design Promo Card -->
+        <div class="listing-widget" style="background:linear-gradient(135deg,rgba(26,31,58,0.9),rgba(10,15,30,0.95));border-color:rgba(232,93,4,0.35);padding:1.1rem;">
+          <div style="text-align:center;margin-bottom:0.75rem;">
+            <span style="font-size:1.6rem;">🌐</span>
+            <div style="font-size:0.65rem;font-weight:700;letter-spacing:.08em;color:rgba(232,93,4,0.9);text-transform:uppercase;margin-top:0.2rem;"><?= t('Built & Managed by 237Biz','Créé & géré par 237Biz') ?></div>
+          </div>
+          <h4 style="font-size:0.9rem;font-weight:700;color:#fff;text-align:center;margin:0 0 0.5rem;"><?= t('Need a website?','Besoin d\'un site web ?') ?></h4>
+          <p style="font-size:0.78rem;color:var(--muted);text-align:center;line-height:1.5;margin:0 0 0.8rem;">
+            <?= t('We build professional bilingual websites for Cameroonian businesses — like <strong style="color:#e85d04">sabi-pot.com</strong> &amp; <strong style="color:#e85d04">thetahiriheffect.com</strong>.',
+                  'Nous créons des sites bilingues professionnels pour les entreprises camerounaises — comme <strong style="color:#e85d04">sabi-pot.com</strong> &amp; <strong style="color:#e85d04">thetahiriheffect.com</strong>.') ?>
+          </p>
+          <a href="<?= SITE_URL ?>/websites" style="display:block;text-align:center;background:rgba(232,93,4,0.15);border:1px solid rgba(232,93,4,0.4);color:#e85d04;text-decoration:none;font-size:0.78rem;font-weight:600;padding:0.45rem 0.75rem;border-radius:6px;margin-bottom:0.5rem;transition:background .2s;" onmouseover="this.style.background='rgba(232,93,4,0.25)'" onmouseout="this.style.background='rgba(232,93,4,0.15)'">
+            🔍 <?= t('See our web work','Voir nos réalisations') ?>
+          </a>
+          <a href="<?= SITE_URL ?>/contact?type=website" style="display:block;text-align:center;background:#e85d04;color:#fff;text-decoration:none;font-size:0.78rem;font-weight:700;padding:0.45rem 0.75rem;border-radius:6px;transition:background .2s;" onmouseover="this.style.background='#c94a00'" onmouseout="this.style.background='#e85d04'">
+            💬 <?= t('Get a quote','Obtenir un devis') ?>
+          </a>
+        </div>
       </aside>
     </div>
   </div>

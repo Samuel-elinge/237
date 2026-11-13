@@ -454,6 +454,11 @@ $cuRole = $cu['role'] ?? 'guest';
       <a href="<?= SITE_URL ?>/booking" class="nav-link">📅 <?= t('Bookings','Réservations') ?></a>
     </div>
 
+    <!-- Web Design -->
+    <div class="nav-item">
+      <a href="<?= SITE_URL ?>/websites" class="nav-link">🌐 <?= t('Web Design','Création Web') ?></a>
+    </div>
+
     <!-- Offers & Events -->
     <div class="nav-item">
       <button class="nav-link" aria-haspopup="true">🎁 <?= t('Offers & Events','Offres & Événements') ?> <span class="caret">▾</span></button>
@@ -641,7 +646,15 @@ $cuRole = $cu['role'] ?? 'guest';
         </a>
       </li>
 
-      <!-- 3. Offers & Events -->
+      <!-- 3. Web Design -->
+      <li>
+        <a href="<?= SITE_URL ?>/websites" class="drawer-nav-item" onclick="closeDrawer()">
+          <span class="icon">🌐</span>
+          <span class="label"><?= t('Web Design','Création Web') ?></span>
+        </a>
+      </li>
+
+      <!-- 4. Offers & Events -->
       <li>
         <button class="drawer-nav-item" aria-expanded="false" data-target="sub-offers">
           <span class="icon">🎁</span>

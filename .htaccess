@@ -219,6 +219,7 @@ RewriteRule ^locations/?$      locations.php   [L,QSA]
 RewriteRule ^privacy-policy/?$  privacy-policy.php  [L,QSA]
 RewriteRule ^terms/?$           terms.php           [L,QSA]
 RewriteRule ^contact/?$         contact.php         [L,QSA]
+RewriteRule ^websites/?$        websites.php        [L,QSA]
 
 # ── CACHING ───────────────────────────────────────────────
 <IfModule mod_expires.c>
