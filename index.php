@@ -991,6 +991,65 @@ require_once __DIR__ . '/includes/header.php';
   </div>
 </section>
 
+<!-- ══ WEBSITES WE BUILD ═══════════════════════════════════ -->
+<section class="hp-section" style="background:rgba(255,255,255,0.01);border-top:1px solid rgba(255,255,255,0.06) !important;">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">🌐 <?= t('WEB DESIGN', 'CRÉATION DE SITES') ?></div>
+      <h2 class="section-title"><?= t('Websites Built &amp; Managed by 237Biz', 'Sites web créés &amp; gérés par 237Biz') ?></h2>
+      <p class="section-sub"><?= t('We don\'t just list businesses — we build their online presence. Here\'s some of our web work.', 'Nous ne listons pas seulement des entreprises — nous construisons leur présence en ligne.') ?></p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:32px;">
+      <?php
+      $showcaseSites = [
+        ['name'=>'The Tahirih Effect','url'=>'https://thetahiriheffect.com','icon'=>'🎯','bg'=>'#1a1f3a','color'=>'#e85d04',
+         'tag'=>t('Marketing Agency','Agence Marketing'),
+         'desc'=>t('Cameroon\'s Business Visibility Agency','Agence de visibilité des entreprises'),
+         'badge'=>t('First Build','Premier site')],
+        ['name'=>'Sabi Pot Restaurant','url'=>'https://sabi-pot.com','icon'=>'🍲','bg'=>'#1a0a00','color'=>'#c1440e',
+         'tag'=>t('Restaurant','Restaurant'),
+         'desc'=>t('Rich, slow-cooked African flavours','Les saveurs africaines mijotées'),
+         'badge'=>t('Latest Build','Dernière réalisation')],
+      ];
+      foreach ($showcaseSites as $site): ?>
+      <a href="<?= htmlspecialchars($site['url']) ?>" target="_blank" rel="noopener"
+         style="display:flex;flex-direction:column;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;text-decoration:none;transition:all .2s;"
+         onmouseover="this.style.borderColor='rgba(0,168,120,0.3)';this.style.transform='translateY(-2px)'"
+         onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';this.style.transform='none'">
+        <!-- Mini browser mockup -->
+        <div style="background:<?= $site['bg'] ?>;padding:1.25rem;display:flex;align-items:center;justify-content:center;min-height:120px;">
+          <div style="width:85%;background:#1e1e1e;border-radius:8px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.5);">
+            <div style="background:#2a2a2a;padding:5px 8px;display:flex;align-items:center;gap:4px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:#ff5f57;"></div>
+              <div style="width:8px;height:8px;border-radius:50%;background:#febc2e;"></div>
+              <div style="width:8px;height:8px;border-radius:50%;background:#28c840;"></div>
+              <div style="flex:1;background:#3a3a3a;border-radius:3px;padding:2px 6px;font-size:9px;color:#888;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= str_replace('https://','',$site['url']) ?></div>
+            </div>
+            <div style="background:<?= $site['bg'] ?>;height:60px;display:flex;align-items:center;justify-content:center;font-size:2rem;"><?= $site['icon'] ?></div>
+          </div>
+        </div>
+        <!-- Info -->
+        <div style="padding:14px 16px;flex:1;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+            <span style="font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.08em;"><?= htmlspecialchars($site['tag']) ?></span>
+            <span style="font-size:0.65rem;font-weight:700;padding:1px 7px;border-radius:20px;color:#fff;background:<?= $site['color'] ?>;"><?= htmlspecialchars($site['badge']) ?></span>
+          </div>
+          <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:3px;"><?= htmlspecialchars($site['name']) ?></div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.5);font-style:italic;">"<?= htmlspecialchars($site['desc']) ?>"</div>
+        </div>
+        <div style="padding:0 16px 14px;">
+          <span style="font-size:12px;font-weight:600;color:#00A878;">🌐 <?= t('View live site','Voir le site') ?> →</span>
+        </div>
+      </a>
+      <?php endforeach; ?>
+    </div>
+    <div style="text-align:center;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a href="<?= SITE_URL ?>/websites" class="view-all">🌐 <?= t('See All Our Web Work', 'Voir nos réalisations web') ?> →</a>
+      <a href="<?= SITE_URL ?>/contact?type=website" class="view-all" style="color:#fcd116;border-color:rgba(252,209,22,0.3);">💬 <?= t('Get a Website', 'Obtenir un site') ?></a>
+    </div>
+  </div>
+</section>
+
 <!-- ══ FOOTER CTA ═════════════════════════════════════════ -->
 <section style="background:linear-gradient(135deg,#08472F,#081C10);padding:70px 0;text-align:center;">
   <div class="container">
