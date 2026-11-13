@@ -92,8 +92,8 @@ require_once __DIR__ . '/includes/header.php';
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: #fff;
-  color: var(--primary);
+  background: var(--primary);
+  color: #fff;
   font-weight: 700;
   font-size: 0.95rem;
   padding: 0.75rem 1.75rem;
@@ -301,8 +301,8 @@ require_once __DIR__ . '/includes/header.php';
 .ws-cta p { opacity: 0.88; max-width: 480px; margin: 0 auto 2rem; font-size: 1rem; }
 .ws-cta-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
 .ws-cta-btn-white {
-  background: #fff;
-  color: var(--primary);
+  background: var(--primary);
+  color: #fff;
   font-weight: 700;
   padding: 0.8rem 2rem;
   border-radius: 10px;
