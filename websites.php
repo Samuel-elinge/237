@@ -28,7 +28,7 @@ $sites = [
     'color'    => '#e85d04',
     'badge'    => t('First Site Built','Premier site construit'),
     'screenshot_bg' => '#1a1f3a',
-    'screenshot'    => SITE_URL . '/assets/images/screenshot-thetahiriheffect.jpg',
+    'screenshot'    => 'screenshot-thetahiriheffect.jpg',
   ],
   [
     'name'     => 'Sabi Pot Restaurant & Grill',
@@ -49,7 +49,7 @@ $sites = [
     'color'    => '#c1440e',
     'badge'    => t('Latest Build','Dernière réalisation'),
     'screenshot_bg' => '#1a0a00',
-    'screenshot'    => SITE_URL . '/assets/images/screenshot-sabi-pot.jpg',
+    'screenshot'    => 'screenshot-sabi-pot.jpg',
   ],
 ];
 
@@ -376,12 +376,12 @@ require_once __DIR__ . '/includes/header.php';
           <div class="ws-browser-dot" style="background:#28c840;"></div>
           <div class="ws-browser-url"><?= htmlspecialchars(str_replace('https://','',$s['url'])) ?></div>
         </div>
-        <div class="ws-browser-content" style="background:<?= ['screenshot_bg'] ?>;padding:0;overflow:hidden;">
-          <?php if (!empty(['screenshot'])): ?>
-          <img src="<?= ['screenshot'] ?>" alt="<?= htmlspecialchars(['name']) ?> website screenshot"
+        <div class="ws-browser-content" style="background:<?= $s['screenshot_bg'] ?>;padding:0;overflow:hidden;">
+          <?php if (!empty($s['screenshot'])): ?>
+          <img src="<?= SITE_URL ?>/assets/images/<?= $s['screenshot'] ?>" alt="<?= htmlspecialchars($s['name']) ?> website screenshot"
                style="width:100%;height:100%;object-fit:cover;object-position:top center;display:block;border-radius:0 0 4px 4px;">
           <?php else: ?>
-          <span style="font-size:3.5rem;"><?= ['icon'] ?></span>
+          <span style="font-size:3.5rem;"><?= $s['icon'] ?></span>
           <?php endif; ?>
         </div>
       </div>
