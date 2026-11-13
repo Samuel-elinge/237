@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/partner-helpers.php';
 require_once __DIR__ . '/../includes/ops-admin-helpers.php';
 requireAnyAdmin();
 
@@ -469,7 +470,7 @@ adminNav('users'); adminNavAssets();
                 <!-- Login as (non-admin only) -->
                 <?php if ($u['role'] !== 'admin'): ?>
                 <form method="POST" action="<?= SITE_URL ?>/admin/login-as.php" style="display:block;">
-                  <input type="hidden" name="csrf" value="<?= csrf() ?>">
+                  <?= gpCsrfField() ?>
                   <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
                   <button type="submit" style="width:100%;background:rgba(138,180,248,0.12);border:1px solid rgba(138,180,248,0.3);color:#8ab4f8;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:inherit;">👁 Login as</button>
                 </form>
