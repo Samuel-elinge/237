@@ -324,7 +324,7 @@ body{background:#060e0a;color:#cde8d8;font-family:system-ui,sans-serif;margin:0}
         <?= $globalEnabled ? 'ENABLED' : 'DISABLED' ?>
       </span>
       <form method="POST" action="<?= SITE_URL ?>/admin/digital-cards">
-        <?= csrf() ?>
+        <?= csrfField() ?>
         <input type="hidden" name="action" value="global_toggle">
         <?php if ($globalEnabled): ?>
           <input type="hidden" name="enabled" value="0">
@@ -448,7 +448,7 @@ body{background:#060e0a;color:#cde8d8;font-family:system-ui,sans-serif;margin:0}
           </td>
           <td>
             <form method="POST" action="<?= SITE_URL ?>/admin/digital-cards" style="display:inline">
-              <?= csrf() ?>
+              <?= csrfField() ?>
               <input type="hidden" name="action" value="toggle_card">
               <input type="hidden" name="listing_id" value="<?= (int)$b['id'] ?>">
               <button type="submit" class="dc-btn dc-btn-sm <?= $b['card_disabled'] ? 'dc-btn-en' : 'dc-btn-dis' ?>">
@@ -477,7 +477,7 @@ body{background:#060e0a;color:#cde8d8;font-family:system-ui,sans-serif;margin:0}
   </div>
 
   <form method="POST" action="<?= SITE_URL ?>/admin/digital-cards" id="bulkForm">
-    <?= csrf() ?>
+    <?= csrfField() ?>
     <div style="display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap">
       <button type="submit" name="action" value="bulk_disable" class="dc-btn dc-btn-dis" onclick="return document.querySelectorAll('.bulk-chk:checked').length>0||alert('Select at least one listing')&&false">Disable selected</button>
       <button type="submit" name="action" value="bulk_enable"  class="dc-btn dc-btn-en" onclick="return document.querySelectorAll('.bulk-chk:checked').length>0||alert('Select at least one listing')&&false">Enable selected</button>
@@ -541,7 +541,7 @@ body{background:#060e0a;color:#cde8d8;font-family:system-ui,sans-serif;margin:0}
               <a href="<?= SITE_URL ?>/card/<?= e($l['slug']) ?>" target="_blank" class="dc-btn dc-btn-sm" style="color:#8db8a8">View</a>
               <a href="<?= SITE_URL ?>/card-analytics?listing_id=<?= (int)$l['id'] ?>" class="dc-btn dc-btn-sm">Analytics</a>
               <form method="POST" action="<?= SITE_URL ?>/admin/digital-cards" style="display:inline">
-                <?= csrf() ?>
+                <?= csrfField() ?>
                 <input type="hidden" name="action" value="toggle_card">
                 <input type="hidden" name="listing_id" value="<?= (int)$l['id'] ?>">
                 <input type="hidden" name="q" value="<?= e($search) ?>">
