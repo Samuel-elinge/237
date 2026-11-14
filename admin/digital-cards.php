@@ -4,6 +4,9 @@
  * URL: /admin/digital-cards
  * Admin controls: global toggle, platform analytics, per-business card enable/disable
  */
+// TEMP: surface PHP errors for debugging
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 require_once __DIR__ . '/../includes/config.php';
 requireAdmin();
 
