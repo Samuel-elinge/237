@@ -340,8 +340,8 @@ require_once __DIR__ . '/includes/header.php';
   <!-- QR + card URL bar -->
   <div class="qr-card">
     <img class="qr-img"
-         src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=<?= urlencode(SITE_URL.'/card/'.$slug) ?>&color=08472F&bgcolor=ffffff"
-         alt="QR Code" loading="lazy">
+         src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=<?= urlencode(SITE_URL.'/card/'.$slug) ?>&color=08472F&bgcolor=ffffff"
+         alt="QR Code" loading="lazy" style="width:100px;height:100px;">
     <div class="qr-info">
       <h3><?= t('Your Digital Card QR','Votre QR Carte Digitale') ?></h3>
       <p id="cardUrlText"><?= SITE_URL ?>/card/<?= e($slug) ?></p>
@@ -358,6 +358,16 @@ require_once __DIR__ . '/includes/header.php';
           📋 <?= t('Copy Link','Copier lien') ?>
         </button>
       </div>
+      <details style="margin-top:10px;">
+        <summary style="font-size:11.5px;color:var(--muted,#888);cursor:pointer;"><?= t('💡 How to use your QR code','💡 Comment utiliser votre code QR') ?></summary>
+        <div style="font-size:11px;color:var(--muted,#888);margin-top:6px;line-height:1.6;">
+          <strong><?= t('On mobile:','Sur mobile :') ?></strong><br>
+          1. <?= t('Tap "Download QR" above','Appuyez sur "Télécharger QR" ci-dessus') ?><br>
+          2. <?= t('Save the image to your phone gallery','Enregistrez l\'image dans votre galerie') ?><br>
+          3. <?= t('Share via WhatsApp, Instagram, or print it','Partagez via WhatsApp, Instagram, ou imprimez-le') ?><br>
+          <strong><?= t('Print tip:','Conseil impression :') ?></strong> <?= t('Add the QR code to your business card, flyer or signage','Ajoutez le code QR sur votre carte de visite, flyer ou enseigne') ?>
+        </div>
+      </details>
     </div>
   </div>
 

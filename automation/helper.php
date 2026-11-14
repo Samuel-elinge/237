@@ -45,14 +45,20 @@ function queueEmail(int $userId, int $templateId, ?int $sequenceId = null, ?int 
         $uDetailed->execute([$userId]);
         $uData = $uDetailed->fetch();
 
-        $mergeFind = ['{{name}}','{{first_name}}','{{email}}','{{business_name}}','{{listing_url}}','{{site_url}}','{{dashboard_url}}'];
+        $mergeFind = ['{{name}}','{{first_name}}','{{email}}','{{business_name}}','{{listing_url}}','{{card_url}}','{{qr_code_url}}','{{site_url}}','{{dashboard_url}}'];
         $firstName = explode(' ', $uData['name'] ?? '')[0];
+        $cardUrl   = isset($uData['listing_slug']) ? SITE_URL . '/card/' . $uData['listing_slug'] : SITE_URL;
+        $qrUrl     = isset($uData['listing_slug'])
+            ? 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=1a7a4a&bgcolor=ffffff&data=' . rawurlencode($cardUrl)
+            : '';
         $mergeReplace = [
             $uData['name']   ?? '',
             $firstName,
             $uData['email']  ?? '',
             $uData['business_name'] ?? ($uData['name'] ?? ''),
             isset($uData['listing_slug']) ? SITE_URL . '/listing/' . $uData['listing_slug'] : SITE_URL,
+            $cardUrl,
+            $qrUrl,
             SITE_URL,
             SITE_URL . '/dashboard',
         ];

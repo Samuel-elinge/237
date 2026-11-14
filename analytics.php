@@ -785,15 +785,25 @@ require_once __DIR__ . '/includes/header.php';
     <div style="font-size:14px;font-weight:700;margin-bottom:8px;">📱 <?= t('QR Code','Code QR') ?></div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:12px;"><?= t('Share or print this QR code to link directly to your listing.','Partagez ou imprimez ce code QR pour accéder directement à votre annonce.') ?></p>
     <?php $listingUrl = SITE_URL . '/listing/' . e($l['slug']); ?>
-    <img class="qr-img"
-         src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=<?= urlencode($listingUrl) ?>&color=08472F&bgcolor=ffffff"
-         alt="QR Code for <?= e($l['title']) ?>">
+    <div style="text-align:center;margin-bottom:12px;">
+      <img class="qr-img"
+           src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?= urlencode($listingUrl) ?>&color=08472F&bgcolor=ffffff"
+           alt="QR Code for <?= e($l['title']) ?>" style="width:120px;height:120px;">
+    </div>
     <a href="https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=<?= urlencode($listingUrl) ?>&color=08472F&bgcolor=ffffff&format=png"
        download="<?= e($l['slug']) ?>-qr.png" target="_blank"
        class="btn btn-outline" style="width:100%;text-align:center;display:block;margin-bottom:8px;">
       ⬇️ <?= t('Download QR Code','Télécharger le code QR') ?>
     </a>
-    <div style="font-size:10.5px;color:var(--muted);text-align:center;word-break:break-all;"><?= $listingUrl ?></div>
+    <div style="font-size:10.5px;color:var(--muted);text-align:center;word-break:break-all;margin-bottom:8px;"><?= $listingUrl ?></div>
+    <details>
+      <summary style="font-size:11px;color:var(--muted);cursor:pointer;"><?= t('💡 How to share your QR code','💡 Comment partager votre code QR') ?></summary>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6;">
+        1. <?= t('Download the QR image above','Téléchargez l\'image QR ci-dessus') ?><br>
+        2. <?= t('Save it to your phone gallery','Enregistrez-la dans votre galerie') ?><br>
+        3. <?= t('Share via WhatsApp, Facebook, or print it on your flyer/business card','Partagez via WhatsApp, Facebook, ou imprimez-le sur votre flyer') ?>
+      </div>
+    </details>
   </div>
 
   <!-- Followers mini widget -->
