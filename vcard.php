@@ -84,10 +84,26 @@ if ($phone) {
     }
 }
 
+// Embed logo as base64 PHOTO if available
+$photoLine = '';
+if (!empty($l['logo'])) {
+    $logoPath = __DIR__ . '/uploads/' . ltrim($l['logo'], '/');
+    if (file_exists($logoPath)) {
+        $ext  = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
+        $mime = match($ext) { 'png' => 'PNG', 'gif' => 'GIF', default => 'JPEG' };
+        $b64  = base64_encode(file_get_contents($logoPath));
+        // vCard 3.0 inline photo — fold the base64 data
+        $photoLine = "PHOTO;ENCODING=b;TYPE={$mime}:" . $b64;
+    }
+}
+
 $lines = [];
 $lines[] = 'BEGIN:VCARD';
 $lines[] = 'VERSION:3.0';
 $lines[] = vcf_fold('FN:' . vcf_escape($name));
+// N: field required by iOS: Family;Given;Middle;Prefix;Suffix
+// For a business name we put the full name as "family" so it sorts correctly
+$lines[] = vcf_fold('N:' . vcf_escape($name) . ';;;;');
 $lines[] = vcf_fold('ORG:' . vcf_escape($name));
 $lines[] = vcf_fold('TITLE:' . vcf_escape($l['cat_en'] ?? ''));
 if ($phoneFormatted) {
@@ -123,6 +139,19 @@ if ($phoneFormatted) {
 $cardUrl = SITE_URL . '/card/' . $l['slug'];
 $lines[] = vcf_fold('URL;TYPE=HOME:' . $cardUrl);
 $lines[] = 'X-237BIZ:Powered by 237biz.net';
+// Photo (must come last before END to avoid folding issues on some parsers)
+if ($photoLine) {
+    // Manually fold photo line: prefix + base64 data, 75-char lines after first
+    $header = substr($photoLine, 0, strpos($photoLine, ':') + 1);
+    $data   = substr($photoLine, strlen($header));
+    $folded = $header;
+    while (strlen($data) > 0) {
+        $chunk  = substr($data, 0, 74);
+        $data   = substr($data, 74);
+        $folded .= $chunk . "\r\n ";
+    }
+    $lines[] = rtrim($folded);
+}
 $lines[] = 'END:VCARD';
 
 $vcf = implode("\r\n", $lines) . "\r\n";
