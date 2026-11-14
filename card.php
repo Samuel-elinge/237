@@ -239,8 +239,8 @@ body{
 .card-top{
   display:flex;
   align-items:center;
-  gap:1.1rem;
-  margin-bottom:1.2rem;
+  gap:.85rem;
+  margin-bottom:1rem;
 }
 .hero-logo{
   width:76px;height:76px;
@@ -264,15 +264,18 @@ body{
 .card-title-block{flex:1;min-width:0}
 .hero-name{
   font-family:'Playfair Display',Georgia,serif;
-  font-size:1.45rem;font-weight:700;
-  line-height:1.15;
+  font-size:1.35rem;font-weight:700;
+  line-height:1.2;
   margin-bottom:.3rem;
   letter-spacing:-.01em;
+  word-break:break-word;
+  overflow-wrap:anywhere;
 }
 .hero-cat{
   font-size:.8rem;opacity:.8;
   display:flex;align-items:center;gap:.3rem;
   font-weight:500;
+  flex-wrap:wrap;
 }
 
 /* Divider */
@@ -294,6 +297,7 @@ body{
   font-size:.78rem;line-height:1.3;
   color:rgba(255,255,255,.85);
   min-width:0;
+  overflow:hidden;
 }
 .card-contact-item .ci-icon{
   font-size:.95rem;flex-shrink:0;
@@ -495,17 +499,24 @@ body{
 .toast.show{opacity:1}
 
 /* ── Responsive ──────────────────────────────────────── */
+/* Mobile first: single-column contact grid */
+.card-contact-grid{grid-template-columns:1fr}
+.card-inner{padding:1.5rem 1.1rem 1.3rem}
+
+@media(min-width:420px){
+  .card-contact-grid{grid-template-columns:1fr 1fr}
+  .card-inner{padding:1.75rem 1.3rem 1.5rem}
+}
 @media(min-width:480px){
   .actions-grid{grid-template-columns:repeat(4,1fr)}
-  .card-contact-grid{grid-template-columns:1fr 1fr}
 }
 @media(min-width:600px){
-  .card-inner{padding:2.4rem 2rem 1.8rem}
+  .card-inner{padding:2.2rem 1.8rem 1.8rem}
   .card-loc-strip{padding:.6rem 2rem}
   .actions-wrap,.section-card,.profile-link-wrap{margin-left:auto;margin-right:auto;max-width:540px}
   .actions-wrap{padding:0}
-  .hero-name{font-size:1.65rem}
-  .hero-logo,.hero-initials{width:88px;height:88px}
+  .hero-name{font-size:1.55rem}
+  .hero-logo,.hero-initials{width:84px;height:84px}
 }
 </style>
 </head>
