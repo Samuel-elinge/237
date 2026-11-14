@@ -299,9 +299,6 @@ body{background:#060e0a;color:#cde8d8;font-family:system-ui,sans-serif;margin:0}
 .range-tab:hover{background:rgba(0,168,120,.12);color:#cde8d8}
 .range-tab.active{background:#00A878;color:#0A1A0F;font-weight:700;border-color:#00A878}
 
-/* ── Flash ─── */
-.flash-success{background:rgba(0,168,120,.2);border:1px solid rgba(0,168,120,.4);color:#00A878;padding:.6rem 1rem;border-radius:8px;margin-bottom:1rem;font-size:.85rem}
-
 @media(max-width:600px){
   .dc-stats{grid-template-columns:repeat(2,1fr)}
   .dc-filter input[type=text]{width:100%}
@@ -311,9 +308,7 @@ body{background:#060e0a;color:#cde8d8;font-family:system-ui,sans-serif;margin:0}
 <div class="dc-wrap">
   <div class="dc-title">🪪 Digital Card & QR Management</div>
 
-  <?php if ($msg = getFlash('success')): ?>
-  <div class="flash-success">✓ <?= e($msg) ?></div>
-  <?php endif; ?>
+  <?php showFlash(); ?>
 
   <!-- ── Global Toggle ─────────────────────────────────────── -->
   <div class="dc-global">
