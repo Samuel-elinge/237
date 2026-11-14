@@ -94,6 +94,7 @@ RewriteRule ^events/?$                  events.php                   [L,QSA]
 RewriteRule ^event/([a-z0-9-]+)/?$      event.php?slug=$1            [L,QSA]
 
 # Analytics & announcements
+RewriteRule ^card-analytics/?$          card-analytics.php           [L,QSA]
 RewriteRule ^analytics/?$               analytics.php                [L,QSA]
 RewriteRule ^manage-announcements/?$    manage-announcements.php     [L,QSA]
 
