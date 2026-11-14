@@ -4,6 +4,7 @@
  * URL: /card/{slug}
  * Mobile-first digital business card for QR scanning.
  */
+ini_set('display_errors', 1); error_reporting(E_ALL);
 require_once __DIR__ . '/includes/config.php';
 
 $slug = trim($_GET['slug'] ?? '');
