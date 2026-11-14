@@ -161,6 +161,7 @@ RewriteRule ^partner/marketplace-pay/?$    partner/marketplace-pay.php    [L,QSA
 RewriteRule ^marketplace-approve/?$       marketplace-approve.php       [L,QSA]
 
 # Admin Marketplace
+RewriteRule ^admin/digital-cards/?$         admin/digital-cards.php         [L,QSA]
 RewriteRule ^admin/marketplace-catalogue/?$ admin/marketplace-catalogue.php [L,QSA]
 RewriteRule ^admin/marketplace-orders/?$    admin/marketplace-orders.php    [L,QSA]
 RewriteRule ^admin/marketplace-fulfilment/?$ admin/marketplace-fulfilment.php [L,QSA]

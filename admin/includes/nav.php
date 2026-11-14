@@ -21,6 +21,7 @@ function adminNav(string $activePage = ''): void {
             ['Locations',   '&#x1F4CD;', $base . '/admin/locations.php',       ['locations']],
             ['Reviews',     '&#x2B50;',  $base . '/admin/reviews.php',         ['reviews']],
             ['Claims',      '&#x1F3E2;', $base . '/admin/claims.php',          ['claims']],
+            ['Digital Cards','&#x1FAA9;', $base . '/admin/digital-cards.php', ['digital-cards']],
         ]],
         ['Users', '&#x1F464;', [
             ['Users',           '&#x1F464;', $base . '/admin/users.php',                    ['users']],
