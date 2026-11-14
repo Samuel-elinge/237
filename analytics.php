@@ -788,7 +788,8 @@ require_once __DIR__ . '/includes/header.php';
     <div style="text-align:center;margin-bottom:12px;">
       <img class="qr-img"
            src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?= urlencode($listingUrl) ?>&color=08472F&bgcolor=ffffff"
-           alt="QR Code for <?= e($l['title']) ?>" style="width:120px;height:120px;">
+           alt="QR Code for <?= e($l['title']) ?>" style="width:120px;height:120px;display:block;margin:0 auto 4px;">
+      <span style="font-size:9.5px;font-weight:700;color:#08472F;letter-spacing:.5px;text-transform:uppercase;font-family:sans-serif;">237biz.net</span>
     </div>
     <a href="https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=<?= urlencode($listingUrl) ?>&color=08472F&bgcolor=ffffff&format=png"
        download="<?= e($l['slug']) ?>-qr.png" target="_blank"
