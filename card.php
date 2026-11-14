@@ -4,7 +4,6 @@
  * URL: /card/{slug}
  * Mobile-first digital business card for QR scanning.
  */
-ini_set('display_errors', 1); error_reporting(E_ALL);
 require_once __DIR__ . '/includes/config.php';
 
 $slug = trim($_GET['slug'] ?? '');
@@ -19,7 +18,7 @@ if (!$source) $source = 'direct';
 $st = db()->prepare("
     SELECT l.*, c.name_en AS cat_en, c.name_fr AS cat_fr, c.icon AS cat_icon, c.slug AS cat_slug,
            loc.name_en AS loc_en, loc.name_fr AS loc_fr, loc.slug AS loc_slug,
-           COALESCE(sp.name, 'free') AS plan_name,
+           COALESCE(sp.name_en, 'free') AS plan_name,
            COALESCE(sp.premium_star, 0) AS premium_star
     FROM listings l
     JOIN categories c ON c.id = l.category_id
