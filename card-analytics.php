@@ -339,18 +339,17 @@ require_once __DIR__ . '/includes/header.php';
 
   <!-- QR + card URL bar -->
   <div class="qr-card">
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0;">
       <img class="qr-img"
-           src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=<?= urlencode(SITE_URL.'/card/'.$slug) ?>&color=08472F&bgcolor=ffffff&label=237biz.net&labelalign=center"
-           alt="QR Code" loading="lazy" style="width:100px;height:100px;display:block;">
-      <span style="font-size:9.5px;font-weight:700;color:#08472F;letter-spacing:.5px;text-transform:uppercase;font-family:sans-serif;">237biz.net</span>
+           src="<?= SITE_URL ?>/qr?size=120&data=<?= urlencode(SITE_URL.'/card/'.$slug) ?>"
+           alt="QR Code" loading="lazy" style="width:100px;display:block;">
     </div>
     <div class="qr-info">
       <h3><?= t('Your Digital Card QR','Votre QR Carte Digitale') ?></h3>
       <p id="cardUrlText"><?= SITE_URL ?>/card/<?= e($slug) ?></p>
       <div class="qr-actions">
         <a class="qr-btn qr-btn-dl"
-           href="https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=<?= urlencode(SITE_URL.'/card/'.$slug) ?>&color=08472F&bgcolor=ffffff&format=png&label=237biz.net&labelalign=center"
+           href="<?= SITE_URL ?>/qr?size=600&data=<?= urlencode(SITE_URL.'/card/'.$slug) ?>"
            download="<?= e($slug) ?>-qr.png" target="_blank">
           ⬇ <?= t('Download QR','Télécharger QR') ?>
         </a>

@@ -49,7 +49,7 @@ function queueEmail(int $userId, int $templateId, ?int $sequenceId = null, ?int 
         $firstName = explode(' ', $uData['name'] ?? '')[0];
         $cardUrl   = isset($uData['listing_slug']) ? SITE_URL . '/card/' . $uData['listing_slug'] : SITE_URL;
         $qrUrl     = isset($uData['listing_slug'])
-            ? 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=1a7a4a&bgcolor=ffffff&data=' . rawurlencode($cardUrl)
+            ? SITE_URL . '/qr?size=300&data=' . rawurlencode($cardUrl)
             : '';
         $mergeReplace = [
             $uData['name']   ?? '',
