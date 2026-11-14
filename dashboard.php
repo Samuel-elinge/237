@@ -277,7 +277,14 @@ require_once __DIR__ . '/includes/header.php';
           </a>
           <?php endif; ?>
           <?php if ($firstApprovedSlug): ?>
-          <a href="https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=<?= urlencode(SITE_URL.'/listing/'.$firstApprovedSlug) ?>&color=08472F&bgcolor=ffffff&format=png"
+          <a href="<?= SITE_URL ?>/card/<?= e($firstApprovedSlug) ?>" target="_blank" class="feature-card">
+            <span class="feature-card-icon">🪪</span>
+            <div class="feature-card-text">
+              <span class="feature-card-label"><?= t('Digital Card','Carte Digitale') ?></span>
+              <span class="feature-card-sub"><?= t('Preview your digital business card','Voir votre carte digitale') ?></span>
+            </div>
+          </a>
+          <a href="https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=<?= urlencode(SITE_URL.'/card/'.$firstApprovedSlug) ?>&color=08472F&bgcolor=ffffff&format=png"
              download="<?= e($firstApprovedSlug) ?>-qr.png" target="_blank" class="feature-card">
             <span class="feature-card-icon">📱</span>
             <div class="feature-card-text">

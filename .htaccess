@@ -49,6 +49,10 @@ RewriteRule ^admin/setup-test-partner\.php - [F,L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
+# Digital card
+RewriteRule ^card/([a-z0-9-]+)/?$      card.php?slug=$1             [L,QSA]
+RewriteRule ^vcard/([a-z0-9-]+)/?$     vcard.php?slug=$1            [L,QSA]
+
 # Listings
 RewriteRule ^listing/([a-z0-9-]+)/?$   listing.php?slug=$1          [L,QSA]
 RewriteRule ^r/([a-zA-Z0-9_-]+)/?$   ref.php?code=$1          [L,QSA]
@@ -72,6 +76,7 @@ RewriteRule ^business-listing/?$        business-listing.php         [L,QSA]
 
 # API
 RewriteRule ^api/track/?$               api/track.php                [L,QSA]
+RewriteRule ^api/card-track/?$          api/card-track.php           [L,QSA]
 
 # Tracking link redirects
 RewriteRule ^go/([A-Z0-9]+)/?$          go/index.php?ref=$1          [L,QSA]
