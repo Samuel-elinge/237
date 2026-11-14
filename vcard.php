@@ -51,7 +51,9 @@ try {
 
 // ── Build vCard 3.0 ───────────────────────────────────────────────────────
 function vcf_escape(string $s): string {
-    return str_replace(["\r\n", "\r", "\n", ',', ';', '\\'], ['\\n', '\\n', '\\n', '\\,', '\\;', '\\\\'], $s);
+    // Escape backslashes first, then newlines and semicolons
+    // Commas are NOT escaped — vCard 3.0 parsers on iOS show \, literally in NOTE/ADR
+    return str_replace(["\r\n", "\r", "\n", ';', '\\'], ['\\n', '\\n', '\\n', '\\;', '\\\\'], $s);
 }
 
 function vcf_fold(string $line): string {
