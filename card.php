@@ -178,21 +178,21 @@ function safe_url(?string $url): string {
 <link rel="canonical" href="<?= $cardUrl ?>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <style>
 /* ── Reset & tokens ──────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --primary:#00A878;
-  --primary-dark:#008060;
+  --primary-dark:#007A58;
   --accent:#FF6B2C;
-  --bg:#f0f4f2;
+  --bg:#f2f5f3;
   --card-bg:#ffffff;
   --text:#1a1a1a;
   --muted:#666;
-  --border:#e8ede9;
-  --radius:16px;
-  --shadow:0 2px 16px rgba(0,0,0,.08);
+  --border:#e4ebe7;
+  --radius:20px;
+  --shadow:0 4px 24px rgba(0,0,0,.09);
 }
 html{scroll-behavior:smooth}
 body{
@@ -203,55 +203,148 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 
-/* ── Hero header ─────────────────────────────────────── */
+/* ── Business Card Hero ──────────────────────────────── */
 .card-hero{
-  background:linear-gradient(135deg,var(--primary-dark) 0%,var(--primary) 100%);
+  background:linear-gradient(145deg,#0a2e22 0%,#0d3d2d 40%,#0f4d38 70%,#005a38 100%);
   color:#fff;
-  padding:2rem 1.25rem 3.5rem;
-  text-align:center;
+  padding:0;
   position:relative;
+  overflow:hidden;
+}
+/* Decorative elements */
+.card-hero::before{
+  content:'';
+  position:absolute;
+  top:-60px;right:-60px;
+  width:220px;height:220px;
+  border-radius:50%;
+  background:rgba(0,168,120,.12);
+  pointer-events:none;
 }
 .card-hero::after{
   content:'';
   position:absolute;
-  bottom:-1px;left:0;right:0;
-  height:2rem;
-  background:var(--bg);
-  border-radius:50% 50% 0 0 / 100% 100% 0 0;
+  bottom:-80px;left:-40px;
+  width:280px;height:280px;
+  border-radius:50%;
+  background:rgba(0,168,120,.08);
+  pointer-events:none;
+}
+.card-inner{
+  position:relative;z-index:1;
+  padding:2rem 1.4rem 1.6rem;
+}
+
+/* Top row: logo + name/title */
+.card-top{
+  display:flex;
+  align-items:center;
+  gap:1.1rem;
+  margin-bottom:1.2rem;
 }
 .hero-logo{
-  width:88px;height:88px;
-  border-radius:50%;
-  border:3px solid rgba(255,255,255,.8);
+  width:76px;height:76px;
+  border-radius:14px;
+  border:2px solid rgba(0,168,120,.5);
   object-fit:cover;
-  margin-bottom:.9rem;
+  flex-shrink:0;
   background:#fff;
+  box-shadow:0 4px 16px rgba(0,0,0,.3);
 }
 .hero-initials{
-  width:88px;height:88px;
-  border-radius:50%;
-  border:3px solid rgba(255,255,255,.8);
-  background:rgba(255,255,255,.2);
+  width:76px;height:76px;
+  border-radius:14px;
+  border:2px solid rgba(0,168,120,.5);
+  background:rgba(0,168,120,.18);
   display:flex;align-items:center;justify-content:center;
-  font-size:2rem;font-weight:700;color:#fff;
-  margin:0 auto .9rem;
+  font-size:2rem;font-weight:800;color:#fff;
+  flex-shrink:0;
+  box-shadow:0 4px 16px rgba(0,0,0,.3);
 }
-.hero-name{font-size:1.5rem;font-weight:700;line-height:1.2;margin-bottom:.35rem}
-.hero-cat{font-size:.9rem;opacity:.88;display:flex;align-items:center;justify-content:center;gap:.3rem}
-.hero-loc{font-size:.82rem;opacity:.75;margin-top:.25rem}
-.hero-badges{display:flex;gap:.4rem;justify-content:center;margin-top:.6rem;flex-wrap:wrap}
+.card-title-block{flex:1;min-width:0}
+.hero-name{
+  font-family:'Playfair Display',Georgia,serif;
+  font-size:1.45rem;font-weight:700;
+  line-height:1.15;
+  margin-bottom:.3rem;
+  letter-spacing:-.01em;
+}
+.hero-cat{
+  font-size:.8rem;opacity:.8;
+  display:flex;align-items:center;gap:.3rem;
+  font-weight:500;
+}
+
+/* Divider */
+.card-divider{
+  height:1px;
+  background:linear-gradient(90deg,rgba(0,168,120,.5),rgba(255,255,255,.1),transparent);
+  margin-bottom:1rem;
+}
+
+/* Contact info on the card */
+.card-contact-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:.55rem .8rem;
+  margin-bottom:1rem;
+}
+.card-contact-item{
+  display:flex;align-items:center;gap:.45rem;
+  font-size:.78rem;line-height:1.3;
+  color:rgba(255,255,255,.85);
+  min-width:0;
+}
+.card-contact-item .ci-icon{
+  font-size:.95rem;flex-shrink:0;
+  opacity:.8;
+}
+.card-contact-item a{
+  color:inherit;text-decoration:none;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.card-contact-item a:hover{color:#fff}
+
+/* Badges row */
+.hero-badges{
+  display:flex;gap:.4rem;
+  flex-wrap:wrap;
+  margin-top:.6rem;
+}
 .badge{
   display:inline-flex;align-items:center;gap:.3rem;
-  font-size:.72rem;font-weight:600;padding:.25rem .6rem;
-  border-radius:50px;background:rgba(255,255,255,.2);color:#fff;
+  font-size:.7rem;font-weight:600;padding:.22rem .6rem;
+  border-radius:50px;
+  background:rgba(0,168,120,.25);
+  border:1px solid rgba(0,168,120,.4);
+  color:#7effd4;
 }
-.badge-verified{background:rgba(255,255,255,.3)}
+.badge-verified{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff}
 .rating-stars{color:#FFD700}
+
+/* Bottom strip: location */
+.card-loc-strip{
+  background:rgba(0,0,0,.2);
+  padding:.55rem 1.4rem;
+  font-size:.77rem;
+  color:rgba(255,255,255,.65);
+  display:flex;align-items:center;gap:.35rem;
+  position:relative;z-index:1;
+}
+
+/* Wavy separator */
+.card-wave{
+  display:block;
+  width:100%;height:28px;
+  background:var(--bg);
+  clip-path:ellipse(55% 100% at 50% 100%);
+  margin-top:-1px;
+}
 
 /* ── Action buttons ─────────────────────────────────── */
 .actions-wrap{
   padding:0 1rem;
-  margin-top:-1.5rem;
+  margin-top:.25rem;
   position:relative;z-index:1;
 }
 .actions-grid{
@@ -404,48 +497,97 @@ body{
 /* ── Responsive ──────────────────────────────────────── */
 @media(min-width:480px){
   .actions-grid{grid-template-columns:repeat(4,1fr)}
+  .card-contact-grid{grid-template-columns:1fr 1fr}
 }
 @media(min-width:600px){
-  .card-hero{padding:2.5rem 1.5rem 4rem}
-  .actions-wrap,.section-card,.profile-link-wrap{margin-left:auto;margin-right:auto;max-width:520px}
+  .card-inner{padding:2.4rem 2rem 1.8rem}
+  .card-loc-strip{padding:.6rem 2rem}
+  .actions-wrap,.section-card,.profile-link-wrap{margin-left:auto;margin-right:auto;max-width:540px}
   .actions-wrap{padding:0}
-  .hero-name{font-size:1.8rem}
+  .hero-name{font-size:1.65rem}
+  .hero-logo,.hero-initials{width:88px;height:88px}
 }
 </style>
 </head>
 <body>
 
-<!-- Hero header -->
+<!-- Business Card Hero -->
 <div class="card-hero">
-  <?php if ($l['logo']): ?>
-    <img class="hero-logo" src="<?= e(UPLOAD_URL . $l['logo']) ?>" alt="<?= e($l['title']) ?>">
-  <?php else: ?>
-    <div class="hero-initials">
-      <?= e(mb_strtoupper(mb_substr($l['title'], 0, 1))) ?>
+  <div class="card-inner">
+    <div class="card-top">
+      <?php if ($l['logo']): ?>
+        <img class="hero-logo" src="<?= e(UPLOAD_URL . $l['logo']) ?>" alt="<?= e($l['title']) ?>">
+      <?php else: ?>
+        <div class="hero-initials">
+          <?= e(mb_strtoupper(mb_substr($l['title'], 0, 2))) ?>
+        </div>
+      <?php endif; ?>
+      <div class="card-title-block">
+        <h1 class="hero-name"><?= e($l['title']) ?></h1>
+        <div class="hero-cat"><?= $l['cat_icon'] ?? '🏢' ?> <?= $catName ?></div>
+      </div>
     </div>
-  <?php endif; ?>
 
-  <h1 class="hero-name"><?= e($l['title']) ?></h1>
-  <div class="hero-cat"><?= $l['cat_icon'] ?? '🏢' ?> <?= $catName ?></div>
-  <?php if ($locName): ?>
-    <div class="hero-loc">📍 <?= $locName ?></div>
-  <?php endif; ?>
+    <div class="card-divider"></div>
 
-  <div class="hero-badges">
-    <?php if ($l['verified']): ?>
-      <span class="badge badge-verified">✓ <?= t('Verified','Vérifié') ?></span>
-    <?php endif; ?>
-    <?php if ($avgRating > 0): ?>
-      <span class="badge">
-        <span class="rating-stars">★</span>
-        <?= number_format($avgRating, 1) ?> (<?= $reviewCount ?>)
-      </span>
-    <?php endif; ?>
-    <?php if ($l['premium_star']): ?>
-      <span class="badge">⭐ <?= t('Premium','Premium') ?></span>
-    <?php endif; ?>
+    <!-- Contact details on the card face -->
+    <div class="card-contact-grid">
+      <?php if ($l['phone']): ?>
+      <div class="card-contact-item">
+        <span class="ci-icon">📞</span>
+        <a href="tel:<?= e($l['phone']) ?>" onclick="trackEvent('phone_click')"><?= e($l['phone']) ?></a>
+      </div>
+      <?php endif; ?>
+
+      <?php if ($l['email']): ?>
+      <div class="card-contact-item">
+        <span class="ci-icon">✉️</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?= e($l['email']) ?></span>
+      </div>
+      <?php endif; ?>
+
+      <?php $webUrl = safe_url($l['website'] ?? ''); ?>
+      <?php if ($webUrl): ?>
+      <div class="card-contact-item">
+        <span class="ci-icon">🌐</span>
+        <a href="<?= $webUrl ?>" target="_blank" rel="noopener" onclick="trackEvent('website_click')"
+           style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          <?= e(preg_replace('#^https?://(www\.)?#i', '', $l['website'])) ?>
+        </a>
+      </div>
+      <?php endif; ?>
+
+      <?php if ($l['address']): ?>
+      <div class="card-contact-item">
+        <span class="ci-icon">📍</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?= e(mb_substr($l['address'], 0, 40)) ?></span>
+      </div>
+      <?php endif; ?>
+    </div>
+
+    <div class="hero-badges">
+      <?php if ($l['verified']): ?>
+        <span class="badge badge-verified">✓ <?= t('Verified','Vérifié') ?></span>
+      <?php endif; ?>
+      <?php if ($avgRating > 0): ?>
+        <span class="badge">
+          <span class="rating-stars">★</span>
+          <?= number_format($avgRating, 1) ?> (<?= $reviewCount ?>)
+        </span>
+      <?php endif; ?>
+      <?php if ($l['premium_star']): ?>
+        <span class="badge">⭐ <?= t('Premium','Premium') ?></span>
+      <?php endif; ?>
+    </div>
   </div>
+
+  <?php if ($locName): ?>
+  <div class="card-loc-strip">
+    <span>📍</span> <?= $locName ?>
+  </div>
+  <?php endif; ?>
 </div>
+<span class="card-wave"></span>
 
 <!-- Action buttons -->
 <div class="actions-wrap">
@@ -482,7 +624,6 @@ body{
     <?php endif; ?>
 
     <!-- Website -->
-    <?php $webUrl = safe_url($l['website'] ?? ''); ?>
     <?php if ($webUrl): ?>
     <a href="<?= $webUrl ?>"
        target="_blank" rel="noopener noreferrer"
