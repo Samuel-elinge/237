@@ -285,7 +285,7 @@ require_once __DIR__ . '/includes/header.php';
               <span class="feature-card-sub"><?= t('Preview your digital business card','Voir votre carte digitale') ?></span>
             </div>
           </a>
-          <a href="https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=<?= urlencode(SITE_URL.'/card/'.$firstApprovedSlug) ?>&color=08472F&bgcolor=ffffff&format=png"
+          <a href="https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=<?= urlencode(SITE_URL.'/card/'.$firstApprovedSlug) ?>&color=08472F&bgcolor=ffffff&format=png&label=237biz.net&labelalign=center"
              download="<?= e($firstApprovedSlug) ?>-qr.png" target="_blank" class="feature-card">
             <span class="feature-card-icon">📱</span>
             <div class="feature-card-text">

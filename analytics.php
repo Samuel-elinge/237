@@ -787,11 +787,11 @@ require_once __DIR__ . '/includes/header.php';
     <?php $listingUrl = SITE_URL . '/listing/' . e($l['slug']); ?>
     <div style="text-align:center;margin-bottom:12px;">
       <img class="qr-img"
-           src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?= urlencode($listingUrl) ?>&color=08472F&bgcolor=ffffff"
+           src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?= urlencode($listingUrl) ?>&color=08472F&bgcolor=ffffff&label=237biz.net&labelalign=center"
            alt="QR Code for <?= e($l['title']) ?>" style="width:120px;height:120px;display:block;margin:0 auto 4px;">
       <span style="font-size:9.5px;font-weight:700;color:#08472F;letter-spacing:.5px;text-transform:uppercase;font-family:sans-serif;">237biz.net</span>
     </div>
-    <a href="https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=<?= urlencode($listingUrl) ?>&color=08472F&bgcolor=ffffff&format=png"
+    <a href="https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=<?= urlencode($listingUrl) ?>&color=08472F&bgcolor=ffffff&format=png&label=237biz.net&labelalign=center"
        download="<?= e($l['slug']) ?>-qr.png" target="_blank"
        class="btn btn-outline" style="width:100%;text-align:center;display:block;margin-bottom:8px;">
       ⬇️ <?= t('Download QR Code','Télécharger le code QR') ?>
