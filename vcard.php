@@ -103,9 +103,10 @@ $lines = [];
 $lines[] = 'BEGIN:VCARD';
 $lines[] = 'VERSION:3.0';
 $lines[] = vcf_fold('FN:' . vcf_escape($name));
-// N: field required by iOS: Family;Given;Middle;Prefix;Suffix
-// For a business name we put the full name as "family" so it sorts correctly
-$lines[] = vcf_fold('N:' . vcf_escape($name) . ';;;;');
+// N: field: iOS uses First + Last name fields from N:
+// For a business listing, put the name as "first name" so the field pre-fills
+// N:Last;First;Middle;Prefix;Suffix
+$lines[] = vcf_fold('N:;' . vcf_escape($name) . ';;;');
 $lines[] = vcf_fold('ORG:' . vcf_escape($name));
 $lines[] = vcf_fold('TITLE:' . vcf_escape($l['cat_en'] ?? ''));
 if ($phoneFormatted) {
