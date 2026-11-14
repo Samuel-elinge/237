@@ -61,6 +61,36 @@ a{display:inline-block;background:#00A878;color:#fff;padding:.65rem 1.5rem;borde
 </html>
 <?php exit; }
 
+// Check global feature flag and per-listing disable
+$cardGlobal = db()->query("SELECT value FROM site_settings WHERE `key`='card_feature_enabled'")->fetchColumn();
+$cardGlobalOn = ($cardGlobal === false) ? true : (bool)(int)$cardGlobal;
+if (!$cardGlobalOn || !empty($l['card_disabled'])) {
+?><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Card Unavailable – 237biz</title>
+<style>
+body{margin:0;font-family:system-ui,sans-serif;background:#f4f4f4;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem}
+.box{background:#fff;border-radius:16px;padding:2.5rem 2rem;text-align:center;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.icon{font-size:3rem;margin-bottom:1rem}
+h1{margin:0 0 .5rem;font-size:1.3rem;color:#222}
+p{color:#666;margin:.5rem 0 1.5rem}
+a{display:inline-block;background:#00A878;color:#fff;padding:.65rem 1.5rem;border-radius:50px;text-decoration:none;font-size:.9rem;font-weight:600}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="icon">🪪</div>
+  <h1><?= t('Card Unavailable','Carte Indisponible') ?></h1>
+  <p><?= t('This digital card is not currently available.','Cette carte numérique n\'est pas disponible actuellement.') ?></p>
+  <a href="<?= SITE_URL ?>/listings"><?= t('Browse Businesses','Parcourir les Entreprises') ?></a>
+</div>
+</body>
+</html>
+<?php exit; }
+
 if ($l['status'] !== 'approved') {
 ?><!DOCTYPE html>
 <html lang="en">

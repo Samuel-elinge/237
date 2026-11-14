@@ -26,6 +26,14 @@ if (!$l) {
     exit;
 }
 
+// Check global feature flag and per-listing disable
+$cardGlobal = db()->query("SELECT value FROM site_settings WHERE `key`='card_feature_enabled'")->fetchColumn();
+$cardGlobalOn = ($cardGlobal === false) ? true : (bool)(int)$cardGlobal;
+if (!$cardGlobalOn || !empty($l['card_disabled'])) {
+    http_response_code(403);
+    exit;
+}
+
 // Track contact download
 try {
     $ip   = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
