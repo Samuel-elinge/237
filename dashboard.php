@@ -285,7 +285,7 @@ require_once __DIR__ . '/includes/header.php';
               <span class="feature-card-sub"><?= t('Preview your digital business card','Voir votre carte digitale') ?></span>
             </div>
           </a>
-          <a href="<?= SITE_URL ?>/qr?size=600&data=<?= urlencode(SITE_URL.'/card/'.$firstApprovedSlug) ?>"
+          <a href="<?= SITE_URL ?>/qr.php?size=600&data=<?= urlencode(SITE_URL.'/card/'.$firstApprovedSlug) ?>"
              download="<?= e($firstApprovedSlug) ?>-qr.png" target="_blank" class="feature-card">
             <span class="feature-card-icon">📱</span>
             <div class="feature-card-text">

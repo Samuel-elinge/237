@@ -341,7 +341,7 @@ require_once __DIR__ . '/includes/header.php';
   <div class="qr-card">
     <div style="display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0;">
       <img class="qr-img"
-           src="<?= SITE_URL ?>/qr?size=120&data=<?= urlencode(SITE_URL.'/card/'.$slug) ?>"
+           src="<?= SITE_URL ?>/qr.php?size=120&data=<?= urlencode(SITE_URL.'/card/'.$slug) ?>"
            alt="QR Code" loading="lazy" style="width:100px;display:block;">
     </div>
     <div class="qr-info">
@@ -349,7 +349,7 @@ require_once __DIR__ . '/includes/header.php';
       <p id="cardUrlText"><?= SITE_URL ?>/card/<?= e($slug) ?></p>
       <div class="qr-actions">
         <a class="qr-btn qr-btn-dl"
-           href="<?= SITE_URL ?>/qr?size=600&data=<?= urlencode(SITE_URL.'/card/'.$slug) ?>"
+           href="<?= SITE_URL ?>/qr.php?size=600&data=<?= urlencode(SITE_URL.'/card/'.$slug) ?>"
            download="<?= e($slug) ?>-qr.png" target="_blank">
           ⬇ <?= t('Download QR','Télécharger QR') ?>
         </a>

@@ -787,10 +787,10 @@ require_once __DIR__ . '/includes/header.php';
     <?php $listingUrl = SITE_URL . '/listing/' . e($l['slug']); ?>
     <div style="text-align:center;margin-bottom:12px;">
       <img class="qr-img"
-           src="<?= SITE_URL ?>/qr?size=150&data=<?= urlencode($listingUrl) ?>"
+           src="<?= SITE_URL ?>/qr.php?size=150&data=<?= urlencode($listingUrl) ?>"
            alt="QR Code for <?= e($l['title']) ?>" style="width:120px;display:block;margin:0 auto;">
     </div>
-    <a href="<?= SITE_URL ?>/qr?size=600&data=<?= urlencode($listingUrl) ?>"
+    <a href="<?= SITE_URL ?>/qr.php?size=600&data=<?= urlencode($listingUrl) ?>"
        download="<?= e($l['slug']) ?>-qr.png" target="_blank"
        class="btn btn-outline" style="width:100%;text-align:center;display:block;margin-bottom:8px;">
       ⬇️ <?= t('Download QR Code','Télécharger le code QR') ?>
