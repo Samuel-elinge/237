@@ -4,10 +4,8 @@
  * URL: /admin/digital-cards
  * Admin controls: global toggle, platform analytics, per-business card enable/disable
  */
-// TEMP: surface PHP errors for debugging
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/partner-helpers.php'; // setFlash / getFlash / verifyCsrf
 requireAdmin();
 
 // ── Ensure card_disabled column exists on listings ────────────────────────
@@ -27,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $val = ($_POST['enabled'] ?? '0') === '1' ? '1' : '0';
         db()->prepare("INSERT INTO site_settings (`key`, value) VALUES ('card_feature_enabled', ?) ON DUPLICATE KEY UPDATE value=?")
              ->execute([$val, $val]);
-        flash('success', $val === '1' ? 'Digital Card feature enabled globally.' : 'Digital Card feature disabled globally.');
+        setFlash('success', $val === '1' ? 'Digital Card feature enabled globally.' : 'Digital Card feature disabled globally.');
         redirect(SITE_URL . '/admin/digital-cards');
     }
 
@@ -41,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($row !== false) {
                 $newVal = $row['card_disabled'] ? 0 : 1;
                 db()->prepare("UPDATE listings SET card_disabled=? WHERE id=?")->execute([$newVal, $lid]);
-                flash('success', $newVal ? 'Card disabled for this business.' : 'Card enabled for this business.');
+                setFlash('success', $newVal ? 'Card disabled for this business.' : 'Card enabled for this business.');
             }
         }
         redirect(SITE_URL . '/admin/digital-cards?' . http_build_query(array_filter([
@@ -57,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($ids) {
             $ph = implode(',', array_fill(0, count($ids), '?'));
             db()->prepare("UPDATE listings SET card_disabled=$newVal WHERE id IN ($ph)")->execute($ids);
-            flash('success', count($ids) . ' listing(s) ' . ($newVal ? 'disabled.' : 'enabled.'));
+            setFlash('success', count($ids) . ' listing(s) ' . ($newVal ? 'disabled.' : 'enabled.'));
         }
         redirect(SITE_URL . '/admin/digital-cards');
     }
@@ -70,7 +68,7 @@ $globalRow = db()->query("SELECT value FROM site_settings WHERE `key`='card_feat
 $globalEnabled = ($globalRow === false) ? true : (bool)(int)$globalRow; // default ON
 
 // ── Platform analytics summary ────────────────────────────────────────────
-$range    = in_array($_GET['range'] ?? '30', ['7','30','90']) ? $_GET['range'] : '30';
+$range    = in_array($_GET['range'] ?? '30', ['7','30','90']) ? ($_GET['range'] ?? '30') : '30';
 $rangeSQL = "created_at >= DATE_SUB(NOW(), INTERVAL {$range} DAY)";
 
 $platformStats = [];
@@ -311,7 +309,9 @@ body{background:#060e0a;color:#cde8d8;font-family:system-ui,sans-serif;margin:0}
 <div class="dc-wrap">
   <div class="dc-title">🪪 Digital Card & QR Management</div>
 
-  <?php showFlash(); ?>
+  <?php if ($msg = getFlash('success')): ?>
+  <div class="alert alert-success mb-3" style="background:rgba(0,168,120,0.15);border:1px solid rgba(0,168,120,0.4);color:#00A878;padding:.75rem 1rem;border-radius:8px;margin-bottom:1rem;">✓ <?= e($msg) ?></div>
+  <?php endif; ?>
 
   <!-- ── Global Toggle ─────────────────────────────────────── -->
   <div class="dc-global">
