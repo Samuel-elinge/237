@@ -75,6 +75,22 @@ $st = $pdo->prepare("
 $st->execute($params);
 $leads = $st->fetchAll();
 
+// Fetch audit responses for any audit leads
+$auditResponses = [];
+$auditQuestions = [];
+if ($leads) {
+    $leadIds = array_column($leads, 'id');
+    $in = implode(',', array_fill(0, count($leadIds), '?'));
+    $arSt = $pdo->prepare("SELECT * FROM audit_responses WHERE lead_id IN ($in) AND partner_id=?");
+    $arSt->execute(array_merge($leadIds, [$partnerId]));
+    foreach ($arSt->fetchAll() as $ar) {
+        $auditResponses[$ar['lead_id']] = $ar;
+    }
+    if ($auditResponses) {
+        $auditQuestions = $pdo->query("SELECT id, question_text, sort_order FROM audit_questions ORDER BY sort_order")->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
 $myListings = fetchPartnerListings($partnerId);
 
 $pageTitle = pt('Leads') . ' — ' . pt('Partner Centre');
@@ -175,10 +191,36 @@ partnerNavBadges($partnerId, $pdo);
         <?php endif; ?>
       </div>
 
-      <?php if ($lead['notes'] || $lead['next_action']): ?>
+      <?php if ($lead['next_action']): ?>
       <div style="margin-top:0.5rem; font-size:0.83rem; color:var(--muted);">
-        <?php if ($lead['next_action']): ?><div>→ <strong><?= pt('Next:') ?></strong> <?= e($lead['next_action']) ?></div><?php endif; ?>
-        <?php if ($lead['notes']): ?><div style="margin-top:0.2rem;"><?= e(mb_strimwidth($lead['notes'], 0, 140, '…')) ?></div><?php endif; ?>
+        <div>→ <strong><?= pt('Next:') ?></strong> <?= e($lead['next_action']) ?></div>
+      </div>
+      <?php endif; ?>
+
+      <?php
+        // Show audit form answers if available
+        $auditResp = $auditResponses[$lead['id']] ?? null;
+        if ($auditResp && $auditQuestions):
+          $answers = json_decode($auditResp['answers_json'] ?? '{}', true) ?: [];
+      ?>
+      <details style="margin-top:0.75rem;">
+        <summary style="font-size:0.8rem; color:var(--accent); cursor:pointer; user-select:none; font-weight:600;">📋 <?= pt('Audit Form Answers') ?></summary>
+        <div style="margin-top:0.5rem; border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+          <?php foreach ($auditQuestions as $q):
+            $ans = $answers[$q['id']] ?? '';
+            if (is_array($ans)) $ans = implode(', ', $ans);
+            if ($ans === '') continue;
+          ?>
+          <div style="padding:0.4rem 0.75rem; border-bottom:1px solid var(--border); font-size:0.78rem;">
+            <div style="color:var(--muted); margin-bottom:0.1rem;"><?= htmlspecialchars($q['question_text']) ?></div>
+            <div style="color:var(--text); font-weight:500;"><?= nl2br(htmlspecialchars($ans)) ?></div>
+          </div>
+          <?php endforeach; ?>
+        </div>
+      </details>
+      <?php elseif ($lead['notes'] && $lead['source'] !== 'audit'): ?>
+      <div style="margin-top:0.5rem; font-size:0.83rem; color:var(--muted);">
+        <div><?= e(mb_strimwidth($lead['notes'], 0, 140, '…')) ?></div>
       </div>
       <?php endif; ?>
 
