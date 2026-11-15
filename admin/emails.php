@@ -15,7 +15,6 @@ $NAV = [
     ['href' => SITE_URL . '/admin/locations.php',    'label' => '📍 Locations'],
     ['href' => SITE_URL . '/admin/subscribers.php',  'label' => '📬 Newsletter'],
     ['href' => SITE_URL . '/admin/promos.php',       'label' => '🎁 Promo Codes'],
-    ['href' => SITE_URL . '/admin/packages.php',     'label' => '💳 Packages'],
     ['href' => SITE_URL . '/admin/seo-content.php',  'label' => '📝 SEO Content'],
     ['href' => SITE_URL . '/admin/emails.php',       'label' => '✉️ Emails'],
     ['href' => SITE_URL . '/admin/automation/',      'label' => '🤖 Automation'],

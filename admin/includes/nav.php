@@ -33,7 +33,6 @@ function adminNav(string $activePage = ''): void {
         ]],
         ['Commerce', '&#x1F4B3;', [
             ['Orders',      '&#x1F4E6;', $base . '/admin/orders.php',          ['orders']],
-            ['Packages',    '&#x1F4B3;', $base . '/admin/packages.php',        ['packages']],
             ['Promo Codes', '&#x1F381;', $base . '/admin/promos.php',          ['promos']],
             ['Campaigns',   '&#x1F4E3;', $base . '/admin/manage-campaigns.php',['manage-campaigns']],
             ['Marketplace', '&#x1F6CD;', $base . '/admin/marketplace-catalogue.php', ['marketplace-catalogue']],
