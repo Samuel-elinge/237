@@ -421,21 +421,23 @@ require_once __DIR__ . '/includes/nav.php';
             <td><span class="mp-badge grey"><?= e(str_replace('_',' ',$prod['service_type'])) ?></span></td>
             <td>
               <?php foreach ($pPrices as $pr): ?>
-              <div class="price-chip">
+              <div class="price-chip"
+                data-price-id="<?= $pr['id'] ?>"
+                data-prod-id="<?= $prod['id'] ?>"
+                data-variant="<?= htmlspecialchars($pr['variant_key'], ENT_QUOTES, 'UTF-8') ?>"
+                data-price-type="<?= htmlspecialchars($pr['price_type'], ENT_QUOTES, 'UTF-8') ?>"
+                data-setup="<?= (int)$pr['setup_amount'] ?>"
+                data-recur="<?= (int)$pr['recurring_amount'] ?>"
+                data-interval="<?= htmlspecialchars($pr['billing_interval'], ENT_QUOTES, 'UTF-8') ?>"
+                data-mailbox="<?= $pr['mailbox_limit'] !== null ? (int)$pr['mailbox_limit'] : '' ?>"
+                data-eff-from="<?= htmlspecialchars($pr['effective_from'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                data-eff-to="<?= htmlspecialchars($pr['effective_to'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                 <span><?= e($pr['variant_key'] ?: $pr['price_type']) ?>:
                   <?php if ($pr['setup_amount']>0): ?><?= mpFmt($pr['setup_amount']) ?> setup<?php endif; ?>
                   <?php if ($pr['recurring_amount']>0): ?><?= mpFmt($pr['recurring_amount']) ?>/<?= strtolower($pr['billing_interval']) ?><?php endif; ?>
                   <?php if (!$pr['active']): ?><em style="color:#ef4444">(off)</em><?php endif; ?>
                 </span>
-                <span class="edit-price-btn" title="Edit price"
-                  onclick="openEditPrice(<?= $pr['id'] ?>,<?= $prod['id'] ?>,
-                    <?= htmlspecialchars(json_encode($pr['variant_key']),ENT_QUOTES) ?>,
-                    <?= htmlspecialchars(json_encode($pr['price_type']),ENT_QUOTES) ?>,
-                    <?= (int)$pr['setup_amount'] ?>,<?= (int)$pr['recurring_amount'] ?>,
-                    <?= htmlspecialchars(json_encode($pr['billing_interval']),ENT_QUOTES) ?>,
-                    <?= $pr['mailbox_limit'] !== null ? (int)$pr['mailbox_limit'] : 'null' ?>,
-                    <?= htmlspecialchars(json_encode($pr['effective_from']),ENT_QUOTES) ?>,
-                    <?= htmlspecialchars(json_encode($pr['effective_to'] ?? ''),ENT_QUOTES) ?>)">✏️</span>
+                <span class="edit-price-btn" title="Edit price">✏️</span>
                 <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this price?')">
                   <?= csrfField() ?>
                   <input type="hidden" name="action" value="delete_price">
@@ -1012,18 +1014,37 @@ function openAddPrice(prodId, prodName) {
   openModal('modal-add-price');
 }
 
-function openEditPrice(priceId, prodId, variant, type, setup, recur, interval, mailbox, effFrom, effTo) {
+function openEditPrice(priceId, variant, type, setup, recur, interval, mailbox, effFrom, effTo) {
   document.getElementById('edit-price-id').value = priceId;
   document.getElementById('edit-price-variant').value = variant;
   document.getElementById('edit-price-type').value = type;
   document.getElementById('edit-price-setup').value = setup;
   document.getElementById('edit-price-recur').value = recur;
   document.getElementById('edit-price-interval').value = interval;
-  document.getElementById('edit-price-mailbox').value = mailbox !== null ? mailbox : '';
+  document.getElementById('edit-price-mailbox').value = mailbox || '';
   document.getElementById('edit-price-from').value = effFrom;
   document.getElementById('edit-price-to').value = effTo || '';
   openModal('modal-edit-price');
 }
+
+// Event delegation for edit-price buttons (avoids broken inline onclick with HTML-encoded quotes)
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.edit-price-btn');
+  if (!btn) return;
+  var chip = btn.closest('.price-chip');
+  if (!chip) return;
+  openEditPrice(
+    chip.dataset.priceId,
+    chip.dataset.variant,
+    chip.dataset.priceType,
+    chip.dataset.setup,
+    chip.dataset.recur,
+    chip.dataset.interval,
+    chip.dataset.mailbox,
+    chip.dataset.effFrom,
+    chip.dataset.effTo
+  );
+});
 
 function togglePriceFields(prefix) {
   // Could show/hide setup vs recurring fields based on type — currently all visible
