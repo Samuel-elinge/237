@@ -495,15 +495,30 @@ body { background: var(--gbg); color: var(--text); }
       $ovdL = $lead['follow_up_date'] && $lead['follow_up_date'] < date('Y-m-d'); ?>
     <div class="row-item">
       <div style="flex:1;min-width:0">
-        <div class="row-title"><?= e($lead['contact_name']) ?></div>
-        <div class="row-meta">🏢 <?= e($lead['biz_name']) ?> · <?= ucfirst($lead['status']) ?>
+        <div class="row-title"><?= e($lead['customer_name']) ?></div>
+        <?php
+          // biz_name comes from the listings JOIN; NULL for audit-sourced leads.
+          // Fall back to extracting the business name from the notes field.
+          $displayBiz = $lead['biz_name'];
+          if (!$displayBiz && $lead['notes']) {
+              if (preg_match('/^Business:\s*(.+)/m', $lead['notes'], $m)) {
+                  $displayBiz = trim($m[1]);
+              }
+          }
+          if (!$displayBiz) $displayBiz = ($lead['source'] === 'audit') ? pt('Audit lead') : '—';
+        ?>
+        <div class="row-meta">🏢 <?= e($displayBiz) ?> · <?= ucfirst($lead['status']) ?>
           <?php if ($lead['follow_up_date']): ?> ·
             <?php if ($ovdL): ?><span class="overdue">⚠ <?= pt('Overdue') ?></span>
             <?php else: ?>📅 <?= date('j M', strtotime($lead['follow_up_date'])) ?><?php endif; ?>
           <?php endif; ?>
         </div>
       </div>
+      <?php if ($lead['listing_id']): ?>
       <a href="<?= SITE_URL ?>/partner/business?lid=<?= $lead['listing_id'] ?>&tab=leads" class="row-link">Log →</a>
+      <?php else: ?>
+      <a href="<?= SITE_URL ?>/partner/leads" class="row-link">View →</a>
+      <?php endif; ?>
     </div>
     <?php endforeach; ?>
     <div style="margin-top:12px"><a href="<?= SITE_URL ?>/partner/leads" class="btn-sm btn-outline"><?= pt('All leads') ?> →</a></div>
