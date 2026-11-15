@@ -28,8 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nextAction = trim($_POST['next_action'] ?? '');
             $notes      = trim($_POST['notes'] ?? '');
             if ($newStatus) {
-                $pdo->prepare("UPDATE partner_leads SET status=?, next_action=?, notes=?, last_activity=NOW() WHERE id=?")
-                    ->execute([$newStatus, $nextAction ?: null, $notes ?: null, $leadId]);
+                $pdo->prepare("UPDATE partner_leads SET status=?, next_action=?, last_activity=NOW() WHERE id=?")
+                    ->execute([$newStatus, $nextAction ?: null, $leadId]);
                 partnerAuditLog($partnerId, currentUser()['id'], $lead['listing_id'], 'lead_updated', "Lead #{$leadId} status → {$newStatus}");
             }
         }
@@ -232,7 +232,7 @@ partnerNavBadges($partnerId, $pdo);
           <?= csrfField() ?>
           <input type="hidden" name="action" value="update_lead">
           <input type="hidden" name="lead_id" value="<?= $lead['id'] ?>">
-          <select name="new_status" style="padding:0.4rem; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:0.83rem;">
+          <select name="new_status" style="padding:0.4rem; border:1px solid var(--border); border-radius:6px; background:var(--card); color:var(--text); font-size:0.83rem; color-scheme:dark;">
             <?php foreach (['new','contacted','follow_up','qualified','converted','lost','closed'] as $s): ?>
             <option value="<?= $s ?>" <?= $lead['status']===$s?'selected':'' ?>><?= ucwords(str_replace('_',' ',$s)) ?></option>
             <?php endforeach; ?>
