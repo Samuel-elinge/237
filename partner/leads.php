@@ -65,9 +65,9 @@ if ($search) {
 $st = $pdo->prepare("
     SELECT pl.*, l.title AS listing_title, c.name_en AS cat_en, loc.name_en AS city
     FROM partner_leads pl
-    JOIN listings l ON l.id = pl.listing_id
-    JOIN categories c ON c.id = l.category_id
-    JOIN locations loc ON loc.id = l.location_id
+    LEFT JOIN listings l ON l.id = pl.listing_id
+    LEFT JOIN categories c ON c.id = l.category_id
+    LEFT JOIN locations loc ON loc.id = l.location_id
     WHERE " . implode(' AND ', $where) . "
     ORDER BY FIELD(pl.status,'new','follow_up','contacted','qualified','converted','lost','closed'),
              pl.last_activity DESC, pl.created_at DESC
@@ -154,11 +154,25 @@ partnerNavBadges($partnerId, $pdo);
           <div style="font-size:0.78rem; color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap;">
             <?php if ($lead['customer_email']): ?><span>✉ <?= e($lead['customer_email']) ?></span><?php endif; ?>
             <?php if ($lead['customer_phone']): ?><span>📞 <?= e($lead['customer_phone']) ?></span><?php endif; ?>
-            <span>📍 <a href="<?= SITE_URL ?>/partner/business?id=<?= $lead['listing_id'] ?>" style="color:var(--primary); text-decoration:none;"><?= e($lead['listing_title']) ?></a></span>
+            <?php
+              // For audit leads listing_id is NULL — extract business name from notes
+              $bizLabel = $lead['listing_title'];
+              if (!$bizLabel && $lead['notes']) {
+                  if (preg_match('/^Business:\s*(.+)/m', $lead['notes'], $m)) $bizLabel = trim($m[1]);
+              }
+              if (!$bizLabel) $bizLabel = ($lead['source'] === 'audit') ? pt('Audit lead') : '—';
+            ?>
+            <?php if ($lead['listing_id']): ?>
+            <span>📍 <a href="<?= SITE_URL ?>/partner/business?id=<?= $lead['listing_id'] ?>" style="color:var(--primary); text-decoration:none;"><?= e($bizLabel) ?></a></span>
+            <?php else: ?>
+            <span>📍 <?= e($bizLabel) ?></span>
+            <?php endif; ?>
             <span><?= date('j M Y', strtotime($lead['created_at'])) ?></span>
           </div>
         </div>
+        <?php if ($lead['listing_id']): ?>
         <a href="<?= SITE_URL ?>/partner/business?id=<?= $lead['listing_id'] ?>&tab=leads" style="font-size:0.8rem; color:var(--primary); text-decoration:none; flex-shrink:0;"><?= pt('View') ?> →</a>
+        <?php endif; ?>
       </div>
 
       <?php if ($lead['notes'] || $lead['next_action']): ?>
