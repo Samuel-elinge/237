@@ -173,20 +173,65 @@ $pageTitle = $mode === 'register'
     ? t('Create Account — 237Biz', 'Créer un compte — 237Biz')
     : t('Sign In — 237Biz', 'Connexion — 237Biz');
 
-require_once __DIR__ . '/includes/header.php';
-?>
+// Minimal standalone head — no full navbar/footer on login/register pages
+$lang = lang();
+?><!DOCTYPE html>
+<html lang="<?= $lang ?>">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title><?= e($pageTitle) ?></title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/main.css">
+<style>
+/* Login page — minimal chrome */
+body { margin:0; }
+.login-wrap {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.5rem, 6vw, 3rem) max(16px, 5vw);
+}
+.login-inner { width: 100%; max-width: 440px; }
+.login-logo-block { text-align: center; margin-bottom: 1.5rem; }
+.login-logo-block h1 {
+  font-family: 'Fraunces', serif;
+  font-weight: 900;
+  font-size: clamp(1.4rem, 5vw, 1.8rem);
+  margin: 0.5rem 0 0.25rem;
+  line-height: 1.2;
+}
+.login-logo-block p { color: var(--muted); font-size: 0.85rem; margin: 0; line-height: 1.5; }
+.login-footer {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--muted-2);
+  line-height: 1.8;
+}
+.login-footer a { color: var(--muted); text-decoration: none; }
+.login-footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
 
-<section style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:8rem 5vw 4rem;">
-  <div style="width:100%;max-width:440px;">
+<div class="login-wrap">
+  <div class="login-inner">
 
-    <div style="text-align:center;margin-bottom:2rem;">
+    <div class="login-logo-block">
       <a href="<?= SITE_URL ?>/" style="display:inline-flex;align-items:baseline;gap:2px;text-decoration:none;">
         <span class="brand-num">237</span><span class="brand-word">Biz</span><span class="brand-tld">.net</span>
       </a>
-      <h1 style="font-family:'Fraunces',serif;font-weight:900;font-size:1.8rem;margin-top:0.75rem;">
+      <h1>
         <?= $mode === 'register' ? t('Create your account','Créer votre compte') : t('Welcome back','Bienvenue') ?>
       </h1>
-      <p style="color:var(--muted);font-size:0.875rem;margin-top:0.35rem;">
+      <p>
         <?= $mode === 'register'
             ? t('Free account — book appointments, claim offers &amp; leave reviews.','Compte gratuit — réservez, profitez des offres et laissez des avis.')
             : t('Sign in to book appointments, use offers &amp; manage your account.','Connectez-vous pour réserver, utiliser vos offres et gérer votre compte.') ?>
@@ -319,10 +364,20 @@ require_once __DIR__ . '/includes/header.php';
         <a href="?mode=login"><?= t('Sign in','Connexion') ?></a>
       <?php endif; ?>
     </p>
-  </div>
-</section>
 
-<?php require_once __DIR__ . '/includes/footer.php'; ?>
+    <div class="login-footer">
+      <div>
+        <a href="<?= SITE_URL ?>/"><?= t('Home','Accueil') ?></a> &middot;
+        <a href="<?= SITE_URL ?>/about.php"><?= t('About','À propos') ?></a> &middot;
+        <a href="<?= SITE_URL ?>/contact.php"><?= t('Contact','Contact') ?></a> &middot;
+        <a href="<?= SITE_URL ?>/privacy.php"><?= t('Privacy','Confidentialité') ?></a>
+      </div>
+      <div style="margin-top:.4rem;">© <?= date('Y') ?> 237Biz. <?= t('All rights reserved.','Tous droits réservés.') ?></div>
+    </div>
+
+  </div>
+</div>
+
 <script>
 // Phone-or-email toggle on registration form
 function toggleRegFields() {
@@ -346,3 +401,5 @@ function toggleRegFields() {
 // Run once on page load (in case of back-button with pre-filled values)
 document.addEventListener('DOMContentLoaded', toggleRegFields);
 </script>
+</body>
+</html>
