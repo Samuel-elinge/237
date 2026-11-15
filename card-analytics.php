@@ -339,10 +339,11 @@ require_once __DIR__ . '/includes/header.php';
 
   <!-- QR + card URL bar -->
   <div class="qr-card">
-    <div style="display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0;">
+    <div style="display:inline-flex;flex-direction:column;align-items:center;flex-shrink:0;background:#fff;border:1px solid #d0e9db;border-radius:8px;padding:6px 8px 4px;gap:3px;">
       <img class="qr-img"
-           src="<?= SITE_URL ?>/qr.php?size=120&data=<?= urlencode(SITE_URL.'/card/'.$slug) ?>"
-           alt="QR Code" loading="lazy" style="width:100px;display:block;">
+           src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=<?= urlencode(SITE_URL.'/card/'.$slug) ?>&color=08472F&bgcolor=ffffff"
+           alt="QR Code" loading="lazy" style="width:100px;height:100px;display:block;">
+      <span style="font-size:9px;font-weight:800;color:#08472F;letter-spacing:.8px;text-transform:uppercase;font-family:Arial,sans-serif;line-height:1;">237biz.net</span>
     </div>
     <div class="qr-info">
       <h3><?= t('Your Digital Card QR','Votre QR Carte Digitale') ?></h3>

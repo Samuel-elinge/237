@@ -786,9 +786,12 @@ require_once __DIR__ . '/includes/header.php';
     <p style="font-size:12px;color:var(--muted);margin-bottom:12px;"><?= t('Share or print this QR code to link directly to your listing.','Partagez ou imprimez ce code QR pour accéder directement à votre annonce.') ?></p>
     <?php $listingUrl = SITE_URL . '/listing/' . e($l['slug']); ?>
     <div style="text-align:center;margin-bottom:12px;">
-      <img class="qr-img"
-           src="<?= SITE_URL ?>/qr.php?size=150&data=<?= urlencode($listingUrl) ?>"
-           alt="QR Code for <?= e($l['title']) ?>" style="width:120px;display:block;margin:0 auto;">
+      <div style="display:inline-flex;flex-direction:column;align-items:center;background:#fff;border:1px solid #d0e9db;border-radius:8px;padding:6px 8px 4px;gap:3px;">
+        <img class="qr-img"
+             src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?= urlencode($listingUrl) ?>&color=08472F&bgcolor=ffffff"
+             alt="QR Code for <?= e($l['title']) ?>" style="width:120px;height:120px;display:block;">
+        <span style="font-size:9px;font-weight:800;color:#08472F;letter-spacing:.8px;text-transform:uppercase;font-family:Arial,sans-serif;line-height:1;">237biz.net</span>
+      </div>
     </div>
     <a href="<?= SITE_URL ?>/qr.php?size=600&data=<?= urlencode($listingUrl) ?>"
        download="<?= e($l['slug']) ?>-qr.png" target="_blank"
