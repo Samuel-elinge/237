@@ -14,6 +14,12 @@ $statusFilter  = $_GET['status']  ?? 'active';
 $listingFilter = (int)($_GET['listing'] ?? 0);
 $search        = trim($_GET['q'] ?? '');
 
+// Ensure a stable CSRF token exists in the session for this page's forms
+if (session_status() === PHP_SESSION_NONE) session_start();
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Handle POST: update lead status
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
@@ -229,7 +235,7 @@ partnerNavBadges($partnerId, $pdo);
       <details style="margin-top:0.75rem;">
         <summary style="font-size:0.8rem; color:var(--primary); cursor:pointer; user-select:none;"><?= pt('Update status') ?></summary>
         <form method="POST" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end; margin-top:0.5rem;">
-          <?= csrfField() ?>
+          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
           <input type="hidden" name="action" value="update_lead">
           <input type="hidden" name="lead_id" value="<?= $lead['id'] ?>">
           <select name="new_status" style="padding:0.4rem; border:1px solid var(--border); border-radius:6px; background:var(--card); color:var(--text); font-size:0.83rem; color-scheme:dark;">
