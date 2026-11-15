@@ -162,6 +162,8 @@ foreach ($allLeads as $lead) {
 // Open lead detail
 $openLead = null;
 $openActivities = [];
+$openAuditResponse = null;
+$openAuditQuestions = [];
 if ($openLeadId) {
     $ost = $pdo->prepare("SELECT pl.*, l.title AS biz_name, l.whatsapp AS biz_wa FROM partner_leads pl LEFT JOIN listings l ON l.id=pl.listing_id WHERE pl.id=? AND pl.partner_id=?");
     $ost->execute([$openLeadId, $partnerId]);
@@ -170,6 +172,18 @@ if ($openLeadId) {
         $ast = $pdo->prepare("SELECT * FROM lead_activities WHERE lead_id=? ORDER BY created_at DESC LIMIT 30");
         $ast->execute([$openLeadId]);
         $openActivities = $ast->fetchAll();
+
+        // If this came from the audit form, load the Q&A answers
+        $openAuditResponse = null;
+        $openAuditQuestions = [];
+        if ($openLead['source'] === 'audit') {
+            $arSt = $pdo->prepare("SELECT * FROM audit_responses WHERE lead_id=? AND partner_id=? LIMIT 1");
+            $arSt->execute([$openLeadId, $partnerId]);
+            $openAuditResponse = $arSt->fetch() ?: null;
+            if ($openAuditResponse) {
+                $openAuditQuestions = $pdo->query("SELECT id, question_text, sort_order FROM audit_questions ORDER BY sort_order")->fetchAll(PDO::FETCH_ASSOC);
+            }
+        }
     }
 }
 
@@ -379,6 +393,29 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
       </div>
       <?php endif; ?>
     </div>
+
+    <!-- Audit form answers -->
+    <?php if (!empty($openAuditResponse) && !empty($openAuditQuestions)):
+        $answers = json_decode($openAuditResponse['answers_json'] ?? '{}', true) ?: [];
+    ?>
+    <div style="margin-bottom:1rem; border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+      <div style="background:var(--accent); color:#fff; padding:0.5rem 0.75rem; font-size:0.8rem; font-weight:600;">
+        📋 Audit Form Answers
+      </div>
+      <div style="padding:0.5rem 0; max-height:260px; overflow-y:auto;">
+        <?php foreach ($openAuditQuestions as $q):
+          $ans = $answers[$q['id']] ?? '';
+          if (is_array($ans)) $ans = implode(', ', $ans);
+          if ($ans === '') continue;
+        ?>
+        <div style="padding:0.35rem 0.75rem; border-bottom:1px solid var(--border); font-size:0.78rem;">
+          <div style="color:var(--muted); margin-bottom:0.1rem;"><?= htmlspecialchars($q['question_text']) ?></div>
+          <div style="color:var(--text);"><?= nl2br(htmlspecialchars($ans)) ?></div>
+        </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+    <?php endif; ?>
 
     <!-- WhatsApp quick-send -->
     <?php if ($clientPhone): ?>
