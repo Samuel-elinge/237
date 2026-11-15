@@ -177,9 +177,35 @@ if ($openLeadId) {
         $openAuditResponse = null;
         $openAuditQuestions = [];
         if ($openLead['source'] === 'audit') {
+            // Try matching by lead_id first; fall back to partner + phone/name match
+            // (older submissions may have lead_id=NULL if the UPDATE step was missed)
             $arSt = $pdo->prepare("SELECT * FROM audit_responses WHERE lead_id=? AND partner_id=? LIMIT 1");
             $arSt->execute([$openLeadId, $partnerId]);
             $openAuditResponse = $arSt->fetch() ?: null;
+
+            if (!$openAuditResponse) {
+                // Fallback: match by partner + phone or name, closest in time to lead creation
+                $arSt2 = $pdo->prepare("
+                    SELECT * FROM audit_responses
+                    WHERE partner_id=?
+                      AND (phone=? OR owner_name=?)
+                    ORDER BY ABS(TIMESTAMPDIFF(SECOND, submitted_at, ?)) ASC
+                    LIMIT 1
+                ");
+                $arSt2->execute([
+                    $partnerId,
+                    $openLead['customer_phone'] ?? '',
+                    $openLead['customer_name'] ?? '',
+                    $openLead['created_at'],
+                ]);
+                $openAuditResponse = $arSt2->fetch() ?: null;
+                // Backfill the lead_id so next time the first query works
+                if ($openAuditResponse && !$openAuditResponse['lead_id']) {
+                    $pdo->prepare("UPDATE audit_responses SET lead_id=? WHERE id=?")
+                        ->execute([$openLeadId, $openAuditResponse['id']]);
+                }
+            }
+
             if ($openAuditResponse) {
                 $openAuditQuestions = $pdo->query("SELECT id, question_text, sort_order FROM audit_questions ORDER BY sort_order")->fetchAll(PDO::FETCH_ASSOC);
             }
