@@ -24,6 +24,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // ── ADD EMAIL (phone-only accounts) ──────────────────
+    elseif ($action === 'add_email') {
+        $newEmail = strtolower(trim($_POST['new_email'] ?? ''));
+        if (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
+            $errors[] = t('Please enter a valid email address.', 'Veuillez entrer une adresse email valide.');
+        } else {
+            // Check not already taken
+            $chk = db()->prepare("SELECT id FROM users WHERE email=?");
+            $chk->execute([$newEmail]);
+            if ($chk->fetch()) {
+                $errors[] = t('That email address is already registered.', 'Cette adresse email est déjà enregistrée.');
+            }
+        }
+        if (!$errors) {
+            $token = bin2hex(random_bytes(32));
+            // Update email + reset verified flag + set new token
+            db()->prepare("UPDATE users SET email=?, verified=0, verify_token=? WHERE id=?")
+                 ->execute([$newEmail, $token, $u['id']]);
+            // Send verification email
+            $verifyUrl = SITE_URL . '/verify.php?token=' . $token;
+            sendMail($newEmail,
+                t('Verify your 237Biz email address', 'Vérifiez votre adresse email 237Biz'),
+                '<h2 style="color:#fff;font-family:Georgia,serif;">'. t('Almost there!','Presque là !') .'</h2>
+                 <p style="color:rgba(255,255,255,0.7);">'. t('Hi','Bonjour') .' ' . htmlspecialchars($u['name']) . ',</p>
+                 <p style="color:rgba(255,255,255,0.7);">'. t('Click the button below to verify your email and unlock business listings on 237Biz.','Cliquez ci-dessous pour vérifier votre email et publier des annonces sur 237Biz.') .'</p>
+                 <a href="'.$verifyUrl.'" style="display:inline-block;margin:1.5rem 0;background:#00A878;color:#fff;padding:0.85rem 2rem;border-radius:5px;text-decoration:none;font-weight:500;">'.
+                 t('Verify Email →','Vérifier mon Email →').'</a>
+                 <p style="color:rgba(255,255,255,0.4);font-size:0.8rem;">'.t('Link expires in 24 hours.','Le lien expire dans 24 heures.').'</p>'
+            );
+            flash('success', t('Verification email sent! Check your inbox and click the link to unlock listings.',
+                               'Email de vérification envoyé ! Vérifiez votre boîte mail et cliquez sur le lien.'));
+            redirect(SITE_URL . '/profile.php');
+        }
+    }
+
     // ── CHANGE PASSWORD ───────────────────────────────────
     elseif ($action === 'change_password') {
         $current  = $_POST['current_password'] ?? '';
@@ -159,6 +194,8 @@ require_once __DIR__ . '/includes/header.php';
                 <input type="tel" name="phone" value="<?= e($u['phone'] ?? '') ?>" placeholder="+237 6XX XXX XXX">
               </div>
             </div>
+            <?php $isPhoneOnly = str_ends_with($u['email'] ?? '', '@237biz.internal'); ?>
+            <?php if (!$isPhoneOnly): ?>
             <div class="form-group">
               <label><?= t('Email Address', 'Adresse email') ?></label>
               <input type="email" value="<?= e($u['email']) ?>" disabled
@@ -167,9 +204,36 @@ require_once __DIR__ . '/includes/header.php';
                 <?= t('Email cannot be changed. Contact support if needed.', 'L\'email ne peut pas être modifié. Contactez le support si nécessaire.') ?>
               </small>
             </div>
+            <?php endif; ?>
             <button type="submit" class="btn btn-primary"><?= t('Save Changes', 'Enregistrer') ?></button>
           </form>
         </div>
+
+        <?php if ($isPhoneOnly ?? false): ?>
+        <!-- ADD EMAIL — phone-only account prompt -->
+        <div class="listing-widget" style="margin-bottom:1.5rem;border:2px solid var(--green);background:rgba(8,71,47,.08);">
+          <h4 style="margin-bottom:.5rem;">📧 <?= t('Add Email to Unlock Listings', 'Ajoutez un email pour publier des annonces') ?></h4>
+          <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem;line-height:1.5;">
+            <?= t('You registered with a phone number. Add a verified email address to publish business listings on 237Biz.',
+                  'Vous vous êtes inscrit par téléphone. Ajoutez un email vérifié pour publier des annonces sur 237Biz.') ?>
+          </p>
+          <?php foreach ($errors as $err): ?>
+            <div class="flash flash-error" style="margin-bottom:.75rem;"><?= e($err) ?></div>
+          <?php endforeach; ?>
+          <form method="POST">
+            <input type="hidden" name="csrf" value="<?= csrf() ?>">
+            <input type="hidden" name="action" value="add_email">
+            <div class="form-group" style="margin-bottom:1rem;">
+              <label><?= t('Email Address *', 'Adresse email *') ?></label>
+              <input type="email" name="new_email" required autocomplete="email" placeholder="you@example.com"
+                     value="<?= e($_POST['new_email'] ?? '') ?>">
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <?= t('Send Verification Email', 'Envoyer l\'email de vérification') ?>
+            </button>
+          </form>
+        </div>
+        <?php endif; ?>
 
         <!-- CHANGE PASSWORD -->
         <div class="listing-widget" style="margin-bottom:1.5rem;">

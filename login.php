@@ -106,7 +106,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$name)  $errors[] = t('Name is required.', 'Le nom est requis.');
         if (!$phoneOnly && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = t('Valid email required.', 'Email valide requis.');
-        if ($phoneOnly && strlen($cleanPhone ?? '') < 8) $errors[] = t('Please enter a valid phone number.', 'Veuillez entrer un numéro de téléphone valide.');
+        // Cameroon phone validation: strip country code (+237 / 237), must be 9 digits starting with 6
+        if ($phoneOnly) {
+            $localPhone = $cleanPhone ?? '';
+            // Strip leading country code: 00237 or 237
+            if (str_starts_with($localPhone, '00237')) $localPhone = substr($localPhone, 5);
+            elseif (str_starts_with($localPhone, '237') && strlen($localPhone) === 12) $localPhone = substr($localPhone, 3);
+            if (!preg_match('/^6[0-9]{8}$/', $localPhone)) {
+                $errors[] = t('Please enter a valid Cameroon mobile number (e.g. 677 123 456).',
+                              'Veuillez entrer un numéro mobile camerounais valide (ex. 677 123 456).');
+            } else {
+                // Normalise to local 9-digit form for storage
+                $cleanPhone = $localPhone;
+                $email = 'phone+' . $cleanPhone . '@237biz.internal';
+            }
+        }
         if (strlen($pass) < 8) $errors[] = t('Password must be at least 8 characters.', 'Mot de passe : 8 caractères minimum.');
         if ($pass !== $pass2) $errors[] = t('Passwords do not match.', 'Les mots de passe ne correspondent pas.');
         if (!preg_match('/[A-Z]/', $pass)) $errors[] = t('Password must contain an uppercase letter.', 'Le mot de passe doit contenir une majuscule.');

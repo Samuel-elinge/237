@@ -2,6 +2,36 @@
 require_once __DIR__ . '/includes/config.php';
 requireLogin();
 
+// Phone-only accounts cannot publish listings until they verify an email address
+$_cu = currentUser();
+if ($_cu && str_ends_with($_cu['email'] ?? '', '@237biz.internal')) {
+    // Phone-only account — block with friendly prompt
+    $pageTitle = t('Email Required — 237Biz', 'Email requis — 237Biz');
+    require_once __DIR__ . '/includes/header.php';
+    ?>
+    <section style="min-height:60vh;display:flex;align-items:center;justify-content:center;padding:6rem 5vw 3rem;">
+      <div style="max-width:480px;width:100%;text-align:center;">
+        <div style="font-size:3rem;margin-bottom:1rem;">📧</div>
+        <h1 style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;margin-bottom:.75rem;">
+          <?= t('Verify your email to publish a listing','Vérifiez votre email pour publier une annonce') ?>
+        </h1>
+        <p style="color:var(--muted);line-height:1.6;margin-bottom:1.5rem;">
+          <?= t('You registered with a phone number. To publish a business listing, please add and verify an email address on your profile.',
+                'Vous vous êtes inscrit avec un numéro de téléphone. Pour publier une annonce, veuillez ajouter et vérifier une adresse email sur votre profil.') ?>
+        </p>
+        <a href="<?= SITE_URL ?>/profile.php?add_email=1" class="btn btn-primary" style="margin-right:.5rem;">
+          <?= t('Add Email Address','Ajouter une adresse email') ?>
+        </a>
+        <a href="<?= SITE_URL ?>/dashboard.php" class="btn btn-outline" style="margin-top:.5rem;display:inline-block;">
+          <?= t('Back to Dashboard','Retour au tableau de bord') ?>
+        </a>
+      </div>
+    </section>
+    <?php
+    require_once __DIR__ . '/includes/footer.php';
+    exit;
+}
+
 $cats     = db()->query("SELECT * FROM categories ORDER BY sort_order")->fetchAll();
 $locs     = db()->query("SELECT * FROM locations ORDER BY sort_order")->fetchAll();
 $packages = db()->query("SELECT * FROM listing_packages WHERE active=1 ORDER BY sort_order")->fetchAll();
