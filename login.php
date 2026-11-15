@@ -96,24 +96,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pass2 = $_POST['password2'] ?? '';
         $phone = trim($_POST['phone'] ?? '');
 
+        // Phone-only registration: allow signup with just phone (no real email)
+        $phoneOnly = ($phone && !$email);
+        if ($phoneOnly) {
+            // Generate a stable placeholder email from phone so DB unique constraint is met
+            $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
+            $email = 'phone+' . $cleanPhone . '@237biz.internal';
+        }
+
         if (!$name)  $errors[] = t('Name is required.', 'Le nom est requis.');
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = t('Valid email required.', 'Email valide requis.');
+        if (!$phoneOnly && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = t('Valid email required.', 'Email valide requis.');
+        if ($phoneOnly && strlen($cleanPhone ?? '') < 8) $errors[] = t('Please enter a valid phone number.', 'Veuillez entrer un numéro de téléphone valide.');
         if (strlen($pass) < 8) $errors[] = t('Password must be at least 8 characters.', 'Mot de passe : 8 caractères minimum.');
         if ($pass !== $pass2) $errors[] = t('Passwords do not match.', 'Les mots de passe ne correspondent pas.');
         if (!preg_match('/[A-Z]/', $pass)) $errors[] = t('Password must contain an uppercase letter.', 'Le mot de passe doit contenir une majuscule.');
         if (!preg_match('/[0-9]/', $pass)) $errors[] = t('Password must contain a number.', 'Le mot de passe doit contenir un chiffre.');
 
         if (!$errors) {
-            $chk = db()->prepare("SELECT id FROM users WHERE email = ?");
-            $chk->execute([$email]);
-            if ($chk->fetch()) $errors[] = t('Email already registered.', 'Email déjà enregistré.');
+            // Check for duplicate phone (for phone-only accounts)
+            if ($phoneOnly) {
+                $chkP = db()->prepare("SELECT id FROM users WHERE phone=? AND email LIKE 'phone+%@237biz.internal'");
+                $chkP->execute([$phone]);
+                if ($chkP->fetch()) $errors[] = t('Phone number already registered.', 'Ce numéro est déjà enregistré.');
+            } else {
+                $chk = db()->prepare("SELECT id FROM users WHERE email = ?");
+                $chk->execute([$email]);
+                if ($chk->fetch()) $errors[] = t('Email already registered.', 'Email déjà enregistré.');
+            }
         }
 
         if (!$errors) {
             $token = bin2hex(random_bytes(32));
             $hash  = password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]);
-            $st = db()->prepare("INSERT INTO users (name,email,password,phone,verify_token,verified) VALUES (?,?,?,?,?,0)");
-            $st->execute([$name, $email, $hash, $phone, $token]);
+            // Phone-only accounts are auto-verified (no email to verify)
+            $verified = $phoneOnly ? 1 : 0;
+            $st = db()->prepare("INSERT INTO users (name,email,password,phone,verify_token,verified) VALUES (?,?,?,?,?,?)");
+            $st->execute([$name, $email, $hash, $phone, $token, $verified]);
             $newUserId = (int)db()->lastInsertId();
 
             // ── Automation: tag language on registration ──
@@ -124,21 +142,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             // ─────────────────────────────────────────────
 
-            // Send verification email
-            $verifyUrl = SITE_URL . '/verify.php?token=' . $token;
-            sendMail($email,
-                t('Verify your 237Biz account', 'Vérifiez votre compte 237Biz'),
-                '<h2 style="color:#fff;font-family:Georgia,serif;">'. t('Welcome to 237Biz!','Bienvenue sur 237Biz !') .'</h2>
-                 <p style="color:rgba(255,255,255,0.7);">'. t('Hi','Bonjour') .' ' . htmlspecialchars($name) . ',</p>
-                 <p style="color:rgba(255,255,255,0.7);">'. t('Please click the button below to verify your email address and activate your account.','Cliquez sur le bouton ci-dessous pour vérifier votre adresse email et activer votre compte.') .'</p>
-                 <a href="'.$verifyUrl.'" style="display:inline-block;margin:1.5rem 0;background:#00A878;color:#fff;padding:0.85rem 2rem;border-radius:5px;text-decoration:none;font-weight:500;">'.
-                 t('Verify My Email →','Vérifier mon Email →').'</a>
-                 <p style="color:rgba(255,255,255,0.4);font-size:0.8rem;">'.t('Link expires in 24 hours. If you did not register, ignore this email.','Lien expire dans 24 heures. Si vous n\'avez pas créé de compte, ignorez cet email.').'</p>'
-            );
-
-            flash('success', t('Account created! Please check your email to verify your account before logging in.',
-                               'Compte créé ! Vérifiez votre email pour activer votre compte avant de vous connecter.'));
-            redirect(SITE_URL . '/login.php?mode=login&verified=pending');
+            if ($phoneOnly) {
+                // Log straight in — no email to verify
+                session_regenerate_id(true);
+                $_SESSION['user_id']   = $newUserId;
+                $_SESSION['user_name'] = $name;
+                flash('success', t('Account created! You are now logged in.', 'Compte créé ! Vous êtes maintenant connecté.'));
+                redirect($next ?: SITE_URL . '/dashboard');
+            } else {
+                // Send verification email
+                $verifyUrl = SITE_URL . '/verify.php?token=' . $token;
+                sendMail($email,
+                    t('Verify your 237Biz account', 'Vérifiez votre compte 237Biz'),
+                    '<h2 style="color:#fff;font-family:Georgia,serif;">'. t('Welcome to 237Biz!','Bienvenue sur 237Biz !') .'</h2>
+                     <p style="color:rgba(255,255,255,0.7);">'. t('Hi','Bonjour') .' ' . htmlspecialchars($name) . ',</p>
+                     <p style="color:rgba(255,255,255,0.7);">'. t('Please click the button below to verify your email address and activate your account.','Cliquez sur le bouton ci-dessous pour vérifier votre adresse email et activer votre compte.') .'</p>
+                     <a href="'.$verifyUrl.'" style="display:inline-block;margin:1.5rem 0;background:#00A878;color:#fff;padding:0.85rem 2rem;border-radius:5px;text-decoration:none;font-weight:500;">'.
+                     t('Verify My Email →','Vérifier mon Email →').'</a>
+                     <p style="color:rgba(255,255,255,0.4);font-size:0.8rem;">'.t('Link expires in 24 hours. If you did not register, ignore this email.','Lien expire dans 24 heures. Si vous n\'avez pas créé de compte, ignorez cet email.').'</p>'
+                );
+                flash('success', t('Account created! Please check your email to verify your account before logging in.',
+                                   'Compte créé ! Vérifiez votre email pour activer votre compte avant de vous connecter.'));
+                redirect(SITE_URL . '/login.php?mode=login&verified=pending');
+            }
         }
     }
 }
@@ -221,23 +247,41 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <?php if ($mode === 'register'): ?>
+          <?php if (isset($_GET['reason']) && $_GET['reason'] === 'review'): ?>
+          <div style="background:linear-gradient(135deg,#08472F,#0d6b47);color:#fff;border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.82rem;line-height:1.5;">
+            ⭐ <?= t('Create a free account to review <strong>' . e($_GET['biz'] ?? 'this business') . '</strong>',
+                      'Créez un compte gratuit pour évaluer <strong>' . e($_GET['biz'] ?? 'cette entreprise') . '</strong>') ?>
+          </div>
+          <?php endif; ?>
           <div class="form-group">
             <label><?= t('Full Name *','Nom complet *') ?></label>
             <input type="text" name="name" value="<?= e($_POST['name'] ?? '') ?>" required
                    autocomplete="name" placeholder="<?= t('Your name','Votre nom') ?>">
           </div>
-          <div class="form-group">
-            <label><?= t('Phone','Téléphone') ?></label>
-            <input type="tel" name="phone" value="<?= e($_POST['phone'] ?? '') ?>" placeholder="+237 6XX XXX XXX">
+          <!-- Phone OR Email — user needs only one -->
+          <div style="margin-bottom:1rem;">
+            <div style="font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.5rem;">
+              <?= t('Sign up with phone or email (choose one):','Inscrivez-vous avec téléphone ou email (choisissez un) :') ?>
+            </div>
+            <div class="form-group" style="margin-bottom:.5rem;">
+              <label><?= t('📱 Phone Number','📱 Numéro de téléphone') ?></label>
+              <input type="tel" name="phone" value="<?= e($_POST['phone'] ?? '') ?>" placeholder="+237 6XX XXX XXX"
+                     autocomplete="tel" id="reg-phone" oninput="toggleRegFields()">
+            </div>
+            <div style="text-align:center;font-size:.75rem;color:var(--muted);margin:.25rem 0;"><?= t('— or —','— ou —') ?></div>
+            <div class="form-group" style="margin-bottom:0;" id="email-field-wrap">
+              <label><?= t('✉️ Email Address','✉️ Adresse email') ?></label>
+              <input type="email" name="email" value="<?= e($_POST['email'] ?? '') ?>"
+                     autocomplete="email" placeholder="you@example.com" id="reg-email" oninput="toggleRegFields()">
+            </div>
           </div>
-        <?php endif; ?>
-
+        <?php else: ?>
         <div class="form-group">
           <label><?= t('Email Address *','Adresse email *') ?></label>
           <input type="email" name="email" value="<?= e($_POST['email'] ?? '') ?>" required
                  autocomplete="email" placeholder="you@example.com">
         </div>
-
+        <?php endif; ?>
         <div class="form-group">
           <label><?= t('Password *','Mot de passe *') ?></label>
           <input type="password" name="password" required autocomplete="<?= $mode==='register' ? 'new-password' : 'current-password' ?>"
@@ -249,9 +293,9 @@ require_once __DIR__ . '/includes/header.php';
             <label><?= t('Confirm Password *','Confirmer le mot de passe *') ?></label>
             <input type="password" name="password2" required autocomplete="new-password" placeholder="••••••••">
           </div>
-          <p style="font-size:0.75rem;color:var(--muted-2);margin-bottom:1rem;line-height:1.5;">
-            <?= t('✉️ A verification email will be sent to activate your account.',
-                  '✉️ Un email de vérification sera envoyé pour activer votre compte.') ?>
+          <p style="font-size:0.75rem;color:var(--muted-2);margin-bottom:1rem;line-height:1.5;" id="email-verify-note">
+            <?= t('✉️ A verification email will be sent if you register with email.',
+                  '✉️ Un email de vérification sera envoyé si vous vous inscrivez avec un email.') ?>
           </p>
         <?php endif; ?>
 
@@ -279,3 +323,26 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
+<script>
+// Phone-or-email toggle on registration form
+function toggleRegFields() {
+  var phone = document.getElementById('reg-phone');
+  var email = document.getElementById('reg-email');
+  var note  = document.getElementById('email-verify-note');
+  if (!phone || !email) return;
+  if (phone.value.trim()) {
+    // Phone filled — email optional
+    email.removeAttribute('required');
+    if (note) note.style.display = 'none';
+  } else if (email.value.trim()) {
+    // Email filled — phone optional
+    phone.removeAttribute('required');
+    if (note) note.style.display = '';
+  } else {
+    // Neither filled — keep email note visible
+    if (note) note.style.display = '';
+  }
+}
+// Run once on page load (in case of back-button with pre-filled values)
+document.addEventListener('DOMContentLoaded', toggleRegFields);
+</script>

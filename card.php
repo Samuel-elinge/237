@@ -416,6 +416,16 @@ body{
 .btn-share.action-icon{background:#f5e8ff;color:#8a2be2}
 .btn-share .action-icon{background:#f5e8ff;color:#8a2be2}
 .btn-view .action-icon{background:#fff8e1;color:#c9820a}
+/* Review CTA */
+.review-cta-btn{
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(135deg,#08472F 0%,#0d6b47 100%);
+  color:#fff;border-radius:16px;padding:1rem 1.25rem;
+  text-decoration:none;box-shadow:0 4px 16px rgba(8,71,47,.35);
+  transition:transform .15s,box-shadow .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.review-cta-btn:active{transform:scale(.97);box-shadow:0 2px 8px rgba(8,71,47,.25)}
 
 /* ── Info card ───────────────────────────────────────── */
 .section-card{
@@ -703,6 +713,30 @@ body{
     </button>
 
   </div>
+</div>
+
+<?php
+// Review CTA: determine link target
+$_cardReviewBase = SITE_URL . '/listing/' . e($l['slug']) . '#reviews';
+$_cardReviewLoggedIn = isset($_SESSION['user_id']);
+$_cardReviewUrl = $_cardReviewLoggedIn
+    ? $_cardReviewBase
+    : SITE_URL . '/login.php?mode=register&next=' . urlencode('/listing/' . $l['slug'] . '#review-form') . '&reason=review&biz=' . urlencode($l['title']);
+?>
+<!-- Review CTA Banner -->
+<div class="review-cta-wrap" style="max-width:540px;margin:0 auto 1rem;">
+  <a href="<?= $_cardReviewUrl ?>" class="review-cta-btn" onclick="trackEvent('review_cta_click')">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+      <div style="font-size:1.5rem;line-height:1;">⭐</div>
+      <div style="font-weight:800;font-size:0.95rem;letter-spacing:.01em;">
+        <?= t('Rate &amp; Review This Business','Évaluer cette entreprise') ?>
+      </div>
+      <div style="font-size:0.75rem;opacity:.85;">
+        <?= t('Help others by sharing your experience','Aidez les autres en partageant votre avis') ?>
+      </div>
+    </div>
+    <div style="font-size:1.2rem;opacity:.9;">→</div>
+  </a>
 </div>
 
 <!-- Description -->
