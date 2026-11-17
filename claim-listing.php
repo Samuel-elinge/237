@@ -15,8 +15,9 @@ $rawToken = $_GET['token'] ?? $_POST['token'] ?? '';
 $token    = preg_replace('/[^a-f0-9]/i', '', $rawToken);
 
 if (strlen($token) !== 64) {
-    http_response_code(404);
-    die('Invalid or missing invitation token.');
+    // No token = user arrived via nav link, not an invitation
+    header('Location: ' . (defined('SITE_URL') ? SITE_URL : '') . '/add-listing');
+    exit;
 }
 
 $pdo = db();
