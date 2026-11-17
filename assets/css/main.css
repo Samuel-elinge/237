@@ -246,7 +246,7 @@ h1,h2,h3,h4,h5,h6 { font-family: 'Fraunces', serif; font-weight: 700; line-heigh
 .footer-bottom a:hover { color: var(--green); }
 
 /* ── PAGE HEADER ── */
-.page-header { padding: 4.5rem 5vw 1.5rem; background: linear-gradient(180deg,rgba(0,168,120,0.05) 0%,transparent 60%); border-bottom: 1px solid var(--border); }
+.page-header { padding: 3rem 5vw 1rem; background: linear-gradient(180deg,rgba(0,168,120,0.05) 0%,transparent 60%); border-bottom: 1px solid var(--border); }
 .breadcrumb { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--muted-2); margin-bottom: 1rem; flex-wrap: wrap; }
 .breadcrumb a { color: var(--green); }
 
