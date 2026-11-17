@@ -376,7 +376,10 @@ require_once __DIR__ . '/includes/header.php';
             <?php else: ?>
             <p style="color:var(--muted);margin-bottom:1.5rem;"><?= t('No businesses match your search yet. Be the first to list yours — it\'s free!', 'Aucune entreprise ne correspond encore. Soyez le premier à lister la vôtre — c\'est gratuit !') ?></p>
             <?php endif; ?>
-            <a href="<?= SITE_URL ?>/join" class="btn btn-primary">+ <?= t('List your business free', 'Lister votre entreprise gratuitement') ?></a>
+            <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+              <a href="<?= SITE_URL ?>/join" class="btn btn-primary">🚀 <?= t('List your business free', 'Lister votre entreprise gratuitement') ?></a>
+              <a href="<?= SITE_URL ?>/suggest-business<?= $emptyLocName ? '?business_name=' . urlencode(($_GET['q'] ?? '')) : '' ?>" class="btn btn-outline">💡 <?= t('Suggest a business', 'Suggérer une entreprise') ?></a>
+            </div>
           </div>
         <?php endif; ?>
       </div>
@@ -549,11 +552,16 @@ require_once __DIR__ . '/includes/header.php';
         var emptyMsg = locLabel && locSel && locSel.value
           ? (isFr ? 'Aucune entreprise répertoriée à ' + locLabel + ' pour l\'instant. Soyez le premier, c\'est gratuit.' : 'No businesses listed in ' + locLabel + ' yet. Be the first — it\'s free.')
           : (isFr ? "Aucune entreprise ne correspond encore. Soyez le premier à lister la vôtre — c'est gratuit !" : 'No businesses match your search yet. Be the first to list yours — it\'s free!');
+        var qVal = (document.querySelector('input[name="q"]') || {}).value || '';
+        var sugUrl = '<?= SITE_URL ?>/suggest-business' + (qVal ? '?business_name=' + encodeURIComponent(qVal) : '');
         grid.innerHTML = '<div style="text-align:center;padding:4rem 2rem;background:var(--card);border:1px solid var(--border);border-radius:14px;">'
           + '<div style="font-size:3rem;margin-bottom:1rem;">🔍</div>'
           + '<h3 style="font-family:\'Fraunces\',serif;margin-bottom:0.5rem;">' + (isFr ? 'Aucune entreprise trouvée' : 'No businesses found') + '</h3>'
           + '<p style="color:var(--muted);margin-bottom:1.5rem;">' + emptyMsg + '</p>'
-          + '<a href="<?= SITE_URL ?>/join" class="btn btn-primary">+ ' + (isFr ? 'Lister votre entreprise gratuitement' : 'List your business free') + '</a>'
+          + '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">'
+          + '<a href="<?= SITE_URL ?>/join" class="btn btn-primary">🚀 ' + (isFr ? 'Lister votre entreprise gratuitement' : 'List your business free') + '</a>'
+          + '<a href="' + sugUrl + '" class="btn btn-outline">💡 ' + (isFr ? 'Suggérer une entreprise' : 'Suggest a business') + '</a>'
+          + '</div>'
           + '</div>';
         return;
       }

@@ -85,6 +85,7 @@
         </div>
         <?php foreach ([
           [SITE_URL.'/join',          t('Join 237Biz','Rejoindre 237Biz')],
+          [SITE_URL.'/suggest-business', t('Suggest a Business','Suggérer une Entreprise')],
           [SITE_URL.'/login',         t('Sign In','Connexion')],
           [SITE_URL.'/dashboard',     t('My Dashboard','Mon Tableau de bord')],
           [SITE_URL.'/analytics',     t('Analytics','Analytiques')],

@@ -48,6 +48,7 @@ function adminNav(string $activePage = ''): void {
         ]],
         ['Comms', '&#x1F4EC;', [
             ['Enquiries',   '&#x1F4EC;', $base . '/admin/enquiries.php',       ['enquiries']],
+            ['Suggestions', '&#x1F4A1;', $base . '/admin/suggested-listings.php', ['suggested-listings']],
             ['Leads',       '&#x1F310;', $base . '/admin/leads.php',           ['leads']],
             ['Newsletter',  '&#x1F4EC;', $base . '/admin/subscribers.php',         ['subscribers']],
             ['Notif. Subs', '&#x1F514;', $base . '/admin/notify-subscribers.php', ['notify-subscribers']],
