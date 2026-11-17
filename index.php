@@ -55,7 +55,8 @@ try {
         JOIN categories c   ON c.id  = l.category_id
         JOIN locations  loc ON loc.id = l.location_id
         WHERE l.status = 'approved' AND l.booking_enabled = 1
-        ORDER BY l.featured DESC, l.views DESC
+          AND l.id NOT IN (<?= implode(',', array_map('intval', array_column($featured, 'id')) ?: [0]) ?>)
+        ORDER BY l.views DESC
         LIMIT 6
     ")->fetchAll();
 } catch (Exception $e) { $bookables = []; }
@@ -532,7 +533,9 @@ require_once __DIR__ . '/includes/header.php';
       <a href="<?= SITE_URL ?>/category/<?= e($slug) ?>" class="cat-card">
         <div class="ci"><?= $cat['icon'] ?></div>
         <div class="cn"><?= e($catName) ?></div>
+        <?php if ((int)$cat['listing_count'] > 0): ?>
         <div class="cc"><?= (int)$cat['listing_count'] ?> <?= t('businesses', 'entreprises') ?></div>
+        <?php endif; ?>
       </a>
       <?php endforeach; ?>
     </div>
@@ -865,7 +868,7 @@ require_once __DIR__ . '/includes/header.php';
         <input type="email" name="email"
                placeholder="<?= t('Your email address', 'Votre adresse e-mail') ?>"
                required autocomplete="email" maxlength="254"
-               style="flex:1;min-width:220px;max-width:300px;padding:0.75rem 1rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.9rem;">
+               style="flex:1;min-width:220px;max-width:300px;padding:0.75rem 1rem;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);border-radius:8px;color:#fff;font-size:0.9rem;">
         <button type="submit"
                 style="padding:0.75rem 1.5rem;background:#00A878;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.9rem;white-space:nowrap;">
           <?= t('Subscribe free →', 'S\'abonner →') ?>
