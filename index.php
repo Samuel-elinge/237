@@ -214,32 +214,35 @@ require_once __DIR__ . '/includes/header.php';
 }
 .hero-search button:hover { background: #008f67; }
 
-/* Quick action buttons below search */
-.hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+/* Hero CTA buttons */
+.hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
 .hero-action {
-  padding: 9px 18px; border-radius: 9px; font-size: 13.5px; font-weight: 600;
-  text-decoration: none; border: 1.5px solid rgba(255,255,255,0.15);
-  color: rgba(255,255,255,0.8); transition: all .2s;
+  padding: 13px 28px; border-radius: 10px; font-size: 14.5px; font-weight: 700;
+  text-decoration: none; transition: all .2s; white-space: nowrap;
 }
-.hero-action:hover { border-color: rgba(255,255,255,0.4); color: #fff; background: rgba(255,255,255,0.05); }
-.hero-action.primary { background: #fcd116; color: #0A1A0F; border-color: #fcd116; }
+.hero-action.secondary {
+  border: 2px solid rgba(255,255,255,0.22); color: rgba(255,255,255,0.88);
+  background: rgba(255,255,255,0.05);
+}
+.hero-action.secondary:hover { border-color: rgba(255,255,255,0.5); color: #fff; background: rgba(255,255,255,0.1); }
+.hero-action.primary { background: #fcd116; color: #0A1A0F; border: 2px solid #fcd116; }
 .hero-action.primary:hover { background: #ffe44d; border-color: #ffe44d; }
 
-/* ── Quick-action cards ── */
-.qa-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-  margin-top: 44px;
+/* ── Growth section columns ── */
+.growth-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
+.growth-col {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px; padding: 32px 26px; display: flex; flex-direction: column; gap: 12px;
 }
-.qa-card {
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 14px; padding: 22px 16px; text-align: center;
-  text-decoration: none; transition: all .2s; display: flex;
-  flex-direction: column; align-items: center; gap: 10px;
+.growth-col:hover { border-color: rgba(0,168,120,0.3); background: rgba(0,168,120,0.04); transition: all .2s; }
+.growth-col-icon { font-size: 2.2rem; line-height: 1; }
+.growth-col-title { font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 900; color: #fff; }
+.growth-col-desc { font-size: 13.5px; color: rgba(255,255,255,0.58); line-height: 1.65; flex: 1; }
+.growth-col-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.growth-col-tag {
+  background: rgba(0,168,120,0.1); border: 1px solid rgba(0,168,120,0.2);
+  color: #00A878; border-radius: 99px; font-size: 11.5px; font-weight: 700; padding: 3px 10px;
 }
-.qa-card:hover { background: rgba(0,168,120,0.1); border-color: rgba(0,168,120,0.35); transform: translateY(-2px); }
-.qa-card .qa-icon { font-size: 2rem; }
-.qa-card .qa-title { font-size: 13px; font-weight: 700; color: #fff; }
-.qa-card .qa-sub { font-size: 11.5px; color: rgba(255,255,255,0.45); }
 
 /* ── Sections ── */
 .hp-section { padding: 72px 0; }
@@ -413,7 +416,7 @@ require_once __DIR__ . '/includes/header.php';
 
 /* ── Responsive ── */
 @media (max-width: 900px) {
-  .qa-grid { grid-template-columns: repeat(2, 1fr); }
+  .growth-cols { grid-template-columns: 1fr !important; }
   .owner-grid  { grid-template-columns: 1fr !important; }
   .partner-split { grid-template-columns: 1fr !important; }
 }
@@ -422,7 +425,7 @@ require_once __DIR__ . '/includes/header.php';
   .hero-search { flex-direction: column; border-radius: 12px; }
   .hero-search .search-div { width: 100%; height: 1px; margin: 0 16px; }
   .hero-search button { padding: 14px; }
-  .qa-grid { gap: 8px; }
+  .hero-actions { flex-direction: column; align-items: stretch; padding: 0 8px; }
   .mobile-bottom-nav { display: block; }
   /* Add bottom padding on mobile so content isn't hidden by bottom nav */
   body { padding-bottom: 72px; }
@@ -460,24 +463,22 @@ require_once __DIR__ . '/includes/header.php';
     <div class="hero-label">
       🇨🇲 <?= t('Cameroon\'s Business Hub', 'Le Hub des Entreprises du Cameroun') ?>
     </div>
-    <h1><?= t('Discover. Connect. Grow.', 'Découvrez. Connectez. Grandissez.') ?></h1>
+    <h1><?= t('Discover Trusted Businesses in Cameroon — Or Grow Your Own.', 'Découvrez des Entreprises de Confiance au Cameroun — Ou Développez la Vôtre.') ?></h1>
     <p class="hero-tagline">
-      <span><?= t('Find', 'Trouvez') ?></span> <?= t('local businesses ·', 'des entreprises locales ·') ?>
-      <span><?= t('Book', 'Réservez') ?></span> <?= t('services ·', 'des services ·') ?>
-      <span><?= t('Grow', 'Grandissez') ?></span> <?= t('your presence in Cameroon', 'votre présence au Cameroun') ?>
+      <?= t('Douala, Yaoundé and beyond — find local services, book appointments, or list your business free.', 'Douala, Yaoundé et partout — trouvez des services locaux, réservez ou listez votre entreprise gratuitement.') ?>
     </p>
 
-    <!-- Search -->
+    <!-- Search: keyword + city -->
     <form action="<?= SITE_URL ?>/listings" method="GET" class="hero-search">
       <input type="text" name="q"
-             placeholder="<?= e(t('What are you looking for?', 'Que recherchez-vous ?')) ?>"
+             placeholder="<?= e(t('Plumber, restaurant, lawyer…', 'Plombier, restaurant, avocat…')) ?>"
              value="<?= e($_GET['q'] ?? '') ?>" autocomplete="off">
       <div class="search-div"></div>
-      <select name="location_id">
+      <select name="location">
         <option value=""><?= t('All Cities', 'Toutes les villes') ?></option>
         <?php foreach ($locs as $loc): ?>
-        <option value="<?= $loc['id'] ?>" <?= ($_GET['location_id'] ?? '') == $loc['id'] ? 'selected' : '' ?>>
-          📍 <?= e($loc['name_en']) ?>
+        <option value="<?= e($loc['slug']) ?>" <?= ($_GET['location'] ?? '') === $loc['slug'] ? 'selected' : '' ?>>
+          📍 <?= e($isFr ? ($loc['name_fr'] ?? $loc['name_en']) : $loc['name_en']) ?>
         </option>
         <?php endforeach; ?>
       </select>
@@ -485,33 +486,8 @@ require_once __DIR__ . '/includes/header.php';
     </form>
 
     <div class="hero-actions">
-      <a href="<?= SITE_URL ?>/listings" class="hero-action">🏪 <?= t('Browse Businesses', 'Parcourir les Entreprises') ?></a>
-      <a href="<?= SITE_URL ?>/add-listing" class="hero-action primary">+ <?= t('List Your Business', 'Lister votre Entreprise') ?></a>
-      <a href="<?= SITE_URL ?>/partners" class="hero-action">🤝 <?= t('Become a Partner', 'Devenir Partenaire') ?></a>
-    </div>
-
-    <!-- Quick-action cards -->
-    <div class="qa-grid">
-      <a href="<?= SITE_URL ?>/listings?booking=1" class="qa-card">
-        <div class="qa-icon">📅</div>
-        <div class="qa-title"><?= t('Book a Service', 'Réserver un Service') ?></div>
-        <div class="qa-sub"><?= t('Appointments online', 'Rendez-vous en ligne') ?></div>
-      </a>
-      <a href="<?= SITE_URL ?>/offers" class="qa-card">
-        <div class="qa-icon">🏷️</div>
-        <div class="qa-title"><?= t('Special Offers', 'Offres Spéciales') ?></div>
-        <div class="qa-sub"><?= t('Deals & discounts', 'Bons plans & réductions') ?></div>
-      </a>
-      <a href="<?= SITE_URL ?>/events" class="qa-card">
-        <div class="qa-icon">🎉</div>
-        <div class="qa-title"><?= t('Events Near You', 'Événements Près de Vous') ?></div>
-        <div class="qa-sub"><?= t('What\'s happening', 'Ce qui se passe') ?></div>
-      </a>
-      <a href="<?= SITE_URL ?>/listings" class="qa-card">
-        <div class="qa-icon">💬</div>
-        <div class="qa-title"><?= t('Contact a Business', 'Contacter une Entreprise') ?></div>
-        <div class="qa-sub"><?= t('WhatsApp & call', 'WhatsApp & appel') ?></div>
-      </a>
+      <a href="<?= SITE_URL ?>/listings" class="hero-action secondary">🏪 <?= t('Search Businesses', 'Rechercher des Entreprises') ?></a>
+      <a href="<?= SITE_URL ?>/join" class="hero-action primary">🚀 <?= t('List &amp; Grow Your Business — Free', 'Listez &amp; Développez Votre Entreprise — Gratuit') ?></a>
     </div>
   </div>
 </section>
@@ -680,6 +656,67 @@ require_once __DIR__ . '/includes/header.php';
   </div>
 </section>
 <?php endif; ?>
+
+<!-- ══ GROWTH VALUE SECTION ═══════════════════════════════ -->
+<section class="hp-section" style="background:rgba(0,168,120,0.02);border-top:1px solid rgba(0,168,120,0.1) !important;">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">💡 <?= t('MORE THAN A DIRECTORY', 'BIEN PLUS QU\'UN ANNUAIRE') ?></div>
+      <h2 class="section-title"><?= t('Everything You Need to Win Customers Online', 'Tout ce qu\'il Faut pour Gagner des Clients en Ligne') ?></h2>
+      <p class="section-sub"><?= t('A free listing is just the start. 237Biz gives your business the tools to get found, get customers, and get online.', 'Un listing gratuit n\'est que le début. 237Biz offre à votre entreprise les outils pour être trouvée, attirer des clients et être visible en ligne.') ?></p>
+    </div>
+
+    <div class="growth-cols">
+      <!-- Get Found -->
+      <div class="growth-col">
+        <div class="growth-col-icon">🔍</div>
+        <div class="growth-col-title"><?= t('Get Found', 'Soyez Trouvé') ?></div>
+        <div class="growth-col-desc">
+          <?= t('Your business appears in search results the moment you list it. Customers in Douala, Yaoundé and beyond find you by name, category or location.', 'Votre entreprise apparaît dans les résultats de recherche dès que vous la listez. Les clients à Douala, Yaoundé et au-delà vous trouvent par nom, catégorie ou lieu.') ?>
+        </div>
+        <div class="growth-col-tags">
+          <span class="growth-col-tag"><?= t('Search visibility', 'Visibilité') ?></span>
+          <span class="growth-col-tag"><?= t('Category listing', 'Catégorie') ?></span>
+          <span class="growth-col-tag"><?= t('City pages', 'Pages villes') ?></span>
+        </div>
+      </div>
+
+      <!-- Get Customers -->
+      <div class="growth-col">
+        <div class="growth-col-icon">💬</div>
+        <div class="growth-col-title"><?= t('Get Customers', 'Obtenez des Clients') ?></div>
+        <div class="growth-col-desc">
+          <?= t('Customers contact you directly by WhatsApp, phone or online booking — no middleman. Collect reviews that build your reputation and drive repeat business.', 'Les clients vous contactent directement par WhatsApp, téléphone ou réservation en ligne — sans intermédiaire. Collectez des avis qui renforcent votre réputation.') ?>
+        </div>
+        <div class="growth-col-tags">
+          <span class="growth-col-tag"><?= t('WhatsApp enquiries', 'WhatsApp') ?></span>
+          <span class="growth-col-tag"><?= t('Online booking', 'Réservation') ?></span>
+          <span class="growth-col-tag"><?= t('Verified reviews', 'Avis clients') ?></span>
+        </div>
+      </div>
+
+      <!-- Get Online -->
+      <div class="growth-col">
+        <div class="growth-col-icon">🌐</div>
+        <div class="growth-col-title"><?= t('Get Online', 'Soyez en Ligne') ?></div>
+        <div class="growth-col-desc">
+          <?= t('Your profile is a mini website — photos, services, opening hours, location map, and special offers. Update it any time from your phone.', 'Votre profil est un mini-site web — photos, services, horaires, carte et offres spéciales. Mettez-le à jour à tout moment depuis votre téléphone.') ?>
+        </div>
+        <div class="growth-col-tags">
+          <span class="growth-col-tag"><?= t('Business profile', 'Profil') ?></span>
+          <span class="growth-col-tag"><?= t('Special offers', 'Offres') ?></span>
+          <span class="growth-col-tag"><?= t('Mobile-friendly', 'Mobile') ?></span>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center;">
+      <a href="<?= SITE_URL ?>/join" class="hero-action primary" style="display:inline-flex;align-items:center;gap:8px;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;background:#fcd116;color:#0A1A0F;border:none;text-decoration:none;">
+        🚀 <?= t('List Your Business Free — Takes 2 Minutes', 'Listez Votre Entreprise Gratuitement — En 2 Minutes') ?>
+      </a>
+    </div>
+  </div>
+</section>
 
 <!-- ══ SPECIAL OFFERS & PROMOTIONS ═══════════════════════ -->
 <?php if ($offers): ?>
