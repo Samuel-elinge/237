@@ -415,20 +415,19 @@ $cuRole = $cu['role'] ?? 'guest';
   <!-- ── DESKTOP NAV ── -->
   <div class="nav-desktop" aria-label="<?= t('Desktop navigation','Navigation bureau') ?>">
 
-    <!-- Explore Businesses (consolidates Discover + Businesses + Services) -->
+    <!-- Find Businesses -->
     <div class="nav-item">
-      <button class="nav-link" aria-haspopup="true">🔍 <?= t('Explore','Explorer') ?> <span class="caret">▾</span></button>
-      <div class="mega-menu align-left" style="min-width:540px;">
+      <button class="nav-link" aria-haspopup="true">🔍 <?= t('Find Businesses','Trouver des Entreprises') ?> <span class="caret">▾</span></button>
+      <div class="mega-menu align-left" style="min-width:520px;">
         <div class="mega-col">
           <div class="mega-col-title"><?= t('Browse','Parcourir') ?></div>
           <a href="<?= SITE_URL ?>/listings" class="mega-link"><span class="icon">🏪</span><span><?= t('All Businesses','Toutes les Entreprises') ?><small><?= t('Full directory','Répertoire complet') ?></small></span></a>
           <a href="<?= SITE_URL ?>/listings?sort=featured" class="mega-link"><span class="icon">⭐</span><span><?= t('Featured','Vedettes') ?><small><?= t('Top verified listings','Annonces vérifiées') ?></small></span></a>
-          <a href="<?= SITE_URL ?>/listings?verified=1" class="mega-link"><span class="icon">✅</span><span><?= t('Verified Businesses','Entreprises Vérifiées') ?></span></a>
-          <a href="<?= SITE_URL ?>/services" class="mega-link"><span class="icon">🛠️</span><span><?= t('Services','Services') ?><small><?= t('Bookable services','Services réservables') ?></small></span></a>
+          <a href="<?= SITE_URL ?>/listings?verified=1" class="mega-link"><span class="icon">✅</span><span><?= t('Verified','Vérifiées') ?></span></a>
         </div>
         <div class="mega-col">
           <div class="mega-col-title"><?= t('By Category','Par Catégorie') ?></div>
-          <?php foreach(array_slice($cats, 0, 6) as $cat): ?>
+          <?php foreach(array_slice($cats, 0, 5) as $cat): ?>
           <a href="<?= SITE_URL ?>/category/<?= e($cat['slug'] ?? strtolower(str_replace(' ','-',$cat['name_en']))) ?>" class="mega-link">
             <span class="icon"><?= $cat['icon'] ?></span>
             <?= e($isFr ? $cat['name_fr'] : $cat['name_en']) ?>
@@ -437,71 +436,51 @@ $cuRole = $cu['role'] ?? 'guest';
           <a href="<?= SITE_URL ?>/listings" class="mega-link" style="color:#00A878;margin-top:4px;"><span class="icon">→</span><?= t('All Categories','Toutes catégories') ?></a>
         </div>
         <div class="mega-col">
-          <div class="mega-col-title"><?= t('By Location','Par Ville') ?></div>
-          <?php foreach(array_slice($locs, 0, 6) as $loc): ?>
+          <div class="mega-col-title"><?= t('By City','Par Ville') ?></div>
+          <?php foreach(array_slice($locs, 0, 5) as $loc): ?>
           <a href="<?= SITE_URL ?>/location/<?= e($loc['slug'] ?? strtolower(str_replace(' ','-',$loc['name_en']))) ?>" class="mega-link">
             <span class="icon">📍</span>
             <?= e($loc['name_en']) ?>
           </a>
           <?php endforeach; ?>
-          <a href="<?= SITE_URL ?>/listings" class="mega-link" style="color:#00A878;margin-top:4px;"><span class="icon">→</span><?= t('All Locations','Toutes les villes') ?></a>
+          <a href="<?= SITE_URL ?>/locations" class="mega-link" style="color:#00A878;margin-top:4px;"><span class="icon">→</span><?= t('All Cities','Toutes les villes') ?></a>
         </div>
       </div>
     </div>
 
-    <!-- Bookings -->
+    <!-- For Businesses -->
     <div class="nav-item">
-      <a href="<?= SITE_URL ?>/booking" class="nav-link">📅 <?= t('Bookings','Réservations') ?></a>
+      <button class="nav-link" aria-haspopup="true">💼 <?= t('For Businesses','Pour les Entreprises') ?> <span class="caret">▾</span></button>
+      <div class="mega-menu" style="min-width:480px;">
+        <div class="mega-col">
+          <div class="mega-col-title"><?= t('Get Listed','Se faire référencer') ?></div>
+          <a href="<?= SITE_URL ?>/add-listing" class="mega-link"><span class="icon">🚀</span><span><?= t('List Free','Inscription Gratuite') ?><small><?= t('Add your business in minutes','Ajoutez votre entreprise') ?></small></span></a>
+          <a href="<?= SITE_URL ?>/business-listing" class="mega-link"><span class="icon">⭐</span><span><?= t('Featured & Pricing','Vedette & Tarifs') ?><small><?= t('Stand out from the crowd','Démarquez-vous') ?></small></span></a>
+          <a href="<?= SITE_URL ?>/claim-listing" class="mega-link"><span class="icon">🏢</span><span><?= t('Claim Your Listing','Revendiquer votre annonce') ?><small><?= t('Already listed? Take control','Déjà listé ? Prenez le contrôle') ?></small></span></a>
+        </div>
+        <div class="mega-col">
+          <div class="mega-col-title"><?= t('Tools & Services','Outils & Services') ?></div>
+          <a href="<?= SITE_URL ?>/online-presence" class="mega-link"><span class="icon">🌐</span><span><?= t('Website & Email','Site Web & E-mail') ?><small><?= t('Professional online presence','Présence en ligne professionnelle') ?></small></span></a>
+          <a href="<?= SITE_URL ?>/booking" class="mega-link"><span class="icon">📅</span><span><?= t('Bookings Tool','Outil Réservations') ?><small><?= t('Let customers book online','Réservations en ligne') ?></small></span></a>
+          <a href="<?= SITE_URL ?>/services" class="mega-link"><span class="icon">🛠️</span><span><?= t('Reviews & QR Code','Avis & QR Code') ?><small><?= t('Manage your reputation','Gérez votre réputation') ?></small></span></a>
+          <a href="<?= SITE_URL ?>/business-hub" class="mega-link" style="color:#00A878;margin-top:4px;"><span class="icon">→</span><?= t('Why 237Biz?','Pourquoi 237Biz ?') ?></a>
+        </div>
+      </div>
     </div>
 
-    <!-- Web Design -->
-    <div class="nav-item">
-      <a href="<?= SITE_URL ?>/websites" class="nav-link">🌐 <?= t('Web Design','Création Web') ?></a>
-    </div>
-
-    <!-- Offers & Events -->
+    <!-- Offers & Events (hidden until populated) -->
+    <?php /* Uncomment when offers/events have live content:
     <div class="nav-item">
       <button class="nav-link" aria-haspopup="true">🎁 <?= t('Offers & Events','Offres & Événements') ?> <span class="caret">▾</span></button>
-      <div class="mega-menu" style="min-width:340px;">
+      <div class="mega-menu" style="min-width:300px;">
         <div class="mega-col">
-          <div class="mega-col-title"><?= t('Discover Deals','Découvrir') ?></div>
-          <a href="<?= SITE_URL ?>/offers" class="mega-link"><span class="icon">🎁</span><span><?= t('Special Offers','Offres Spéciales') ?><small><?= t('Active deals from businesses','Offres actives') ?></small></span></a>
-          <a href="<?= SITE_URL ?>/events" class="mega-link"><span class="icon">📅</span><span><?= t('Events','Événements') ?><small><?= t('Upcoming events near you','Événements à venir') ?></small></span></a>
-          <a href="<?= SITE_URL ?>/marketplace" class="mega-link"><span class="icon">🛒</span><span><?= t('Marketplace','Marché') ?><small><?= t('Products & promotions','Produits & promotions') ?></small></span></a>
+          <a href="<?= SITE_URL ?>/offers" class="mega-link"><span class="icon">🎁</span><?= t('Special Offers','Offres Spéciales') ?></a>
+          <a href="<?= SITE_URL ?>/events" class="mega-link"><span class="icon">📅</span><?= t('Events','Événements') ?></a>
+          <a href="<?= SITE_URL ?>/marketplace" class="mega-link"><span class="icon">🛒</span><?= t('Marketplace','Marché') ?></a>
         </div>
       </div>
     </div>
-
-    <!-- Partner Network (Sales Agents + Creators + Growth Partners) -->
-    <div class="nav-item">
-      <button class="nav-link" style="color:#fcd116;" aria-haspopup="true">🤝 <?= t('Partner Network','Réseau Partenaires') ?> <span class="caret" style="opacity:.7;">▾</span></button>
-      <div class="mega-menu align-right" style="min-width:600px;">
-        <div class="mega-col">
-          <div class="mega-col-title" style="color:#8ab4f8;">👔 <?= t('Sales Agents','Agents de Vente') ?></div>
-          <a href="<?= SITE_URL ?>/partners#agents" class="mega-link"><span class="icon">💰</span><span><?= t('Earn Commission','Gagner des commissions') ?><small><?= t('Get paid per business referral','Payé par parrainage') ?></small></span></a>
-          <a href="<?= SITE_URL ?>/join?path=agent" class="mega-link" style="color:#8ab4f8;"><span class="icon">→</span><?= t('Become a Sales Agent','Devenir Agent de Vente') ?></a>
-          <?php if ($cuRole === 'sales_staff'): ?>
-          <a href="<?= SITE_URL ?>/agent/dashboard" class="mega-link" style="color:#00A878;"><span class="icon">📊</span><?= t('Agent Dashboard','Tableau Agent') ?></a>
-          <?php endif; ?>
-        </div>
-        <div class="mega-col">
-          <div class="mega-col-title" style="color:#e07be0;">🎬 <?= t('Content Creators','Créateurs') ?></div>
-          <a href="<?= SITE_URL ?>/partners#creators" class="mega-link"><span class="icon">🎁</span><span><?= t('Earn Rewards','Gagner des récompenses') ?><small><?= t('Share content, earn per signup','Partagez, gagnez par inscription') ?></small></span></a>
-          <a href="<?= SITE_URL ?>/join?path=creator" class="mega-link" style="color:#e07be0;"><span class="icon">→</span><?= t('Become a Creator','Devenir Créateur') ?></a>
-          <?php if ($cuRole === 'creator'): ?>
-          <a href="<?= SITE_URL ?>/creator/dashboard" class="mega-link" style="color:#00A878;"><span class="icon">📊</span><?= t('Creator Dashboard','Tableau Créateur') ?></a>
-          <?php endif; ?>
-        </div>
-        <div class="mega-col">
-          <div class="mega-col-title" style="color:#00A878;">🤝 <?= t('Growth Partners','Partenaires Croissance') ?></div>
-          <a href="<?= SITE_URL ?>/partners" class="mega-link"><span class="icon">📈</span><span><?= t('Growth Partner Programme','Programme Partenaire Croissance') ?><small><?= t('Help businesses grow, earn together','Aidez les entreprises à croître') ?></small></span></a>
-          <a href="<?= SITE_URL ?>/join?path=partner" class="mega-link" style="color:#00A878;"><span class="icon">→</span><?= t('Apply as Growth Partner','Devenir Partenaire Croissance') ?></a>
-          <?php if ($cuRole === 'growth_partner'): ?>
-          <a href="<?= SITE_URL ?>/partner/dashboard" class="mega-link" style="color:#00A878;"><span class="icon">📊</span><?= t('Partner Centre','Centre Partenaire') ?></a>
-          <?php endif; ?>
-        </div>
-      </div>
-    </div>
+    */ ?>
 
   </div><!-- /nav-desktop -->
 
@@ -576,8 +555,8 @@ $cuRole = $cu['role'] ?? 'guest';
     </div>
     <?php else: ?>
     <a href="<?= SITE_URL ?>/login" class="nav-signin"><?= t('Sign In','Connexion') ?></a>
-    <a href="<?= SITE_URL ?>/add-listing" class="btn-list-biz">+ <?= t('List Your Business','Lister votre Entreprise') ?></a>
     <?php endif; ?>
+    <a href="<?= SITE_URL ?>/add-listing" class="btn-list-biz">+ <?= t('List Your Business — Free','Lister votre Entreprise — Gratuit') ?></a>
 
     <!-- Hamburger — mobile only -->
     <button class="nav-hamburger" id="nav-hamburger-btn"
@@ -606,96 +585,56 @@ $cuRole = $cu['role'] ?? 'guest';
     <!-- Primary nav list -->
     <ul class="drawer-nav" role="list">
 
-      <!-- 1. Explore Businesses -->
+      <!-- 1. Find Businesses -->
       <li>
-        <button class="drawer-nav-item" aria-expanded="false" data-target="sub-explore">
+        <button class="drawer-nav-item" aria-expanded="false" data-target="sub-find">
           <span class="icon">🔍</span>
-          <span class="label"><?= t('Explore Businesses','Explorer les Entreprises') ?></span>
+          <span class="label"><?= t('Find Businesses','Trouver des Entreprises') ?></span>
           <span class="chevron">›</span>
         </button>
-        <div class="drawer-sub" id="sub-explore">
+        <div class="drawer-sub" id="sub-find">
           <div class="drawer-sub-title"><?= t('Browse','Parcourir') ?></div>
           <a href="<?= SITE_URL ?>/listings" onclick="closeDrawer()"><span class="icon">🏪</span><?= t('All Businesses','Toutes les Entreprises') ?></a>
           <a href="<?= SITE_URL ?>/listings?sort=featured" onclick="closeDrawer()"><span class="icon">⭐</span><?= t('Featured','Vedettes') ?></a>
           <a href="<?= SITE_URL ?>/listings?verified=1" onclick="closeDrawer()"><span class="icon">✅</span><?= t('Verified','Vérifiées') ?></a>
-          <a href="<?= SITE_URL ?>/services" onclick="closeDrawer()"><span class="icon">🛠️</span><?= t('Services','Services') ?></a>
           <?php if (!empty($cats)): ?>
-          <div class="drawer-sub-title"><?= t('Categories','Catégories') ?></div>
-          <?php foreach(array_slice($cats, 0, 6) as $cat): ?>
+          <div class="drawer-sub-title"><?= t('By Category','Par Catégorie') ?></div>
+          <?php foreach(array_slice($cats, 0, 5) as $cat): ?>
           <a href="<?= SITE_URL ?>/category/<?= e($cat['slug'] ?? strtolower(str_replace(' ','-',$cat['name_en']))) ?>" onclick="closeDrawer()">
             <span class="icon"><?= $cat['icon'] ?></span><?= e($isFr ? $cat['name_fr'] : $cat['name_en']) ?>
           </a>
           <?php endforeach; ?>
+          <a href="<?= SITE_URL ?>/listings" onclick="closeDrawer()" style="color:#00A878;"><span class="icon">→</span><?= t('All Categories','Toutes catégories') ?></a>
           <?php endif; ?>
           <?php if (!empty($locs)): ?>
-          <div class="drawer-sub-title"><?= t('Cities','Villes') ?></div>
+          <div class="drawer-sub-title"><?= t('By City','Par Ville') ?></div>
           <?php foreach(array_slice($locs, 0, 5) as $loc): ?>
           <a href="<?= SITE_URL ?>/location/<?= e($loc['slug'] ?? strtolower(str_replace(' ','-',$loc['name_en']))) ?>" onclick="closeDrawer()">
             <span class="icon">📍</span><?= e($loc['name_en']) ?>
           </a>
           <?php endforeach; ?>
+          <a href="<?= SITE_URL ?>/locations" onclick="closeDrawer()" style="color:#00A878;"><span class="icon">→</span><?= t('All Cities','Toutes les villes') ?></a>
           <?php endif; ?>
         </div>
       </li>
 
-      <!-- 2. Bookings -->
+      <!-- 2. For Businesses -->
       <li>
-        <a href="<?= SITE_URL ?>/booking" class="drawer-nav-item" onclick="closeDrawer()">
-          <span class="icon">📅</span>
-          <span class="label"><?= t('Bookings','Réservations') ?></span>
-        </a>
-      </li>
-
-      <!-- 3. Web Design -->
-      <li>
-        <a href="<?= SITE_URL ?>/websites" class="drawer-nav-item" onclick="closeDrawer()">
-          <span class="icon">🌐</span>
-          <span class="label"><?= t('Web Design','Création Web') ?></span>
-        </a>
-      </li>
-
-      <!-- 4. Offers & Events -->
-      <li>
-        <button class="drawer-nav-item" aria-expanded="false" data-target="sub-offers">
-          <span class="icon">🎁</span>
-          <span class="label"><?= t('Offers & Events','Offres & Événements') ?></span>
+        <button class="drawer-nav-item" aria-expanded="false" data-target="sub-forbiz">
+          <span class="icon">💼</span>
+          <span class="label"><?= t('For Businesses','Pour les Entreprises') ?></span>
           <span class="chevron">›</span>
         </button>
-        <div class="drawer-sub" id="sub-offers">
-          <a href="<?= SITE_URL ?>/offers" onclick="closeDrawer()"><span class="icon">🎁</span><?= t('Special Offers','Offres Spéciales') ?></a>
-          <a href="<?= SITE_URL ?>/events" onclick="closeDrawer()"><span class="icon">📅</span><?= t('Events','Événements') ?></a>
-          <a href="<?= SITE_URL ?>/marketplace" onclick="closeDrawer()"><span class="icon">🛒</span><?= t('Marketplace','Marché') ?></a>
-        </div>
-      </li>
-
-      <!-- 4. Partner Network -->
-      <li>
-        <button class="drawer-nav-item" aria-expanded="false" data-target="sub-partners">
-          <span class="icon">🤝</span>
-          <span class="label"><?= t('Partner Network','Réseau Partenaires') ?></span>
-          <span class="chevron">›</span>
-        </button>
-        <div class="drawer-sub" id="sub-partners">
-          <div class="drawer-sub-title" style="color:#8ab4f8;">👔 <?= t('Sales Agents','Agents de Vente') ?></div>
-          <a href="<?= SITE_URL ?>/partners#agents" onclick="closeDrawer()"><span class="icon">💰</span><?= t('Earn Commission','Gagner des commissions') ?></a>
-          <a href="<?= SITE_URL ?>/join?path=agent" onclick="closeDrawer()" style="color:#8ab4f8;"><span class="icon">→</span><?= t('Become a Sales Agent','Devenir Agent de Vente') ?></a>
-          <?php if ($cuRole === 'sales_staff'): ?>
-          <a href="<?= SITE_URL ?>/agent/dashboard" onclick="closeDrawer()" style="color:#00A878;"><span class="icon">📊</span><?= t('Agent Dashboard','Tableau Agent') ?></a>
-          <?php endif; ?>
-
-          <div class="drawer-sub-title" style="color:#e07be0;">🎬 <?= t('Content Creators','Créateurs') ?></div>
-          <a href="<?= SITE_URL ?>/partners#creators" onclick="closeDrawer()"><span class="icon">🎁</span><?= t('Earn Rewards','Gagner des récompenses') ?></a>
-          <a href="<?= SITE_URL ?>/join?path=creator" onclick="closeDrawer()" style="color:#e07be0;"><span class="icon">→</span><?= t('Become a Creator','Devenir Créateur') ?></a>
-          <?php if ($cuRole === 'creator'): ?>
-          <a href="<?= SITE_URL ?>/creator/dashboard" onclick="closeDrawer()" style="color:#00A878;"><span class="icon">📊</span><?= t('Creator Dashboard','Tableau Créateur') ?></a>
-          <?php endif; ?>
-
-          <div class="drawer-sub-title" style="color:#00A878;">🤝 <?= t('Growth Partners','Partenaires Croissance') ?></div>
-          <a href="<?= SITE_URL ?>/partners" onclick="closeDrawer()"><span class="icon">📈</span><?= t('Growth Partner Programme','Programme Partenaire') ?></a>
-          <a href="<?= SITE_URL ?>/join?path=partner" onclick="closeDrawer()" style="color:#00A878;"><span class="icon">→</span><?= t('Apply as Growth Partner','Devenir Partenaire Croissance') ?></a>
-          <?php if ($cuRole === 'growth_partner'): ?>
-          <a href="<?= SITE_URL ?>/partner/dashboard" onclick="closeDrawer()" style="color:#00A878;"><span class="icon">📊</span><?= t('Partner Centre','Centre Partenaire') ?></a>
-          <?php endif; ?>
+        <div class="drawer-sub" id="sub-forbiz">
+          <div class="drawer-sub-title"><?= t('Get Listed','Se faire référencer') ?></div>
+          <a href="<?= SITE_URL ?>/add-listing" onclick="closeDrawer()"><span class="icon">🚀</span><?= t('List Free','Inscription Gratuite') ?></a>
+          <a href="<?= SITE_URL ?>/business-listing" onclick="closeDrawer()"><span class="icon">⭐</span><?= t('Featured & Pricing','Vedette & Tarifs') ?></a>
+          <a href="<?= SITE_URL ?>/claim-listing" onclick="closeDrawer()"><span class="icon">🏢</span><?= t('Claim Your Listing','Revendiquer votre annonce') ?></a>
+          <div class="drawer-sub-title"><?= t('Tools & Services','Outils & Services') ?></div>
+          <a href="<?= SITE_URL ?>/online-presence" onclick="closeDrawer()"><span class="icon">🌐</span><?= t('Website & Email','Site Web & E-mail') ?></a>
+          <a href="<?= SITE_URL ?>/booking" onclick="closeDrawer()"><span class="icon">📅</span><?= t('Bookings Tool','Outil Réservations') ?></a>
+          <a href="<?= SITE_URL ?>/services" onclick="closeDrawer()"><span class="icon">🛠️</span><?= t('Reviews & QR Code','Avis & QR Code') ?></a>
+          <a href="<?= SITE_URL ?>/business-hub" onclick="closeDrawer()" style="color:#00A878;"><span class="icon">→</span><?= t('Why 237Biz?','Pourquoi 237Biz ?') ?></a>
         </div>
       </li>
 
