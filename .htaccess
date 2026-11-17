@@ -213,6 +213,7 @@ RewriteRule ^admin/quality-monitoring/?$   admin/quality-monitoring.php   [L,QSA
 RewriteRule ^admin/strategic-partners/?$   admin/strategic-partners.php   [L,QSA]
 RewriteRule ^admin/offers/?$               admin/offers.php               [L,QSA]
 RewriteRule ^admin/events/?$               admin/events.php               [L,QSA]
+RewriteRule ^suggest-business/?$         suggest-business.php         [L,QSA]
 RewriteRule ^partner-request/?$          partner-request.php          [L,QSA]
 
 # Join & Partners
