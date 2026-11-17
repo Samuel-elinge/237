@@ -63,7 +63,10 @@ RewriteRule ^location/([a-z0-9-]+)/?$  location.php?slug=$1         [L,QSA]
 # Listing management
 RewriteRule ^add-listing/?$             add-listing.php              [L,QSA]
 RewriteRule ^edit-listing/?$            edit-listing.php             [L,QSA]
+# claim-listing: redirect to add-listing if no token supplied
+RewriteCond %{QUERY_STRING} (?:^|&)token=([a-f0-9]{64})(?:&|$) [NC]
 RewriteRule ^claim-listing/?$           claim-listing.php            [L,QSA]
+RewriteRule ^claim-listing/?$           /add-listing                 [R=302,L]
 RewriteRule ^upgrade-listing/?$         upgrade-listing.php          [L,QSA]
 
 # Products & services
