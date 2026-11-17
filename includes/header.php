@@ -456,7 +456,7 @@ $cuRole = $cu['role'] ?? 'guest';
           <div class="mega-col-title"><?= t('Get Listed','Se faire référencer') ?></div>
           <a href="<?= SITE_URL ?>/add-listing" class="mega-link"><span class="icon">🚀</span><span><?= t('List Free','Inscription Gratuite') ?><small><?= t('Add your business in minutes','Ajoutez votre entreprise') ?></small></span></a>
           <a href="<?= SITE_URL ?>/business-listing" class="mega-link"><span class="icon">⭐</span><span><?= t('Featured & Pricing','Vedette & Tarifs') ?><small><?= t('Stand out from the crowd','Démarquez-vous') ?></small></span></a>
-          <a href="<?= SITE_URL ?>/claim-listing" class="mega-link"><span class="icon">🏢</span><span><?= t('Claim Your Listing','Revendiquer votre annonce') ?><small><?= t('Already listed? Take control','Déjà listé ? Prenez le contrôle') ?></small></span></a>
+          <a href="<?= SITE_URL ?>/add-listing?claim=1" class="mega-link"><span class="icon">🏢</span><span><?= t('Claim Your Listing','Revendiquer votre annonce') ?><small><?= t('Already listed? Take control','Déjà listé ? Prenez le contrôle') ?></small></span></a>
         </div>
         <div class="mega-col">
           <div class="mega-col-title"><?= t('Tools & Services','Outils & Services') ?></div>
@@ -629,7 +629,7 @@ $cuRole = $cu['role'] ?? 'guest';
           <div class="drawer-sub-title"><?= t('Get Listed','Se faire référencer') ?></div>
           <a href="<?= SITE_URL ?>/add-listing" onclick="closeDrawer()"><span class="icon">🚀</span><?= t('List Free','Inscription Gratuite') ?></a>
           <a href="<?= SITE_URL ?>/business-listing" onclick="closeDrawer()"><span class="icon">⭐</span><?= t('Featured & Pricing','Vedette & Tarifs') ?></a>
-          <a href="<?= SITE_URL ?>/claim-listing" onclick="closeDrawer()"><span class="icon">🏢</span><?= t('Claim Your Listing','Revendiquer votre annonce') ?></a>
+          <a href="<?= SITE_URL ?>/add-listing?claim=1" onclick="closeDrawer()"><span class="icon">🏢</span><?= t('Claim Your Listing','Revendiquer votre annonce') ?></a>
           <div class="drawer-sub-title"><?= t('Tools & Services','Outils & Services') ?></div>
           <a href="<?= SITE_URL ?>/online-presence" onclick="closeDrawer()"><span class="icon">🌐</span><?= t('Website & Email','Site Web & E-mail') ?></a>
           <a href="<?= SITE_URL ?>/booking" onclick="closeDrawer()"><span class="icon">📅</span><?= t('Bookings Tool','Outil Réservations') ?></a>
