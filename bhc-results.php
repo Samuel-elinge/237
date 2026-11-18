@@ -8,8 +8,20 @@ define('IN_237BIZ', true);
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/bhc-config.php';
 require_once __DIR__ . '/includes/bhc-scoring.php';
+require_once __DIR__ . '/includes/bhc-email.php';
 
 $isFr = lang() === 'fr';
+
+// ─── Handle resend-by-email POST ──────────────────────────────────────────────
+$resendResult = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'bhc_resend') {
+    $resendEmail = trim($_POST['resend_email'] ?? '');
+    if ($resendEmail && filter_var($resendEmail, FILTER_VALIDATE_EMAIL)) {
+        $resendResult = bhc_resend_report_by_email($resendEmail);
+    } else {
+        $resendResult = 'invalid';
+    }
+}
 
 // ─── Validate access token ────────────────────────────────────────────────────
 $rawToken   = trim($_GET['token'] ?? '');
@@ -19,14 +31,48 @@ if (!$assessId) {
     http_response_code(403);
     $page_title = ($isFr ? 'Lien invalide' : 'Invalid Link') . ' | 237biz';
     include __DIR__ . '/includes/header.php';
-    echo '<div style="text-align:center;padding:5rem 5vw;">';
-    echo '<h1 style="font-size:1.6rem;">' . ($isFr ? 'Lien invalide ou expiré' : 'Invalid or Expired Link') . '</h1>';
-    echo '<p style="color:var(--muted);">' . ($isFr
-        ? 'Ce lien de rapport n\'est plus valide. Vérifiez votre email ou refaites le bilan.'
-        : 'This report link is no longer valid. Check your email or retake the assessment.') . '</p>';
-    echo '<a href="/business-health-check" class="btn btn-primary">'
-        . ($isFr ? 'Refaire le bilan' : 'Start New Assessment') . '</a>';
-    echo '</div>';
+    ?>
+    <div style="max-width:520px;margin:5rem auto;padding:0 5vw;text-align:center;">
+      <h1 style="font-size:1.6rem;margin-bottom:.75rem;">
+        <?= $isFr ? 'Lien invalide ou expiré' : 'Invalid or Expired Link' ?>
+      </h1>
+      <p style="color:var(--muted);margin-bottom:2rem;">
+        <?= $isFr
+          ? 'Ce lien de rapport n\'est plus valide. Entrez votre adresse email pour recevoir un nouveau lien vers votre dernier rapport.'
+          : 'This report link is no longer valid. Enter your email address to receive a new link to your most recent report.' ?>
+      </p>
+
+      <?php if ($resendResult === 'sent'): ?>
+        <div style="background:var(--card);border:1px solid #22c55e55;border-radius:10px;padding:1.5rem;color:#22c55e;margin-bottom:1.5rem;">
+          <?= $isFr ? '✅ Email envoyé ! Vérifiez votre boîte de réception.' : '✅ Email sent! Check your inbox.' ?>
+        </div>
+      <?php elseif ($resendResult === 'not_found'): ?>
+        <div style="background:var(--card);border:1px solid #ef444455;border-radius:10px;padding:1.5rem;color:#ef4444;margin-bottom:1.5rem;">
+          <?= $isFr ? 'Aucun rapport trouvé pour cette adresse email.' : 'No report found for that email address.' ?>
+        </div>
+      <?php elseif ($resendResult === 'error' || $resendResult === 'invalid'): ?>
+        <div style="background:var(--card);border:1px solid #ef444455;border-radius:10px;padding:1.5rem;color:#ef4444;margin-bottom:1.5rem;">
+          <?= $isFr ? 'Une erreur s\'est produite. Veuillez réessayer.' : 'Something went wrong. Please try again.' ?>
+        </div>
+      <?php endif; ?>
+
+      <form method="POST" action="/bhc-results" style="display:flex;flex-direction:column;gap:.75rem;max-width:380px;margin:0 auto;">
+        <input type="hidden" name="action" value="bhc_resend">
+        <input type="email" name="resend_email" required
+               placeholder="<?= $isFr ? 'Votre adresse email' : 'Your email address' ?>"
+               style="padding:.75rem 1rem;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--fg);font-size:.95rem;">
+        <button type="submit" class="btn btn-primary" style="padding:.75rem;">
+          <?= $isFr ? 'Renvoyer mon rapport' : 'Resend My Report' ?>
+        </button>
+      </form>
+
+      <p style="margin-top:2rem;">
+        <a href="/business-health-check" style="color:var(--primary);font-size:.9rem;">
+          <?= $isFr ? '← Faire un nouveau bilan' : '← Start a New Assessment' ?>
+        </a>
+      </p>
+    </div>
+    <?php
     include __DIR__ . '/includes/footer.php';
     exit;
 }
@@ -282,6 +328,18 @@ include __DIR__ . '/includes/header.php';
         <?= $isFr ? 'Refaire le bilan' : 'Retake Assessment' ?>
       </a>
     </div>
+  </div>
+
+  <!-- Resend link helper -->
+  <div style="text-align:center;padding:1.5rem 0;border-top:1px solid var(--border);margin-top:1rem;">
+    <p style="font-size:.82rem;color:var(--muted);margin:0 0 .4rem;">
+      <?= $isFr ? 'Besoin de retrouver ce rapport plus tard ?' : 'Need to find this report again?' ?>
+    </p>
+    <p style="font-size:.82rem;color:var(--muted);margin:0;">
+      <?= $isFr
+        ? 'Allez sur <a href="/bhc-results" style="color:var(--primary);">237biz.net/bhc-results</a> et entrez votre email pour recevoir un nouveau lien.'
+        : 'Visit <a href="/bhc-results" style="color:var(--primary);">237biz.net/bhc-results</a> and enter your email to receive a new link.' ?>
+    </p>
   </div>
 
   <!-- Branding footer -->

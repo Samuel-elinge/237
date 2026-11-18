@@ -208,3 +208,55 @@ HTML;
 
     return (bool) sendMail($email, $subject, $body);
 }
+
+/**
+ * Look up the most recent completed assessment for an email address,
+ * find or create its report token, and re-send the report email.
+ *
+ * Returns: 'sent' | 'not_found' | 'error'
+ */
+function bhc_resend_report_by_email(string $email): string
+{
+    if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return 'not_found';
+    }
+
+    $pdo = db();
+
+    // Find most recent completed assessment for this email
+    $stmt = $pdo->prepare(
+        "SELECT * FROM bhc_assessments
+         WHERE contact_email = :email
+           AND status IN ('submitted','completed')
+         ORDER BY completed_at DESC, submitted_at DESC
+         LIMIT 1"
+    );
+    $stmt->execute([':email' => $email]);
+    $assessment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$assessment) {
+        return 'not_found';
+    }
+
+    // Find existing permanent report token
+    $tStmt = $pdo->prepare(
+        "SELECT token_hash FROM bhc_access_tokens
+         WHERE assessment_id = :aid
+           AND token_type = 'report'
+           AND (expires_at IS NULL OR expires_at > NOW())
+           AND revoked = 0
+         ORDER BY created_at DESC
+         LIMIT 1"
+    );
+    $tStmt->execute([':aid' => $assessment['id']]);
+    $tokenRow = $tStmt->fetch(PDO::FETCH_ASSOC);
+
+    // We can't reverse-hash to get the raw token, so create a new one
+    // (the old one remains valid — users just get a fresh link)
+    $rawToken = bhc_create_access_token((int)$assessment['id'], 'report');
+
+    $lang = $assessment['lang'] ?? 'en';
+    $ok   = bhc_send_report_email($assessment, $rawToken, $lang);
+
+    return $ok ? 'sent' : 'error';
+}
