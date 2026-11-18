@@ -64,7 +64,7 @@ function partnerNav(string $activePage = ''): void {
         ['tasks',              '&#x1F4DD;', 'Notes',            $base . '/partner/tasks',              $overdueT,     false],
         ['commissions',        '&#x1F4B0;', 'Commissions',      $base . '/partner/commissions',        0,             false],
         ['bhc-assessments',    '&#x1FA7A;', 'BHC Leads',        $base . '/partner/bhc-assessments',    0,             false],
-        ['bhc-send',           '&#x1F517;', 'BHC Send Link',    $base . '/partner/bhc-send',           0,             false],
+        ['bhc-send',           '&#x1F517;', 'BHC Link',         $base . '/partner/bhc-send',           0,             false],
     ];
 
     echo '<nav class="partner-nav" role="navigation" aria-label="Partner navigation">' . "\n";
@@ -102,7 +102,7 @@ function partnerNavAssets(): void {
 .partner-nav-inner {
   display: flex;
   align-items: stretch;
-  gap: 2px;
+  gap: 0;
   min-width: max-content;
   margin: 0 auto;
 }
@@ -110,9 +110,9 @@ function partnerNavAssets(): void {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.75rem 0.8rem;
-  font-size: 0.8rem;
+  gap: 0.3rem;
+  padding: 0.7rem 0.6rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: #8db8a8;
   text-decoration: none;

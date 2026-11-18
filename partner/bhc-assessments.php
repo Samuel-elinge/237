@@ -3,7 +3,6 @@
  * partner/bhc-assessments.php
  * BHC leads attributed to this Growth Partner via bhc_leads.gp_id
  */
-define('IN_237BIZ', true);
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
 require_once __DIR__ . '/../includes/partner-lang.php';

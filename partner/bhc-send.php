@@ -3,7 +3,6 @@
  * partner/bhc-send.php
  * Generate & share the partner's tracked BHC referral link.
  */
-define('IN_237BIZ', true);
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/partner-helpers.php';
 require_once __DIR__ . '/../includes/partner-lang.php';
@@ -17,7 +16,10 @@ $slugRow = $pdo->prepare("SELECT slug FROM partner_profiles WHERE id = ?");
 $slugRow->execute([$pid]);
 $slug = $slugRow->fetchColumn();
 
-$referralUrl = defined('SITE_URL') ? rtrim(SITE_URL, '/') . '/business-health-check?gp=' . rawurlencode((string)$slug) : '';
+$slugMissing = empty($slug);
+$referralUrl = (!$slugMissing && defined('SITE_URL'))
+    ? rtrim(SITE_URL, '/') . '/business-health-check?gp=' . rawurlencode((string)$slug)
+    : '';
 
 // ── Attribution stats ─────────────────────────────────────────────────
 $stats = $pdo->prepare("
@@ -270,6 +272,14 @@ table.recent-tbl tbody tr:hover { background: rgba(0,168,120,0.04); }
         <h1>&#x1F517; BHC Referral Link</h1>
         <p>Share this link to attribute Business Health Check completions to you</p>
     </div>
+
+    <?php if ($slugMissing): ?>
+    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem;color:#dc2626;font-size:0.875rem;">
+        &#x26A0;&#xFE0F; <strong>Your partner profile does not have a referral slug set.</strong>
+        Your referral link cannot be generated until an admin assigns your profile a unique slug.
+        Please contact support.
+    </div>
+    <?php endif; ?>
 
     <!-- Stats -->
     <div class="bhcs-stats">
