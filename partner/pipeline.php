@@ -639,7 +639,7 @@ function moveLead(id, status) {
   data.append('action', 'move_lead');
   data.append('lead_id', id);
   data.append('new_status', status);
-  data.append('<?= gpCsrfToken() ?>', '<?= gpCsrfValue() ?>');
+  data.append('csrf_token', '<?= htmlspecialchars($_SESSION['_gp_csrf'] ?? '', ENT_QUOTES, 'UTF-8') ?>');
 
   fetch(window.location.pathname, { method: 'POST', body: data })
     .then(r => r.json())
