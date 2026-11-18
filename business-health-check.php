@@ -8,6 +8,7 @@ define('IN_237BIZ', true);
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/bhc-config.php';
 require_once __DIR__ . '/includes/bhc-scoring.php';
+require_once __DIR__ . '/includes/bhc-email.php';
 
 $isFr   = lang() === 'fr';
 $user   = current_user();
@@ -186,6 +187,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo = db();
                 $pdo->prepare("UPDATE bhc_assessments SET status='completed', completed_at=NOW() WHERE id=:id")
                     ->execute([':id' => $resumeAssessment['id']]);
+
+                // Send report email (non-fatal — don't block redirect on failure)
+                try {
+                    // Reload assessment with final scores for email
+                    $eStmt = $pdo->prepare("SELECT * FROM bhc_assessments WHERE id = :id");
+                    $eStmt->execute([':id' => $resumeAssessment['id']]);
+                    $eAssessment = $eStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($eAssessment) {
+                        $eLang = $eAssessment['lang'] ?? 'en';
+                        bhc_send_report_email($eAssessment, $reportToken, $eLang);
+                    }
+                } catch (Exception $e) {
+                    // Email failure is non-fatal — user still gets redirected to results
+                    error_log('BHC email send failed: ' . $e->getMessage());
+                }
 
                 // Redirect to results
                 header('Location: /bhc-results?token=' . urlencode($reportToken));
