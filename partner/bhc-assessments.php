@@ -1,4 +1,5 @@
 <?php
+ini_set('display_errors', 1); error_reporting(E_ALL); // TEMP DEBUG
 /**
  * partner/bhc-assessments.php
  * BHC leads attributed to this Growth Partner via bhc_leads.gp_id
