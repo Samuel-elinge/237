@@ -286,7 +286,16 @@ include __DIR__ . '/includes/header.php';
   outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(var(--primary-rgb),.15);
 }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-@media (max-width: 540px) { .form-row { grid-template-columns: 1fr; } }
+@media (max-width: 540px) {
+  .form-row { grid-template-columns: 1fr; }
+  .bhc-form-wrap { padding: 1.25rem 1rem 3rem; }
+  .bhc-form-wrap input, .bhc-form-wrap select, .bhc-form-wrap textarea {
+    font-size: 1rem; padding: .75rem .9rem; min-height: 48px;
+  }
+  .bhc-form-wrap button[type=submit] { font-size: 1rem; padding: 1rem; min-height: 52px; }
+  .consent-row { gap: .75rem; }
+  .consent-row input[type=checkbox] { width: 20px; height: 20px; min-width: 20px; }
+}
 .form-hint { font-size: .82rem; color: var(--muted); margin-top: .3rem; }
 .form-error-list {
   background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px;
@@ -542,16 +551,6 @@ include __DIR__ . '/includes/header.php';
           <?= $isFr
             ? 'J\'accepte de recevoir des communications de 237biz (optionnel).'
             : 'I am happy to receive communications from 237biz (optional).'
-          ?>
-        </label>
-      </div>
-      <div class="consent-row">
-        <input type="checkbox" id="consent_ms" name="consent_ms" value="1"
-               <?= !empty($posted['consent_ms']) ? 'checked' : '' ?>>
-        <label for="consent_ms">
-          <?= $isFr
-            ? 'J\'accepte de recevoir des communications de MS IT Solutions (optionnel).'
-            : 'I am happy to receive communications from MS IT Solutions (optional).'
           ?>
         </label>
       </div>
