@@ -1,5 +1,4 @@
 <?php
-ini_set('display_errors', 1); error_reporting(E_ALL); // TEMP DEBUG
 /**
  * partner/bhc-assessments.php
  * BHC leads attributed to this Growth Partner via bhc_leads.gp_id
@@ -48,7 +47,6 @@ $rows = $pdo->prepare("
         ba.score_band,
         ba.status           AS assessment_status,
         ba.created_at       AS submitted_at,
-        ba.pdf_path,
         bl.id               AS lead_id,
         bl.status           AS lead_status,
         bl.created_at       AS lead_created_at
@@ -325,13 +323,7 @@ table.bhca-tbl tbody tr:hover { background:rgba(0,168,120,0.04); }
                     <?= e(date('d M Y', strtotime($row['submitted_at']))) ?>
                 </td>
                 <td class="pdf-link">
-                    <?php if ($row['pdf_path'] && $row['assessment_status'] === 'completed'): ?>
-                    <a href="<?= e(SITE_URL . '/' . ltrim($row['pdf_path'], '/')) ?>" target="_blank" rel="noopener">
-                        &#x1F4C4; View PDF
-                    </a>
-                    <?php else: ?>
                     <span style="color:var(--text-muted);font-size:0.8rem;">—</span>
-                    <?php endif; ?>
                 </td>
             </tr>
             <?php endforeach; ?>
