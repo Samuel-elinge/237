@@ -61,6 +61,9 @@ function adminNav(string $activePage = ''): void {
             ['Dashboard',   '&#x1F4CA;', $base . '/admin/dashboard.php',                ['dashboard']],
             ['SEO Content', '&#x1F4DD;', $base . '/admin/seo-content.php',              ['seo-content']],
             ['Health Check','&#x1FA7A;', $base . '/admin/health-check-overview.php',    ['health-check-overview','health-check-questions','health-check-staff']],
+            ['BHC Overview','&#x1FA7A;', $base . '/admin/bhc-overview',                 ['bhc-overview']],
+            ['BHC Assess.', '&#x1F4CB;', $base . '/admin/bhc-assessments',              ['bhc-assessments']],
+            ['BHC Recs.',   '&#x1F4A1;', $base . '/admin/bhc-recommendations',          ['bhc-recommendations']],
             ['Automation',  '&#x1F916;', $base . '/admin/automation/',                  ['automation']],
         ]],
     ];
