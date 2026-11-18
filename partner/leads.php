@@ -8,6 +8,7 @@ require_once __DIR__ . '/../includes/partner-lang.php';
 
 $partnerProfile = requireGrowthPartner();
 $partnerId      = (int)$partnerProfile['id'];
+$userId         = (int)($_SESSION['user_id'] ?? 0);
 $pdo            = db();
 
 // ── Which tab? general | bhc ──────────────────────────────────────────────────
@@ -30,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($newStatus) {
                 $pdo->prepare("UPDATE partner_leads SET status=?, next_action=?, last_activity=NOW() WHERE id=?")
                     ->execute([$newStatus, $nextAction ?: null, $leadId]);
-                partnerAuditLog($partnerId, currentUser()['id'], $lead['listing_id'], 'lead_updated', "Lead #{$leadId} status → {$newStatus}");
+                partnerAuditLog($partnerId, $userId, $lead['listing_id'], 'lead_updated', "Lead #{$leadId} status → {$newStatus}");
             }
         }
     }
@@ -104,7 +105,7 @@ if ($statusFilter && in_array($statusFilter, $bhcStatusAllowed)) {
     $bParams[] = $statusFilter;
 }
 if ($search !== '') {
-    $bWhere[]  = '(ba.business_name LIKE ? OR ba.contact_email LIKE ?)';
+    $bWhere[]  = '(ba.business_name LIKE ? OR ba.email LIKE ?)';
     $like      = '%' . $search . '%';
     $bParams[] = $like;
     $bParams[] = $like;
@@ -114,7 +115,7 @@ $bRows = $pdo->prepare("
     SELECT
         ba.id               AS assessment_id,
         ba.business_name,
-        ba.contact_email    AS email,
+        ba.email,
         ba.contact_name,
         ba.total_score,
         ba.score_band,
