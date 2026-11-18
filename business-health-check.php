@@ -6,6 +6,7 @@
 
 define('IN_237BIZ', true);
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/partner-helpers.php';
 require_once __DIR__ . '/includes/bhc-config.php';
 require_once __DIR__ . '/includes/bhc-scoring.php';
 require_once __DIR__ . '/includes/bhc-email.php';
