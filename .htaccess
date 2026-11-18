@@ -219,6 +219,10 @@ RewriteRule ^admin/events/?$               admin/events.php               [L,QSA
 RewriteRule ^suggest-business/?$         suggest-business.php         [L,QSA]
 RewriteRule ^partner-request/?$          partner-request.php          [L,QSA]
 
+# ── Business Health Check ─────────────────────────────────
+RewriteRule ^business-health-check/?$    business-health-check.php    [L,QSA]
+RewriteRule ^bhc-results/?$              bhc-results.php              [L,QSA]
+
 # Join & Partners
 RewriteRule ^join/?$       join.php      [L,QSA]
 RewriteRule ^partners/?$   partners.php  [L,QSA]
