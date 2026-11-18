@@ -13,7 +13,14 @@ try {
     $cats = db()->query('SELECT * FROM categories ORDER BY sort_order')->fetchAll();
     $locs = db()->query('SELECT * FROM locations ORDER BY sort_order')->fetchAll();
 } catch(Exception $e) { $cats = []; $locs = []; }
-$cu     = isLoggedIn() ? currentUser() : null;
+if (isLoggedIn()) {
+    $_hdr_st = db()->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
+    $_hdr_st->execute([$_SESSION['user_id']]);
+    $cu = $_hdr_st->fetch(PDO::FETCH_ASSOC) ?: null;
+    unset($_hdr_st);
+} else {
+    $cu = null;
+}
 $cuRole = $cu['role'] ?? 'guest';
 ?>
 <!DOCTYPE html>
