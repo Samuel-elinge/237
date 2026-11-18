@@ -1,4 +1,7 @@
 <?php
+// TEMP DEBUG - remove after diagnosis
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 /**
  * Business Health Check — public guest-first assessment
  * Clean URL: /business-health-check
