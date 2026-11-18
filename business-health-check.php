@@ -1,7 +1,4 @@
 <?php
-// TEMP DEBUG - remove after diagnosis
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 /**
  * Business Health Check — public guest-first assessment
  * Clean URL: /business-health-check
@@ -14,8 +11,7 @@ require_once __DIR__ . '/includes/bhc-scoring.php';
 require_once __DIR__ . '/includes/bhc-email.php';
 
 $isFr   = lang() === 'fr';
-$user   = current_user();
-$userId = $user ? (int)$user['id'] : null;
+$userId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
 
 // ─── Determine mode: landing | start | assess | done ─────────────────────────
 $mode = $_GET['mode'] ?? 'landing';
