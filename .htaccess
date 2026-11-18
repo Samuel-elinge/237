@@ -226,6 +226,9 @@ RewriteRule ^bhc-report-pdf/?$              bhc-report-pdf.php                 [
 RewriteRule ^admin/bhc-overview/?$          admin/bhc-overview.php             [L,QSA]
 RewriteRule ^admin/bhc-assessments/?$       admin/bhc-assessments.php          [L,QSA]
 RewriteRule ^admin/bhc-recommendations/?$   admin/bhc-recommendations.php      [L,QSA]
+RewriteRule ^admin/bhc-questions/?$         admin/bhc-questions.php             [L,QSA]
+RewriteRule ^admin/bhc-leads/?$             admin/bhc-leads.php                 [L,QSA]
+RewriteRule ^admin/bhc-settings/?$          admin/bhc-settings.php              [L,QSA]
 
 # Join & Partners
 RewriteRule ^join/?$       join.php      [L,QSA]

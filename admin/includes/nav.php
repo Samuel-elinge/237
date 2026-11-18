@@ -64,6 +64,9 @@ function adminNav(string $activePage = ''): void {
             ['BHC Overview','&#x1FA7A;', $base . '/admin/bhc-overview',                 ['bhc-overview']],
             ['BHC Assess.', '&#x1F4CB;', $base . '/admin/bhc-assessments',              ['bhc-assessments']],
             ['BHC Recs.',   '&#x1F4A1;', $base . '/admin/bhc-recommendations',          ['bhc-recommendations']],
+            ['BHC Questions','&#x2753;', $base . '/admin/bhc-questions',                ['bhc-questions']],
+            ['BHC Leads',   '&#x1F4E5;', $base . '/admin/bhc-leads',                   ['bhc-leads']],
+            ['BHC Settings','&#x2699;',  $base . '/admin/bhc-settings',                 ['bhc-settings']],
             ['Automation',  '&#x1F916;', $base . '/admin/automation/',                  ['automation']],
         ]],
     ];
