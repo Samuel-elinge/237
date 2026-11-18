@@ -1,9 +1,13 @@
 <?php
 /**
  * partner/bhc-assessments.php
- * BHC leads attributed to this Growth Partner via bhc_leads.gp_id
+ * Redirects to partner/leads?type=bhc (merged in Option B)
  */
 require_once __DIR__ . '/../includes/config.php';
+
+// Redirect to the merged leads page — BHC tab
+header('Location: /partner/leads?type=bhc', true, 301);
+exit;
 require_once __DIR__ . '/../includes/partner-helpers.php';
 require_once __DIR__ . '/../includes/partner-lang.php';
 

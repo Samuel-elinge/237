@@ -63,7 +63,6 @@ function partnerNav(string $activePage = ''): void {
         ['saleskit',           '&#x1F5C2;', 'Sales Kit',        $base . '/partner/saleskit',           0,             false],
         ['tasks',              '&#x1F4DD;', 'Notes',            $base . '/partner/tasks',              $overdueT,     false],
         ['commissions',        '&#x1F4B0;', 'Commissions',      $base . '/partner/commissions',        0,             false],
-        ['bhc-assessments',    '&#x1FA7A;', 'BHC Leads',        $base . '/partner/bhc-assessments',    0,             false],
         ['bhc-send',           '&#x1F517;', 'BHC Link',         $base . '/partner/bhc-send',           0,             false],
     ];
 
