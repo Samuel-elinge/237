@@ -57,6 +57,14 @@ function adminNav(string $activePage = ''): void {
             ['Emails',      '&#x2709;',  $base . '/admin/emails.php',             ['emails']],
             ['Blog',        '&#x1F4DD;', $base . '/admin/blog.php',            ['blog']],
         ]],
+        ['BHC', '&#x1FA7A;', [
+            ['Dashboard',   '&#x1F4CA;', $base . '/admin-bhc-dashboard.php',   ['admin-bhc-dashboard']],
+            ['Enquiries',   '&#x1F4EC;', $base . '/admin-bhc-enquiries.php',   ['admin-bhc-enquiries']],
+            ['Leads',       '&#x1F4E5;', $base . '/admin-bhc-leads.php',       ['admin-bhc-leads']],
+            ['Catalogue',   '&#x1F4CB;', $base . '/admin-bhc-catalogue.php',   ['admin-bhc-catalogue']],
+            ['GP Links',    '&#x1F91D;', $base . '/admin-bhc-gp-links.php',    ['admin-bhc-gp-links']],
+            ['Commercial',  '&#x1F4B0;', $base . '/admin-bhc-commercial.php',  ['admin-bhc-commercial']],
+        ]],
         ['System', '&#x2699;', [
             ['Dashboard',   '&#x1F4CA;', $base . '/admin/dashboard.php',                ['dashboard']],
             ['SEO Content', '&#x1F4DD;', $base . '/admin/seo-content.php',              ['seo-content']],
