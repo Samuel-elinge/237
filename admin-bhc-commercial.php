@@ -12,9 +12,9 @@ require_once __DIR__ . '/includes/config.php';
 // ── Auth ─── Super Admin only (Ops Managers cannot access financial/commercial terms) ──
 session_start();
 $staffId = (int)($_SESSION['user_id'] ?? 0);
-$isAdmin = ($_SESSION['user_role'] ?? '') === 'admin';
+$isAdmin = ($_SESSION['role'] ?? '') === 'admin';
 if (!$staffId || !$isAdmin) {
-    if ($staffId && ($_SESSION['user_role'] ?? '') === 'operations_admin') {
+    if ($staffId && ($_SESSION['role'] ?? '') === 'operations_admin') {
         http_response_code(403);
         die('Access denied. Commercial terms management requires Super Admin access.');
     }

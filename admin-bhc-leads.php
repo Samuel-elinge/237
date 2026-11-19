@@ -20,8 +20,8 @@ if (empty($_SESSION['user_id'])) {
     exit;
 }
 
-$isSuperAdmin   = ($_SESSION['user_role'] ?? '') === 'admin';
-$isOpsManager   = !$isSuperAdmin && ($_SESSION['user_role'] ?? '') === 'operations_admin';
+$isSuperAdmin   = ($_SESSION['role'] ?? '') === 'admin';
+$isOpsManager   = !$isSuperAdmin && ($_SESSION['role'] ?? '') === 'operations_admin';
 $canManage      = $isSuperAdmin || $isOpsManager;
 
 if (!$canManage) {

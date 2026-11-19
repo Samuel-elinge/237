@@ -15,8 +15,8 @@ $pdo = db();
 
 // ── Auth ──────────────────────────────────────────────────────────────────
 $staffId      = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
-$isAdmin      = ($_SESSION['user_role'] ?? '') === 'admin';
-$isOpsManager = !$isAdmin && ($_SESSION['user_role'] ?? '') === 'operations_admin';
+$isAdmin      = ($_SESSION['role'] ?? '') === 'admin';
+$isOpsManager = !$isAdmin && ($_SESSION['role'] ?? '') === 'operations_admin';
 // Ops Managers may VIEW catalogue but cannot create/edit/delete services or providers
 if (!$staffId || (!$isAdmin && !$isOpsManager)) {
     http_response_code(403);
