@@ -15,12 +15,14 @@
 define('IN_237BIZ', true);
 require_once __DIR__ . '/includes/config.php';
 
-$staffId = isset($_SESSION['staff_id']) ? (int)$_SESSION['staff_id'] : null;
-$isAdmin = isset($_SESSION['is_admin']) ? (bool)$_SESSION['is_admin'] : false;
-if (!$staffId || !$isAdmin) {
+$staffId      = isset($_SESSION['staff_id'])      ? (int)$_SESSION['staff_id']      : null;
+$isAdmin      = isset($_SESSION['is_admin'])      ? (bool)$_SESSION['is_admin']     : false;
+$isOpsManager = !$isAdmin && isset($_SESSION['is_ops_manager']) && $_SESSION['is_ops_manager'];
+if (!$staffId || (!$isAdmin && !$isOpsManager)) {
     http_response_code(403);
     die('Admin login required.');
 }
+$canManage = $isAdmin || $isOpsManager;
 
 require_once __DIR__ . '/includes/bhc-catalogue.php';
 require_once __DIR__ . '/includes/bhc-enquiry.php';

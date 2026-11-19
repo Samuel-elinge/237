@@ -14,12 +14,15 @@ require_once __DIR__ . '/includes/bhc-catalogue.php';
 $pdo = db();
 
 // ── Auth ──────────────────────────────────────────────────────────────────
-$staffId = isset($_SESSION['staff_id']) ? (int)$_SESSION['staff_id'] : null;
-$isAdmin = isset($_SESSION['is_admin']) ? (bool)$_SESSION['is_admin'] : false;
-if (!$staffId || !$isAdmin) {
+$staffId      = isset($_SESSION['staff_id'])      ? (int)$_SESSION['staff_id']      : null;
+$isAdmin      = isset($_SESSION['is_admin'])      ? (bool)$_SESSION['is_admin']     : false;
+$isOpsManager = !$isAdmin && isset($_SESSION['is_ops_manager']) && $_SESSION['is_ops_manager'];
+// Ops Managers may VIEW catalogue but cannot create/edit/delete services or providers
+if (!$staffId || (!$isAdmin && !$isOpsManager)) {
     http_response_code(403);
     die('Admin login required.');
 }
+$canEditCatalogue = $isAdmin; // Ops Managers are read-only on catalogue
 
 // ── AJAX / POST actions ───────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -27,6 +30,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $action = trim($_POST['action'] ?? '');
     $json = fn(array $d, int $c = 200) => (http_response_code($c) && print(json_encode($d))) || exit;
+
+    // Ops Managers cannot perform write operations on the catalogue
+    if (!$canEditCatalogue) {
+        $json(['ok' => false, 'error' => 'Insufficient permissions. Catalogue edits require Super Admin access.'], 403);
+    }
 
     // ---- Service Categories ----
     if ($action === 'save_category') {

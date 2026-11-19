@@ -18,10 +18,41 @@ $userId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
 $mode = $_GET['mode'] ?? 'landing';
 $ref  = trim($_GET['ref'] ?? '');   // resume token
 
-// GP / referral attribution
-$gpRef = trim($_GET['gp'] ?? $_COOKIE['bhc_gp'] ?? '');
+// GP / referral attribution — capture ?gp=TOKEN from URL or cookie
+$gpRef  = trim($_GET['gp'] ?? $_COOKIE['bhc_gp'] ?? '');
+$gpId   = null;   // resolved INT user id of the Growth Partner
 if ($gpRef) {
     setcookie('bhc_gp', $gpRef, time() + 86400 * 30, '/');
+    // Resolve token → GP user id via bhc_gp_links; increment click count on first URL hit
+    if (!empty($_GET['gp'])) {
+        try {
+            $gpDb = db();
+            $gpRow = $gpDb->prepare(
+                "SELECT id, gp_id FROM bhc_gp_links
+                  WHERE token=? AND is_active=1
+                    AND (expires_at IS NULL OR expires_at > NOW())
+                  LIMIT 1"
+            );
+            $gpRow->execute([$gpRef]);
+            $gpLink = $gpRow->fetch(PDO::FETCH_ASSOC);
+            if ($gpLink) {
+                $gpId = (int)$gpLink['gp_id'];
+                $gpDb->prepare("UPDATE bhc_gp_links SET click_count=click_count+1 WHERE id=?")
+                     ->execute([$gpLink['id']]);
+                // Store resolved gp_id in session for use at assessment creation
+                $_SESSION['bhc_gp_id']  = $gpId;
+                $_SESSION['bhc_gp_ref'] = $gpRef;
+            }
+        } catch (Exception $e) { /* non-fatal */ }
+    }
+    // Restore from session when navigating without ?gp= in URL
+    if (!$gpId && !empty($_SESSION['bhc_gp_id'])) {
+        $gpId  = (int)$_SESSION['bhc_gp_id'];
+        $gpRef = $_SESSION['bhc_gp_ref'] ?? $gpRef;
+    }
+} elseif (!empty($_SESSION['bhc_gp_id'])) {
+    $gpId  = (int)$_SESSION['bhc_gp_id'];
+    $gpRef = $_SESSION['bhc_gp_ref'] ?? '';
 }
 
 // ─── Handle resume token ──────────────────────────────────────────────────────
@@ -80,13 +111,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "INSERT INTO bhc_assessments
                    (reference, user_id, business_name, contact_name, business_category,
                     city, whatsapp, email, website, social_url, employee_band,
-                    lang, status, referral_source, gp_ref_code,
+                    lang, status, referral_source, gp_ref_code, gp_id,
                     consent_privacy, consent_237biz_mkt, consent_ms_mkt, consent_at,
                     ip_address, user_agent)
                  VALUES
                    (:ref, :uid, :bn, :cn, :bc,
                     :city, :wa, :email, :web, :soc, :emp,
-                    :lang, 'draft', :rsrc, :gpref,
+                    :lang, 'draft', :rsrc, :gpref, :gpid,
                     :cp, :c2, :cms, NOW(),
                     :ip, :ua)"
             )->execute([
@@ -104,6 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':lang'  => $posted['lang_choice'],
                 ':rsrc'  => $_SERVER['HTTP_REFERER'] ?? null,
                 ':gpref' => $gpRef ?: null,
+                ':gpid'  => $gpId ?: null,
                 ':cp'    => $posted['consent_privacy'],
                 ':c2'    => $posted['consent_237biz'],
                 ':cms'   => $posted['consent_ms'],
@@ -167,18 +199,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Create report access token
                 $reportToken = bhc_create_access_token((int)$resumeAssessment['id'], 'report');
 
-                // Create lead record
+                // Create lead record and ensure gp_id is set on the assessment
                 try {
                     $pdo = db();
-                    $gpId = null;
-                    if ($resumeAssessment['gp_ref_code']) {
-                        $gs = $pdo->prepare("SELECT id FROM users WHERE referral_code = :c LIMIT 1");
-                        $gs->execute([':c' => $resumeAssessment['gp_ref_code']]);
-                        $gpId = $gs->fetchColumn() ?: null;
+                    $resolvedGpId = $resumeAssessment['gp_id'] ?? null;
+                    // Fallback: resolve gp_id from gp_ref_code via bhc_gp_links if not already set
+                    if (!$resolvedGpId && !empty($resumeAssessment['gp_ref_code'])) {
+                        $gs = $pdo->prepare(
+                            "SELECT gp_id FROM bhc_gp_links WHERE token=? AND is_active=1 LIMIT 1"
+                        );
+                        $gs->execute([$resumeAssessment['gp_ref_code']]);
+                        $resolvedGpId = $gs->fetchColumn() ?: null;
+                        if ($resolvedGpId) {
+                            // Backfill gp_id onto the assessment
+                            $pdo->prepare("UPDATE bhc_assessments SET gp_id=? WHERE id=?")
+                                ->execute([$resolvedGpId, $resumeAssessment['id']]);
+                        }
                     }
                     $pdo->prepare(
                         "INSERT IGNORE INTO bhc_leads (assessment_id, gp_id) VALUES (:aid, :gp)"
-                    )->execute([':aid' => $resumeAssessment['id'], ':gp' => $gpId]);
+                    )->execute([':aid' => $resumeAssessment['id'], ':gp' => $resolvedGpId]);
                 } catch (Exception $e) {
                     // non-fatal
                 }

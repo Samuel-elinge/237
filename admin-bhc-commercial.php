@@ -9,11 +9,16 @@
 define('IN_237BIZ', true);
 require_once __DIR__ . '/includes/config.php';
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// ── Auth ─── Super Admin only (Ops Managers cannot access financial/commercial terms) ──
 session_start();
 $staffId = (int)($_SESSION['staff_id'] ?? 0);
 $isAdmin = (bool)($_SESSION['is_admin']  ?? false);
-if (!$staffId) {
+if (!$staffId || !$isAdmin) {
+    // Ops Manager trying to access: show 403, not redirect, to make the restriction clear
+    if ($staffId && !empty($_SESSION['is_ops_manager'])) {
+        http_response_code(403);
+        die('Access denied. Commercial terms management requires Super Admin access.');
+    }
     header('Location: /login.php');
     exit;
 }
