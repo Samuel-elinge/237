@@ -15,9 +15,9 @@
 CREATE TABLE IF NOT EXISTS `bhc_enquiries` (
   `id`                   INT UNSIGNED   NOT NULL AUTO_INCREMENT,
   `ref`                  CHAR(12)       NOT NULL COMMENT 'human-readable reference BHC-XXXXXXXX',
-  `assessment_id`        BIGINT UNSIGNED NULL     COMMENT 'FK → bhc_assessments; null if no assessment',
-  `service_id`           INT UNSIGNED   NOT NULL  COMMENT 'FK → bhc_services',
-  `service_category_id`  INT UNSIGNED   NULL      COMMENT 'denormalised for fast filtering',
+  `assessment_id`        BIGINT UNSIGNED   NULL     COMMENT 'FK → bhc_assessments; null if no assessment',
+  `service_id`           SMALLINT UNSIGNED NOT NULL  COMMENT 'FK → bhc_services',
+  `service_category_id`  SMALLINT UNSIGNED NULL      COMMENT 'denormalised for fast filtering',
 
   -- Business / contact info captured at enquiry time
   `business_name`        VARCHAR(200)   NOT NULL,
@@ -48,8 +48,8 @@ CREATE TABLE IF NOT EXISTS `bhc_enquiries` (
                             'not_converted',
                             'closed'
                           ) NOT NULL DEFAULT 'new',
-  `assigned_provider_id` INT UNSIGNED   NULL     COMMENT 'FK → bhc_service_providers; null = unassigned',
-  `assigned_by`          INT UNSIGNED   NULL     COMMENT 'staff user who made the assignment',
+  `assigned_provider_id` SMALLINT UNSIGNED NULL     COMMENT 'FK → bhc_service_providers; null = unassigned',
+  `assigned_by`          INT UNSIGNED      NULL     COMMENT 'staff user who made the assignment',
   `assigned_at`          DATETIME       NULL,
 
   -- Consent (must be TRUE before forwarding to any provider)
