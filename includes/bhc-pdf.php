@@ -316,6 +316,110 @@ function _bhc_footer(BHC_PDF_Writer $pdf, bool $isFr): void {
  * @param string $lang            'en'|'fr'
  * @return string  Raw PDF bytes
  */
+/**
+ * Convenience wrapper: build PDF bytes for a completed assessment.
+ * Loads all required data from the DB and returns raw PDF bytes.
+ *
+ * @param array $assessment  Row from bhc_assessments
+ * @param PDO   $pdo
+ * @return string  Raw PDF bytes
+ */
+function bhc_generate_pdf_for_assessment(array $assessment, \PDO $pdo): string
+{
+    $lang  = $assessment['lang'] ?? 'en';
+    $isFr  = $lang === 'fr';
+
+    $allCategories = bhc_load_categories();
+
+    $catScores = [
+        'online_visibility'    => (float)($assessment['score_online_visibility']    ?? 0),
+        'customer_acquisition' => (float)($assessment['score_customer_acquisition'] ?? 0),
+        'customer_trust'       => (float)($assessment['score_customer_trust']       ?? 0),
+        'digital_presence'     => (float)($assessment['score_digital_presence']     ?? 0),
+        'customer_management'  => (float)($assessment['score_customer_management']  ?? 0),
+        'marketing_growth'     => (float)($assessment['score_marketing_growth']     ?? 0),
+        'business_operations'  => (float)($assessment['score_business_operations']  ?? 0),
+    ];
+
+    $catPcts  = [];
+    $catBands = [];
+    foreach ($allCategories as $slug => $cat) {
+        $weight = (float)($cat['weight'] ?? 0);
+        $score  = $catScores[$slug] ?? 0.0;
+        $pct    = $weight > 0 ? min(100.0, ($score / $weight) * 100.0) : 0.0;
+        $catPcts[$slug]  = $pct;
+        $catBands[$slug] = bhc_score_band($pct);
+    }
+
+    $sortedByPct = $catPcts; arsort($sortedByPct);
+    $strengthSlugs = array_values(array_filter(
+        array_keys(array_slice($sortedByPct, 0, 3, true)),
+        fn($s) => $catPcts[$s] >= 60
+    ));
+
+    $sortedAsc = $catPcts; asort($sortedAsc);
+    $weaknessSlugs = array_values(array_filter(
+        array_keys(array_slice($sortedAsc, 0, 3, true)),
+        fn($s) => $catPcts[$s] < 70
+    ));
+
+    $recommendations = [];
+    try {
+        foreach ($allCategories as $slug => $cat) {
+            $catBand = $catBands[$slug];
+            $rStmt = $pdo->prepare(
+                "SELECT r.id, r.priority, r.title_en, r.title_fr, r.body_en, r.body_fr,
+                        r.score_band, c.slug AS category_slug
+                 FROM bhc_recommendations r
+                 JOIN bhc_categories c ON c.id = r.category_id
+                 WHERE c.slug = :slug AND r.score_band = :band AND r.is_active = 1
+                 ORDER BY r.priority ASC LIMIT 2"
+            );
+            $rStmt->execute([':slug' => $slug, ':band' => $catBand]);
+            foreach ($rStmt->fetchAll(\PDO::FETCH_ASSOC) as $rec) {
+                $recommendations[$slug][] = $rec;
+            }
+        }
+    } catch (\Exception $e) { /* table not yet seeded */ }
+
+    if (empty($recommendations)) {
+        $tmp = $catPcts; arsort($tmp);
+        foreach (array_slice($tmp, 0, 4, true) as $slug => $pct) {
+            if ($pct >= 80) continue;
+            $cat = $allCategories[$slug] ?? [];
+            $recommendations[$slug][] = [
+                'category_slug' => $slug,
+                'title_en' => 'Improve your ' . ($cat['label_en'] ?? $slug),
+                'title_fr' => 'Améliorez votre ' . ($cat['label_fr'] ?? $slug),
+                'body_en'  => 'Your score in this area indicates room for improvement.',
+                'body_fr'  => 'Votre score dans ce domaine indique une marge d\'amélioration.',
+            ];
+        }
+    }
+
+    $actionPlan = ['immediate' => [], '30d' => [], '60d' => [], '90d' => []];
+    foreach ($allCategories as $slug => $cat) {
+        $pct  = $catPcts[$slug];
+        $recs = $recommendations[$slug] ?? [];
+        if (empty($recs)) continue;
+        $entry = [
+            'slug'  => $slug,
+            'label' => $cat[$isFr ? 'label_fr' : 'label_en'] ?? $slug,
+            'pct'   => $pct,
+            'title' => $recs[0][$isFr ? 'title_fr' : 'title_en'] ?? '',
+        ];
+        if ($pct < 40)     $actionPlan['immediate'][] = $entry;
+        elseif ($pct < 60) $actionPlan['30d'][] = $entry;
+        elseif ($pct < 80) $actionPlan['60d'][] = $entry;
+        else               $actionPlan['90d'][] = $entry;
+    }
+
+    return bhc_generate_pdf(
+        $assessment, $catScores, $catPcts, $catBands, $allCategories,
+        $recommendations, $actionPlan, $strengthSlugs, $weaknessSlugs, $lang
+    );
+}
+
 function bhc_generate_pdf(
     array  $assessment,
     array  $catScores,

@@ -16,6 +16,7 @@
 defined('IN_237BIZ') or die('Direct access denied');
 
 require_once __DIR__ . '/bhc-config.php';
+require_once __DIR__ . '/bhc-pdf.php';
 
 /**
  * Send the BHC completion email to the lead.
@@ -208,6 +209,47 @@ HTML;
     // Replace placeholder year
     $body = str_replace('HTML_YEAR', date('Y'), $body);
 
+    // ── Attach PDF via PHPMailer directly ─────────────────────────────────────
+    $phpmailerPath = __DIR__ . '/../vendor/phpmailer/phpmailer/src/';
+    if (file_exists($phpmailerPath . 'PHPMailer.php')) {
+        require_once $phpmailerPath . 'Exception.php';
+        require_once $phpmailerPath . 'PHPMailer.php';
+        require_once $phpmailerPath . 'SMTP.php';
+
+        try {
+            // Generate PDF bytes
+            $pdo      = db();
+            $pdfBytes = bhc_generate_pdf_for_assessment($assessment, $pdo);
+            $filename = 'BHC-Report-' . preg_replace('/[^A-Z0-9\-]/i', '', $assessment['reference'] ?? 'report') . '.pdf';
+
+            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+            $mail->isSMTP();
+            $mail->Host       = SMTP_HOST;
+            $mail->SMTPAuth   = true;
+            $mail->Username   = SMTP_USER;
+            $mail->Password   = SMTP_PASS;
+            $mail->SMTPSecure = defined('SMTP_SECURE') ? SMTP_SECURE : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port       = defined('SMTP_PORT') ? SMTP_PORT : 587;
+
+            $mail->setFrom(SMTP_USER, defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : '237biz');
+            $mail->addAddress($email);
+            $mail->isHTML(true);
+            $mail->Subject = $subject;
+            $mail->Body    = $body;
+            $mail->AltBody = strip_tags($body);
+
+            // Attach PDF from memory (no temp file needed)
+            $mail->addStringAttachment($pdfBytes, $filename, \PHPMailer\PHPMailer\PHPMailer::ENCODING_BASE64, 'application/pdf');
+
+            $mail->send();
+            return true;
+        } catch (\Exception $e) {
+            error_log('BHC PDF email error: ' . $e->getMessage());
+            // Fall through to plain sendMail without attachment
+        }
+    }
+
+    // Fallback: send without attachment if PHPMailer unavailable or errored
     return (bool) sendMail($email, $subject, $body);
 }
 
