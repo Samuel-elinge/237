@@ -61,12 +61,13 @@ function bhc_send_report_email(array $assessment, string $rawToken, string $lang
         $viewBtn    = 'Voir mon rapport complet';
         $pdfBtn     = 'Télécharger le PDF';
         $nextHdr    = 'Prochaines étapes recommandées';
-        $nextBody   = match ($band) {
-            'strong_foundations' => 'Excellente performance ! Continuez sur cette lancée et affinez votre stratégie de croissance avec un expert 237biz.',
-            'good_progress'      => 'Bonne base ! Quelques améliorations ciblées peuvent propulser votre entreprise au niveau supérieur.',
-            'developing'         => 'Vous progressez. Des actions concrètes dans les domaines prioritaires vous permettront d\'accélérer votre croissance.',
-            default              => 'Une attention immédiate dans les domaines clés peut rapidement transformer vos résultats.',
-        };
+        $nextBody   = $band === 'strong_foundations'
+            ? 'Excellente performance ! Continuez sur cette lancée et affinez votre stratégie de croissance avec un expert 237biz.'
+            : ($band === 'good_progress'
+                ? 'Bonne base ! Quelques améliorations ciblées peuvent propulser votre entreprise au niveau supérieur.'
+                : ($band === 'developing'
+                    ? 'Vous progressez. Des actions concrètes dans les domaines prioritaires vous permettront d\'accélérer votre croissance.'
+                    : 'Une attention immédiate dans les domaines clés peut rapidement transformer vos résultats.'));
         $ctaText    = 'Parler à un expert 237biz';
         $ctaUrl     = rtrim(SITE_URL, '/') . '/contact';
         $footerNote = 'Vous recevez cet email car vous avez complété un bilan de santé sur 237biz.net.';
@@ -81,12 +82,13 @@ function bhc_send_report_email(array $assessment, string $rawToken, string $lang
         $viewBtn    = 'View My Full Report';
         $pdfBtn     = 'Download PDF';
         $nextHdr    = 'Recommended Next Steps';
-        $nextBody   = match ($band) {
-            'strong_foundations' => 'Outstanding performance! Keep the momentum going and refine your growth strategy with a 237biz expert.',
-            'good_progress'      => 'Good foundation! A few targeted improvements can take your business to the next level.',
-            'developing'         => 'You\'re making progress. Concrete actions in priority areas will help you accelerate growth.',
-            default              => 'Immediate attention in several key areas can quickly transform your results.',
-        };
+        $nextBody   = $band === 'strong_foundations'
+            ? 'Outstanding performance! Keep the momentum going and refine your growth strategy with a 237biz expert.'
+            : ($band === 'good_progress'
+                ? 'Good foundation! A few targeted improvements can take your business to the next level.'
+                : ($band === 'developing'
+                    ? 'You\'re making progress. Concrete actions in priority areas will help you accelerate growth.'
+                    : 'Immediate attention in several key areas can quickly transform your results.'));
         $ctaText    = 'Talk to a 237biz Expert';
         $ctaUrl     = rtrim(SITE_URL, '/') . '/contact';
         $footerNote = 'You received this email because you completed a health check at 237biz.net.';

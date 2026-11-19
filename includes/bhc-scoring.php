@@ -206,7 +206,7 @@ function bhc_create_access_token(int $assessment_id, string $type = 'report', ?D
 /**
  * Validate a raw token; returns assessment_id or false.
  */
-function bhc_validate_access_token(string $raw_token, string $type = 'report'): int|false {
+function bhc_validate_access_token(string $raw_token, string $type = 'report') /* : int|false */ {
     $hash = hash('sha256', $raw_token);
     $pdo  = db();
     $stmt = $pdo->prepare(
