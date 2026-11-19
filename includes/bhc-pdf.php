@@ -444,40 +444,82 @@ function bhc_generate_pdf(
     $pdf->addFont('F2','Helvetica');
     $pdf->addFont('F3','Helvetica-Oblique');
 
-    $bname = $assessment['business_name'] ?? '';
-    $ref   = $assessment['reference'] ?? '';
-    $date  = date('d/m/Y', strtotime($assessment['created_at'] ?? 'now'));
+    $bname   = $assessment['business_name'] ?? '';
+    $contact = $assessment['contact_name']  ?? ($assessment['name'] ?? '');
+    $ref     = $assessment['reference'] ?? '';
+    $date    = date('d/m/Y', strtotime($assessment['created_at'] ?? 'now'));
 
     // ════════════════════════════════════════════════════════════════════════════
     //  PAGE 1 — Cover, Score, Category Performance
     // ════════════════════════════════════════════════════════════════════════════
     $pdf->newPage();
 
-    // ── Dark header band ──────────────────────────────────────────────────────
+    // ── Dark header band (taller to fit business info) ───────────────────────
     $pdf->setFill(13, 17, 23);
-    $pdf->rect(0, 0, 595, 175);
+    $pdf->rect(0, 0, 595, 200);
 
     // Green accent strip
     $pdf->setFill(0, 168, 120);
-    $pdf->rect(0, 175, 595, 4);
+    $pdf->rect(0, 200, 595, 4);
 
-    // Brand
-    $pdf->text('F1', 26, 36, 44, '237biz', 255, 255, 255);
+    // ── Logo block: dark green bg pill, "237" in yellow, "Biz" in white ──────
+    // Background pill
+    $pdf->setFill(10, 40, 20);
+    $pdf->roundRect(36, 20, 100, 36, 5);
+    // "237" in yellow
+    $pdf->text('F1', 20, 42, 46, '237', 245, 190, 0);
+    // "Biz" in white
+    $pdf->text('F1', 20, 86, 46, 'Biz', 255, 255, 255);
+    // ".net" small below
+    $pdf->text('F2', 7, 60, 60, '.net', 130, 160, 140);
+
+    // Tagline beside logo
     $tagline = $isFr ? 'La plateforme numerique des entreprises camerounaises'
                      : 'The digital platform for Cameroonian businesses';
-    $pdf->text('F2', 9, 36, 65, $tagline, 150, 165, 180);
+    $pdf->text('F2', 8, 148, 36, $tagline, 130, 155, 170);
 
     // Report title
     $rptTitle = $isFr ? 'BILAN DE SANTE ENTREPRISE' : 'BUSINESS HEALTH CHECK REPORT';
-    $pdf->text('F1', 15, 36, 96, $rptTitle, 255, 255, 255);
+    $pdf->text('F1', 14, 36, 80, $rptTitle, 255, 255, 255);
 
-    // Business name + ref
-    $pdf->text('F2', 11, 36, 118, iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',$bname), 180,195,210);
+    // ── Business info block ───────────────────────────────────────────────────
+    $bizLabel  = $isFr ? 'Entreprise :' : 'Business Name:';
+    $ctcLabel  = $isFr ? 'Contact :' : 'Business Contact:';
+    $refLabel  = $isFr ? 'Ref :' : 'Reference:';
+    $dateLabel = $isFr ? 'Date :' : 'Date:';
+
+    $bnameClean   = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE', $bname);
+    $contactClean = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE', $contact);
+
+    // Label in muted, value in bright
+    $pdf->text('F2',  9,  36, 105, $bizLabel,  130,145,160);
+    $pdf->text('F1', 10, 130, 105, $bnameClean, 220,235,250);
+
+    $pdf->text('F2',  9,  36, 122, $ctcLabel,  130,145,160);
+    $pdf->text('F1', 10, 130, 122, $contactClean ?: '-', 220,235,250);
+
+    $pdf->text('F2',  9,  36, 139, $refLabel,  130,145,160);
+    $pdf->text('F2',  9, 130, 139, $ref,        180,195,210);
+
+    $pdf->text('F2',  9, 280, 139, $dateLabel, 130,145,160);
+    $pdf->text('F2',  9, 330, 139, $date,       180,195,210);
+
+    // Personalisation note
+    $noteText = $isFr
+        ? 'Ce rapport est genere sur la base de vos reponses au questionnaire.'
+        : 'This report is personalised based on the answers provided in your assessment.';
+    $pdf->text('F3', 8, 36, 160, $noteText, 0, 168, 120);
+
+    // Divider line inside header
+    $pdf->setFill(40, 55, 70);
+    $pdf->rect(36, 170, 523, 1);
+
+    // Report date/ref compact line
     $refLine = ($isFr ? 'Ref : ' : 'Ref: ') . $ref . '   |   ' . ($isFr ? 'Date : ' : 'Date: ') . $date;
-    $pdf->text('F2', 9, 36, 136, $refLine, 130,145,160);
+    $pdf->text('F2', 8, 36, 185, $refLine, 100,115,130);
 
     // ── Score circle ──────────────────────────────────────────────────────────
-    $cx = 480; $cy = 95; $cr = 46;
+    $cx = 480; $cy = 108; $cr = 46;
 
     // Outer ring (band colour)
     $pdf->setFill($bR, $bG, $bB);
@@ -497,7 +539,7 @@ function bhc_generate_pdf(
     $pdf->textCentre('F1', 9, $cx - 50, 100, $cy + 25, $bLabel, $bR, $bG, $bB);
 
     // ── Section: Performance by Category ─────────────────────────────────────
-    $y = _bhc_section_head($pdf, 36, 196, $isFr ? 'Performance par categorie' : 'Performance by Category');
+    $y = _bhc_section_head($pdf, 36, 222, $isFr ? 'Performance par categorie' : 'Performance by Category');
 
     foreach ($allCategories as $slug => $cat) {
         if ($y > 762) break;

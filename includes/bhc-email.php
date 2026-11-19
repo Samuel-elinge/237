@@ -28,7 +28,7 @@ require_once __DIR__ . '/bhc-pdf.php';
  */
 function bhc_send_report_email(array $assessment, string $rawToken, string $lang = 'en'): bool
 {
-    $email = trim($assessment['contact_email'] ?? '');
+    $email = trim($assessment['contact_email'] ?? $assessment['email'] ?? '');
     if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         return false;  // No valid email — silent skip
     }
@@ -270,7 +270,7 @@ function bhc_resend_report_by_email(string $email): string
     // Find most recent completed assessment for this email
     $stmt = $pdo->prepare(
         "SELECT * FROM bhc_assessments
-         WHERE contact_email = :email
+         WHERE email = :email
            AND status IN ('submitted','completed')
          ORDER BY completed_at DESC, submitted_at DESC
          LIMIT 1"
