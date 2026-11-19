@@ -1,5 +1,4 @@
 <?php
-ini_set('display_errors', 1); error_reporting(E_ALL);
 /**
  * Admin — BHC Dashboard
  *
@@ -137,7 +136,7 @@ $topServices = $topServices->fetchAll(PDO::FETCH_ASSOC);
 // TOP-PERFORMING PROVIDERS (window)
 // ═══════════════════════════════════════════════════════════════════════════
 $topProviders = $pdo->prepare("
-    SELECT p.name                           AS provider_name,
+    SELECT p.business_name                  AS provider_name,
            COUNT(e.id)                      AS assigned_count,
            SUM(e.status = 'converted')      AS converted_count,
            ROUND(
@@ -148,7 +147,7 @@ $topProviders = $pdo->prepare("
       FROM bhc_service_providers  p
       JOIN bhc_enquiries           e ON e.assigned_provider_id = p.id
      WHERE e.created_at >= :s
-  GROUP BY p.id, p.name
+  GROUP BY p.id, p.business_name
   ORDER BY converted_count DESC, assigned_count DESC
      LIMIT 10
 ");
@@ -162,7 +161,7 @@ $recentEnquiries = $pdo->query("
     SELECT e.id, e.ref, e.business_name, e.contact_name,
            e.status, e.created_at, e.lang,
            s.name_en AS service_name,
-           p.name    AS provider_name
+           p.business_name AS provider_name
       FROM bhc_enquiries          e
       JOIN bhc_services            s ON s.id = e.service_id
  LEFT JOIN bhc_service_providers   p ON p.id = e.assigned_provider_id

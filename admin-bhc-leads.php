@@ -166,7 +166,7 @@ $sql = "
 SELECT  e.*,
         s.name_en                AS service_name,
         sc.name_en               AS category_name,
-        sp.name                  AS provider_name,
+        sp.business_name AS provider_name,
         u.name                   AS gp_name,
         (SELECT COUNT(*) FROM bhc_enquiry_followups f WHERE f.enquiry_id = e.id) AS followup_count,
         (SELECT MAX(f2.created_at) FROM bhc_enquiry_followups f2 WHERE f2.enquiry_id = e.id) AS last_followup,
@@ -209,7 +209,7 @@ if ($viewId) {
         SELECT e.*,
                s.name_en AS service_name,
                sc.name_en AS category_name,
-               sp.name AS provider_name,
+               sp.business_name AS provider_name,
                u.name AS gp_name
         FROM bhc_enquiries e
         LEFT JOIN bhc_services s ON s.id = e.service_id
