@@ -14,8 +14,6 @@
  */
 
 define('IN_237BIZ', true);
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/bhc-config.php';
 require_once __DIR__ . '/includes/bhc-scoring.php';
@@ -106,9 +104,10 @@ $lang = $isFr ? 'fr' : 'en';
 // ─── Load answers ─────────────────────────────────────────────────────────────
 $stmt2 = $pdo->prepare(
     "SELECT ba.question_id, ba.option_key, ba.score,
-            bq.question_en, bq.question_fr, bq.category_slug
+            bq.question_en, bq.question_fr, c.slug AS category_slug
      FROM bhc_answers ba
      JOIN bhc_questions bq ON bq.id = ba.question_id
+     JOIN bhc_categories c ON c.id = bq.category_id
      WHERE ba.assessment_id = :id"
 );
 $stmt2->execute([':id' => $assessId]);
