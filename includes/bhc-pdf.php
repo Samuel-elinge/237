@@ -1,14 +1,25 @@
 <?php
 /**
- * Business Health Check — PDF Report Generator
+ * Business Health Check — PDF Report Generator (Phase 2, Stage 2)
  *
  * Pure-PHP PDF builder (no external library required).
  * Uses a minimal PDF 1.4 structure written from scratch.
  *
  * Usage:
- *   $pdfBytes = bhc_generate_pdf($assessment, $catScores, $allCategories, $recommendations, $lang);
+ *   $pdfBytes = bhc_generate_pdf(
+ *       $assessment,     // row from bhc_assessments
+ *       $catScores,      // ['slug' => float weighted_score, ...]
+ *       $catPcts,        // ['slug' => float 0-100, ...]
+ *       $catBands,       // ['slug' => band_slug, ...]
+ *       $allCategories,  // from bhc_load_categories()
+ *       $recommendations,// ['slug' => [rec_row, ...], ...]
+ *       $actionPlan,     // ['immediate'=>[], '30d'=>[], '60d'=>[], '90d'=>[]]
+ *       $strengthSlugs,  // string[]
+ *       $weaknessSlugs,  // string[]
+ *       $lang            // 'en'|'fr'
+ *   );
  *
- * Returns: string — raw PDF bytes, or false on failure.
+ * Returns: string — raw PDF bytes.
  */
 
 defined('IN_237BIZ') or die('Direct access denied');
@@ -21,50 +32,37 @@ require_once __DIR__ . '/bhc-config.php';
 
 class BHC_PDF_Writer {
 
-    private array  $objects  = [];   // PDF indirect objects: [id => string]
+    private array  $objects  = [];
     private int    $nextId   = 1;
-    private array  $pages    = [];   // page object IDs
-    private int    $pageId   = 0;    // current page object ID
-    private array  $streams  = [];   // content stream for each page (indexed by pageId)
-    private string $cur      = '';   // current page content buffer
-    private array  $fonts    = [];   // registered fonts: name => obj id
-    private string $fontRes  = '';   // /Font resource dict entries
+    private array  $pages    = [];
+    private int    $pageId   = 0;
+    private array  $streams  = [];
+    private string $cur      = '';
+    private array  $fonts    = [];
+    private string $fontRes  = '';
 
-    // Page dimensions (A4 in pts: 595×842)
+    // A4 portrait (595 × 842 pts)
     private float $W = 595;
     private float $H = 842;
 
-    // ── Colour helpers (RGB 0-255 → PDF 0-1) ─────────────────────────────────
+    // ── Colour helpers ────────────────────────────────────────────────────────
     private function rgb(int $r, int $g, int $b): string {
         return sprintf('%.3f %.3f %.3f', $r/255, $g/255, $b/255);
     }
 
-    // ── Allocate an object ID ─────────────────────────────────────────────────
     private function alloc(): int { return $this->nextId++; }
 
-    // ── Store a finalized object ──────────────────────────────────────────────
     private function obj(int $id, string $content): void {
         $this->objects[$id] = $content;
     }
 
-    // ── PDF string escaping ───────────────────────────────────────────────────
-    private function str(string $s): string {
-        // We use UTF-16BE for safe Unicode via PDFDocEncoding workaround;
-        // for simplicity, strip non-Latin1 and use literal strings.
-        $s = iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', $s);
-        $s = str_replace(['\\','(',')',"\r"], ['\\\\','\\(','\\)',''], $s);
-        return '(' . $s . ')';
-    }
-
-    // ── Encode text for PDF stream (safe Latin-1) ────────────────────────────
     private function esc(string $s): string {
         $s = iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', (string)$s);
-        $s = str_replace(['\\','(',')',"\r"], ['\\\\','\\(','\\)',''], $s);
-        return $s;
+        return str_replace(['\\','(',')',"\r"], ['\\\\','\\(','\\)',''], $s);
     }
 
-    // ── Register a standard Type1 font ───────────────────────────────────────
-    private function addFont(string $name, string $pdfName): int {
+    // ── Font registration ─────────────────────────────────────────────────────
+    public function addFont(string $name, string $pdfName): int {
         if (isset($this->fonts[$name])) return $this->fonts[$name];
         $id = $this->alloc();
         $this->obj($id,
@@ -77,9 +75,8 @@ class BHC_PDF_Writer {
         return $id;
     }
 
-    // ── Start new page ────────────────────────────────────────────────────────
+    // ── Page management ───────────────────────────────────────────────────────
     public function newPage(): void {
-        // Save previous page stream
         if ($this->cur !== '' && $this->pageId !== 0) {
             $this->streams[$this->pageId] = $this->cur;
         }
@@ -88,7 +85,7 @@ class BHC_PDF_Writer {
         $this->pages[]= $this->pageId;
     }
 
-    // ── Low-level stream commands ─────────────────────────────────────────────
+    // ── Drawing primitives ────────────────────────────────────────────────────
     public function setFill(int $r, int $g, int $b): void {
         $this->cur .= $this->rgb($r,$g,$b) . " rg\n";
     }
@@ -99,46 +96,72 @@ class BHC_PDF_Writer {
         $this->cur .= "$w w\n";
     }
     public function rect(float $x, float $y, float $w, float $h, bool $fill=true, bool $stroke=false): void {
+        // y = top-of-page coordinates; we convert here
+        $py = $this->H - $y - $h;
         $op = $fill && $stroke ? 'B' : ($fill ? 'f' : 's');
-        $this->cur .= sprintf("%.2f %.2f %.2f %.2f re %s\n", $x, $y, $w, $h, $op);
+        $this->cur .= sprintf("%.2f %.2f %.2f %.2f re %s\n", $x, $py, $w, $h, $op);
+    }
+    public function roundRect(float $x, float $y, float $w, float $h, float $rx): void {
+        // Rounded rectangle using Bézier curves (k = 0.5523)
+        $py = $this->H - $y - $h;
+        $k  = 0.5523 * $rx;
+        $this->cur .=
+            sprintf("%.2f %.2f m\n", $x + $rx, $py) .
+            sprintf("%.2f %.2f %.2f %.2f %.2f %.2f c\n", $x+$rx-$k,$py, $x,$py+$k, $x,$py+$rx) .
+            sprintf("%.2f %.2f l\n", $x, $py + $h - $rx) .
+            sprintf("%.2f %.2f %.2f %.2f %.2f %.2f c\n", $x,$py+$h-$rx+$k, $x+$rx-$k,$py+$h, $x+$rx,$py+$h) .
+            sprintf("%.2f %.2f l\n", $x + $w - $rx, $py + $h) .
+            sprintf("%.2f %.2f %.2f %.2f %.2f %.2f c\n", $x+$w-$rx+$k,$py+$h, $x+$w,$py+$h-$rx+$k, $x+$w,$py+$h-$rx) .
+            sprintf("%.2f %.2f l\n", $x + $w, $py + $rx) .
+            sprintf("%.2f %.2f %.2f %.2f %.2f %.2f c\n", $x+$w,$py+$rx-$k, $x+$w-$rx+$k,$py, $x+$w-$rx,$py) .
+            "h f\n";
     }
     public function line(float $x1, float $y1, float $x2, float $y2): void {
-        $this->cur .= sprintf("%.2f %.2f m %.2f %.2f l S\n", $x1,$y1,$x2,$y2);
+        $py1 = $this->H - $y1;
+        $py2 = $this->H - $y2;
+        $this->cur .= sprintf("%.2f %.2f m %.2f %.2f l S\n", $x1,$py1,$x2,$py2);
+    }
+
+    // Bézier-approximated circle (filled)
+    public function circle(float $cx, float $cy, float $r): void {
+        $py = $this->H - $cy;
+        $k  = 0.5523 * $r;
+        $this->cur .=
+            sprintf("%.2f %.2f m\n", $cx, $py - $r) .
+            sprintf("%.2f %.2f %.2f %.2f %.2f %.2f c\n", $cx+$k,$py-$r, $cx+$r,$py-$k, $cx+$r,$py) .
+            sprintf("%.2f %.2f %.2f %.2f %.2f %.2f c\n", $cx+$r,$py+$k, $cx+$k,$py+$r, $cx,$py+$r) .
+            sprintf("%.2f %.2f %.2f %.2f %.2f %.2f c\n", $cx-$k,$py+$r, $cx-$r,$py+$k, $cx-$r,$py) .
+            sprintf("%.2f %.2f %.2f %.2f %.2f %.2f c\n", $cx-$r,$py-$k, $cx-$k,$py-$r, $cx,$py-$r) .
+            "h f\n";
     }
 
     // ── Text ──────────────────────────────────────────────────────────────────
-    // y is from TOP in our API (we convert internally)
-    private function yFlip(float $y): float { return $this->H - $y; }
-
+    // All y coords are top-of-page (converted internally)
     public function text(string $font, float $size, float $x, float $y, string $text, int $r=0, int $g=0, int $b=0): void {
-        $py = $this->yFlip($y);
-        $t  = $this->esc($text);
-        $col= $this->rgb($r,$g,$b);
+        $py  = $this->H - $y;
+        $t   = $this->esc($text);
+        $col = $this->rgb($r,$g,$b);
         $this->cur .=
-            "BT\n"
-            . "/$font $size Tf\n"
-            . "$col rg\n"
+            "BT\n/$font $size Tf\n$col rg\n"
             . sprintf("%.2f %.2f Td\n", $x, $py)
-            . "($t) Tj\n"
-            . "ET\n";
+            . "($t) Tj\nET\n";
     }
 
-    // Approximate text width (Helvetica/Times rough estimate)
+    // Approximate text width
     public function textWidth(string $text, float $size): float {
-        // Average char width ≈ 0.5 × size for Helvetica
-        return strlen(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',$text)) * $size * 0.52;
+        return strlen(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE', $text)) * $size * 0.52;
     }
 
-    // Wrapped text — returns new Y position
+    // Wrapped text — returns new Y (after last line + lineHeight)
     public function textWrapped(string $font, float $size, float $x, float $y, float $maxW, string $text, int $r=0, int $g=0, int $b=0, float $lineH=0): float {
         if ($lineH === 0.0) $lineH = $size * 1.4;
-        $words  = explode(' ', $text);
-        $line   = '';
-        $curY   = $y;
-        $avgChr = $size * 0.52;
+        $words = explode(' ', $text);
+        $line  = '';
+        $curY  = $y;
+        $avChr = $size * 0.52;
         foreach ($words as $word) {
             $test = $line === '' ? $word : "$line $word";
-            if (strlen(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',$test)) * $avgChr > $maxW && $line !== '') {
+            if (strlen(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',$test)) * $avChr > $maxW && $line !== '') {
                 $this->text($font, $size, $x, $curY, $line, $r, $g, $b);
                 $line = $word;
                 $curY += $lineH;
@@ -153,14 +176,23 @@ class BHC_PDF_Writer {
         return $curY;
     }
 
-    // ── Build and return PDF bytes ────────────────────────────────────────────
+    // Right-aligned text
+    public function textRight(string $font, float $size, float $rightX, float $y, string $text, int $r=0, int $g=0, int $b=0): void {
+        $tw = $this->textWidth($text, $size);
+        $this->text($font, $size, $rightX - $tw, $y, $text, $r, $g, $b);
+    }
+
+    // Centred text within a box
+    public function textCentre(string $font, float $size, float $boxX, float $boxW, float $y, string $text, int $r=0, int $g=0, int $b=0): void {
+        $tw = $this->textWidth($text, $size);
+        $this->text($font, $size, $boxX + ($boxW - $tw) / 2, $y, $text, $r, $g, $b);
+    }
+
+    // ── Finalise & output ─────────────────────────────────────────────────────
     public function output(): string {
-        // Save current page stream
         if ($this->cur !== '' && $this->pageId !== 0) {
             $this->streams[$this->pageId] = $this->cur;
         }
-
-        // Font resources (register at least once)
         if (empty($this->fonts)) {
             $this->addFont('F1','Helvetica-Bold');
             $this->addFont('F2','Helvetica');
@@ -168,7 +200,6 @@ class BHC_PDF_Writer {
         }
         $fontResStr = '/Font << ' . $this->fontRes . '>>';
 
-        // Build page objects + content streams
         $pagesKids = '';
         foreach ($this->pages as $pid) {
             $stream   = $this->streams[$pid] ?? '';
@@ -187,65 +218,114 @@ class BHC_PDF_Writer {
             $pagesKids .= "$pid 0 R ";
         }
 
-        $pageCount = count($this->pages);
+        $this->obj(2, "2 0 obj\n<< /Type /Pages /Kids [$pagesKids] /Count " . count($this->pages) . " >>\nendobj\n");
+        $this->obj(1, "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
 
-        // Pages dict (ID 2)
-        $this->obj(2,
-            "2 0 obj\n<< /Type /Pages /Kids [$pagesKids] /Count $pageCount >>\nendobj\n"
-        );
-
-        // Catalog (ID 1)
-        $this->obj(1,
-            "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
-        );
-
-        // Assemble body
         $body = "%PDF-1.4\n";
         $xref = [];
-        // Sort by object ID
         ksort($this->objects);
         foreach ($this->objects as $id => $content) {
             $xref[$id] = strlen($body);
             $body .= $content;
         }
 
-        // Cross-reference table
         $xrefOffset = strlen($body);
         $maxId      = max(array_keys($this->objects));
         $body .= "xref\n0 " . ($maxId + 1) . "\n";
         $body .= "0000000000 65535 f \n";
         for ($i = 1; $i <= $maxId; $i++) {
-            if (isset($xref[$i])) {
-                $body .= sprintf("%010d 00000 n \n", $xref[$i]);
-            } else {
-                $body .= "0000000000 65535 f \n";
-            }
+            $body .= isset($xref[$i])
+                ? sprintf("%010d 00000 n \n", $xref[$i])
+                : "0000000000 65535 f \n";
         }
-
         $body .= "trailer\n<< /Size " . ($maxId + 1) . " /Root 1 0 R >>\n";
         $body .= "startxref\n$xrefOffset\n%%EOF\n";
-
         return $body;
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Main generator function
+//  Private colour helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+function _bhc_hex2rgb(string $hex): array {
+    $hex = ltrim($hex, '#');
+    if (strlen($hex) === 3) $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
+    return [hexdec(substr($hex,0,2)), hexdec(substr($hex,2,2)), hexdec(substr($hex,4,2))];
+}
+
+function _bhc_pct_rgb(float $pct): array {
+    if ($pct >= 80) return [34,  197,  94];   // green
+    if ($pct >= 60) return [59,  130, 246];   // blue
+    if ($pct >= 40) return [245, 158,  11];   // amber
+    return [239, 68, 68];                     // red
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Reusable layout helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Draw the repeating mini-header used on pages 2+ */
+function _bhc_mini_header(BHC_PDF_Writer $pdf, string $businessName, bool $isFr): void {
+    $pdf->setFill(13, 17, 23);
+    $pdf->rect(0, 0, 595, 44);
+    $pdf->setFill(0, 168, 120);
+    $pdf->rect(0, 44, 595, 3);
+    $pdf->text('F1', 14, 36, 14, '237biz', 255, 255, 255);
+    $sub = ($isFr ? 'Bilan de Sante — ' : 'Health Check — ')
+         . iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE', $businessName);
+    $pdf->text('F2', 9, 120, 19, $sub, 160, 170, 180);
+}
+
+/** Draw a section heading with a green left-rule */
+function _bhc_section_head(BHC_PDF_Writer $pdf, float $x, float $y, string $text): float {
+    $pdf->setFill(0, 168, 120);
+    $pdf->rect($x, $y, 4, 14);
+    $pdf->text('F1', 12, $x + 10, $y + 2, $text, 30, 40, 50);
+    return $y + 24;
+}
+
+/** Draw the page footer */
+function _bhc_footer(BHC_PDF_Writer $pdf, bool $isFr): void {
+    $pdf->setStroke(200, 210, 220);
+    $pdf->setLineWidth(0.5);
+    $pdf->line(36, 814, 559, 814);
+    $lbl = $isFr
+        ? '237biz — La plateforme numerique des entreprises camerounaises'
+        : '237biz — The digital platform for Cameroonian businesses';
+    $pdf->text('F2', 8, 36,  822, $lbl,                            120,130,140);
+    $pdf->text('F2', 8, 36,  832, '237biz.net | privacy-policy',   150,160,170);
+    $year = date('Y');
+    $pdf->text('F2', 8, 450, 827, "(c) $year 237biz / MS IT Solutions", 150,160,170);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Main generator
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param array $assessment  Row from bhc_assessments
- * @param array $catScores   ['slug' => float, ...]
- * @param array $allCategories  From bhc_load_categories()
- * @param array $recommendations  Array of rec rows
- * @param string $lang  'en' | 'fr'
+ * @param array  $assessment      Row from bhc_assessments
+ * @param array  $catScores       ['slug' => float weighted_score, ...]
+ * @param array  $catPcts         ['slug' => float 0-100, ...]
+ * @param array  $catBands        ['slug' => band_slug, ...]
+ * @param array  $allCategories   From bhc_load_categories()
+ * @param array  $recommendations ['slug' => [rec_row, ...], ...]
+ * @param array  $actionPlan      ['immediate'=>[], '30d'=>[], '60d'=>[], '90d'=>[]]
+ * @param array  $strengthSlugs   string[]
+ * @param array  $weaknessSlugs   string[]
+ * @param string $lang            'en'|'fr'
  * @return string  Raw PDF bytes
  */
 function bhc_generate_pdf(
-    array $assessment,
-    array $catScores,
-    array $allCategories,
-    array $recommendations,
+    array  $assessment,
+    array  $catScores,
+    array  $catPcts,
+    array  $catBands,
+    array  $allCategories,
+    array  $recommendations,
+    array  $actionPlan,
+    array  $strengthSlugs,
+    array  $weaknessSlugs,
     string $lang = 'en'
 ): string {
 
@@ -253,254 +333,359 @@ function bhc_generate_pdf(
     $total = (float)($assessment['total_score'] ?? 0);
     $band  = $assessment['score_band'] ?? bhc_score_band($total);
     $bLabel= bhc_band_label($band, $lang);
-    $bHex  = bhc_band_color($band);       // e.g. '#38a169'
-    [$bR, $bG, $bB] = _bhc_hex2rgb($bHex);
+    [$bR,$bG,$bB] = _bhc_hex2rgb(bhc_band_color($band));
 
     $pdf = new BHC_PDF_Writer();
-
-    // Register fonts
     $pdf->addFont('F1','Helvetica-Bold');
     $pdf->addFont('F2','Helvetica');
     $pdf->addFont('F3','Helvetica-Oblique');
 
-    // ── PAGE 1 ──────────────────────────────────────────────────────────────
+    $bname = $assessment['business_name'] ?? '';
+    $ref   = $assessment['reference'] ?? '';
+    $date  = date('d/m/Y', strtotime($assessment['created_at'] ?? 'now'));
+
+    // ════════════════════════════════════════════════════════════════════════════
+    //  PAGE 1 — Cover, Score, Category Performance
+    // ════════════════════════════════════════════════════════════════════════════
     $pdf->newPage();
 
-    // Dark header band
-    $pdf->setFill(13, 17, 23);       // #0d1117
-    $pdf->rect(0, 0, 595, 170);      // top-of-page band (Y from bottom in PDF; we handle via yFlip)
+    // ── Dark header band ──────────────────────────────────────────────────────
+    $pdf->setFill(13, 17, 23);
+    $pdf->rect(0, 0, 595, 175);
 
-    // 237biz brand bar (green accent strip)
-    $pdf->setFill(0, 168, 120);      // #00A878
-    $pdf->rect(0, 170, 595, 5);
+    // Green accent strip
+    $pdf->setFill(0, 168, 120);
+    $pdf->rect(0, 175, 595, 4);
 
-    // Logo text "237biz" in header
-    $pdf->text('F1', 26, 36, 46, '237biz', 255, 255, 255);
-
-    // Tagline
-    $t = $isFr ? 'La plateforme numerique des entreprises camerounaises'
-                : 'The digital platform for Cameroonian businesses';
-    $pdf->text('F2', 9, 36, 65, $t, 160, 170, 180);
+    // Brand
+    $pdf->text('F1', 26, 36, 44, '237biz', 255, 255, 255);
+    $tagline = $isFr ? 'La plateforme numerique des entreprises camerounaises'
+                     : 'The digital platform for Cameroonian businesses';
+    $pdf->text('F2', 9, 36, 65, $tagline, 150, 165, 180);
 
     // Report title
-    $title = $isFr ? 'BILAN DE SANTE ENTREPRISE' : 'BUSINESS HEALTH CHECK REPORT';
-    $pdf->text('F1', 15, 36, 96, $title, 255, 255, 255);
+    $rptTitle = $isFr ? 'BILAN DE SANTE ENTREPRISE' : 'BUSINESS HEALTH CHECK REPORT';
+    $pdf->text('F1', 15, 36, 96, $rptTitle, 255, 255, 255);
 
-    // Business name
-    $bname = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE', $assessment['business_name'] ?? '');
-    $pdf->text('F2', 11, 36, 118, $bname, 180, 190, 200);
+    // Business name + ref
+    $pdf->text('F2', 11, 36, 118, iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',$bname), 180,195,210);
+    $refLine = ($isFr ? 'Ref : ' : 'Ref: ') . $ref . '   |   ' . ($isFr ? 'Date : ' : 'Date: ') . $date;
+    $pdf->text('F2', 9, 36, 136, $refLine, 130,145,160);
 
-    // Reference + date
-    $ref  = $assessment['reference'] ?? '';
-    $date = date('d/m/Y', strtotime($assessment['created_at'] ?? 'now'));
-    $refLabel = ($isFr ? 'Ref: ' : 'Ref: ') . $ref . '   |   ' . ($isFr ? 'Date: ' : 'Date: ') . $date;
-    $pdf->text('F2', 9, 36, 136, $refLabel, 140, 150, 160);
+    // ── Score circle ──────────────────────────────────────────────────────────
+    $cx = 480; $cy = 95; $cr = 46;
 
-    // ── Score circle area ──────────────────────────────────────────────────
-    // Draw a filled circle approximation using a square with radius label
-    $cx = 480; $cy = 100; $r = 46;
+    // Outer ring (band colour)
+    $pdf->setFill($bR, $bG, $bB);
+    $pdf->circle($cx, $cy, $cr + 4);
 
-    // Background circle (dark)
-    $pdf->setFill(26, 31, 54);
-    _bhc_circle($pdf, $cx, $cy, $r);
+    // Inner fill
+    $pdf->setFill(13, 17, 23);
+    $pdf->circle($cx, $cy, $cr - 2);
 
-    // Score arc (simulated with a filled wedge — simplified: just a ring)
-    // Draw band-coloured ring outline
-    $pdf->setStroke($bR, $bG, $bB);
-    $pdf->setLineWidth(8);
-    _bhc_circle_stroke($pdf, $cx, $cy, $r - 6);
-    $pdf->setLineWidth(1);
-
-    // Score number
+    // Score text
     $scoreStr = (string)round($total);
-    $tw = strlen($scoreStr) * 13;
+    $tw = $pdf->textWidth($scoreStr, 22);
     $pdf->text('F1', 22, $cx - $tw/2, $cy - 10, $scoreStr, $bR, $bG, $bB);
-    $pdf->text('F2', 9,  $cx - 10,    $cy + 8,  '/100',    180, 190, 200);
+    $pdf->textCentre('F2', 8, $cx - 20, 40, $cy + 7, '/100', 180, 195, 210);
 
-    // Band label pill below circle
-    $pdf->text('F1', 10, $cx - strlen($bLabel)*3, $cy + 30, $bLabel, $bR, $bG, $bB);
+    // Band label below circle
+    $pdf->textCentre('F1', 9, $cx - 50, 100, $cy + 25, $bLabel, $bR, $bG, $bB);
 
-    // ── Section: Category breakdown ────────────────────────────────────────
-    $y = 198;
-    $pdf->setFill(0, 168, 120);
-    $pdf->rect(36, $y, 4, 14);
-    $hdr = $isFr ? 'Performance par categorie' : 'Performance by Category';
-    $pdf->text('F1', 12, 46, $y + 2, $hdr, 30, 40, 50);
-    $y += 24;
+    // ── Section: Performance by Category ─────────────────────────────────────
+    $y = _bhc_section_head($pdf, 36, 196, $isFr ? 'Performance par categorie' : 'Performance by Category');
 
     foreach ($allCategories as $slug => $cat) {
-        $score  = (float)($catScores[$slug] ?? 0);
-        $weight = (int)($cat['weight'] ?? 0);
-        $pct    = $weight > 0 ? min(100, ($score / $weight) * 100) : 0;
-        [$cr,$cg,$cb] = _bhc_pct_color($pct);
-
+        if ($y > 762) break;
+        $pct  = $catPcts[$slug] ?? 0.0;
+        [$cr2,$cg2,$cb2] = _bhc_pct_rgb($pct);
         $lbl = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',
             $cat[$isFr ? 'label_fr' : 'label_en'] ?? $slug);
 
-        // Label + score
-        $pdf->text('F2', 9, 36,  $y, $lbl,  50, 60, 70);
-        $valStr = round($score, 1) . '/' . $weight . 'pts';
-        $pdf->text('F2', 9, 420, $y, $valStr, 100, 110, 120);
+        $pdf->text('F2', 9, 36, $y, $lbl, 50,60,70);
+
+        // Pct right-aligned
+        $pctStr = round($pct) . '%';
+        $pdf->textRight('F2', 9, 559, $y, $pctStr, $cr2,$cg2,$cb2);
+
+        $y += 12;
 
         // Bar background
-        $y += 12;
-        $pdf->setFill(220, 225, 230);
-        $pdf->rect(36, $y, 380, 7);
+        $pdf->setFill(220, 225, 232);
+        $pdf->rect(36, $y, 490, 7);
 
         // Bar fill
-        $fw = max(2, $pct / 100 * 380);
-        $pdf->setFill($cr, $cg, $cb);
+        $fw = max(2, $pct / 100 * 490);
+        $pdf->setFill($cr2, $cg2, $cb2);
         $pdf->rect(36, $y, $fw, 7);
 
+        $y += 15;
+    }
+
+    _bhc_footer($pdf, $isFr);
+
+    // ════════════════════════════════════════════════════════════════════════════
+    //  PAGE 2 — Strengths, Areas to Improve, Recommendations
+    // ════════════════════════════════════════════════════════════════════════════
+    $pdf->newPage();
+    _bhc_mini_header($pdf, $bname, $isFr);
+    $y = 62;
+
+    // ── Strengths + Areas to Improve (side by side) ───────────────────────────
+    if ($strengthSlugs || $weaknessSlugs) {
+        $y = _bhc_section_head($pdf, 36, $y,
+            $isFr ? 'Forces et domaines a ameliorer' : 'Key Strengths and Areas to Improve');
+
+        $colW  = 240;
+        $leftX = 36;
+        $rightX= 310;
+        $rowY  = $y;
+
+        // ── Strengths column ─────────────────────────────────────────
+        if ($strengthSlugs) {
+            $pdf->setFill(230, 248, 238);
+            $pdf->roundRect($leftX, $rowY, $colW, 20 + count($strengthSlugs) * 24, 5);
+            $pdf->text('F1', 9, $leftX+8, $rowY+8, $isFr ? 'Points forts' : 'Key Strengths', 20,120,70);
+            $iy = $rowY + 24;
+            foreach ($strengthSlugs as $s) {
+                if ($iy > 760 || !isset($allCategories[$s])) continue;
+                $lbl = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',
+                    $allCategories[$s][$isFr ? 'label_fr' : 'label_en'] ?? $s);
+                $pct = $catPcts[$s] ?? 0;
+                [$cr3,$cg3,$cb3] = _bhc_pct_rgb($pct);
+                $pdf->text('F2', 8, $leftX+16, $iy, chr(0xd7) . ' ' . $lbl, 30,80,50);
+                $pdf->textRight('F1', 8, $leftX+$colW-8, $iy, round($pct).'%', $cr3,$cg3,$cb3);
+                $iy += 22;
+            }
+        }
+
+        // ── Weaknesses column ────────────────────────────────────────
+        if ($weaknessSlugs) {
+            $pdf->setFill(254, 243, 235);
+            $pdf->roundRect($rightX, $rowY, $colW, 20 + count($weaknessSlugs) * 24, 5);
+            $pdf->text('F1', 9, $rightX+8, $rowY+8, $isFr ? 'A ameliorer' : 'Areas to Improve', 180,80,20);
+            $iy = $rowY + 24;
+            foreach ($weaknessSlugs as $s) {
+                if ($iy > 760 || !isset($allCategories[$s])) continue;
+                $lbl = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',
+                    $allCategories[$s][$isFr ? 'label_fr' : 'label_en'] ?? $s);
+                $pct = $catPcts[$s] ?? 0;
+                [$cr3,$cg3,$cb3] = _bhc_pct_rgb($pct);
+                $pdf->text('F2', 8, $rightX+16, $iy, chr(0xd7) . ' ' . $lbl, 160,60,20);
+                $pdf->textRight('F1', 8, $rightX+$colW-8, $iy, round($pct).'%', $cr3,$cg3,$cb3);
+                $iy += 22;
+            }
+        }
+
+        $y = max(
+            $strengthSlugs ? ($rowY + 20 + count($strengthSlugs) * 24 + 14) : $y,
+            $weaknessSlugs ? ($rowY + 20 + count($weaknessSlugs) * 24 + 14) : $y
+        );
+    }
+
+    // ── Recommendations ───────────────────────────────────────────────────────
+    if (!empty($recommendations)) {
+        $y = _bhc_section_head($pdf, 36, $y,
+            $isFr ? 'Recommandations personnalisees' : 'Personalised Recommendations');
+
+        // Priority labels
+        $priorityLabels = [
+            'high'   => [$isFr ? 'HAUTE PRIORITE' : 'HIGH PRIORITY',    220, 38,  38],
+            'medium' => [$isFr ? 'PRIORITE MOYENNE' : 'MEDIUM PRIORITY',180, 90,  20],
+            'low'    => [$isFr ? 'FAIBLE PRIORITE' : 'LOW PRIORITY',     40,120,  70],
+        ];
+
+        $cardH   = 56;
+        $cardGap = 6;
+        $printed = 0;
+
+        foreach ($allCategories as $slug => $cat) {
+            if (!isset($recommendations[$slug])) continue;
+            $recs = $recommendations[$slug];
+            $pct  = $catPcts[$slug] ?? 0;
+
+            foreach (array_slice($recs, 0, 2) as $rec) {
+                if ($y + $cardH > 800) {
+                    // Start new page
+                    _bhc_footer($pdf, $isFr);
+                    $pdf->newPage();
+                    _bhc_mini_header($pdf, $bname, $isFr);
+                    $y = 62;
+                }
+
+                // Determine priority
+                if ($pct < 40)       $pKey = 'high';
+                elseif ($pct < 60)   $pKey = 'medium';
+                elseif ($pct < 80)   $pKey = 'low';
+                else                 continue; // already strong, skip
+
+                [$pLabel, $pR, $pG, $pB] = $priorityLabels[$pKey];
+
+                $catLabel = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',
+                    $cat[$isFr ? 'label_fr' : 'label_en'] ?? $slug);
+                $recTitle = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',
+                    $rec[$isFr ? 'title_fr' : 'title_en'] ?? '');
+                $recBody  = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',
+                    $rec[$isFr ? 'body_fr' : 'body_en'] ?? '');
+
+                // Card background
+                $pdf->setFill(246, 248, 251);
+                $pdf->roundRect(36, $y, 523, $cardH, 4);
+
+                // Priority dot
+                [$cr3,$cg3,$cb3] = _bhc_pct_rgb($pct);
+                $pdf->setFill($pR,$pG,$pB);
+                $pdf->rect(36, $y, 4, $cardH);
+
+                // Category + priority labels
+                $pdf->text('F3', 8, 46, $y + 11, strtoupper($catLabel), 80,100,120);
+                $pdf->textRight('F1', 7, 554, $y + 11, $pLabel, $pR,$pG,$pB);
+
+                // Title
+                $pdf->text('F1', 10, 46, $y + 24, $recTitle, 25,35,55);
+
+                // Body (truncated to ~110 chars to fit one line)
+                $bodyShort = strlen($recBody) > 110 ? substr($recBody,0,107).'...' : $recBody;
+                $pdf->text('F2', 8, 46, $y + 37, $bodyShort, 80,90,110);
+
+                $y += $cardH + $cardGap;
+                $printed++;
+                if ($printed >= 10) break 2; // cap at 10 recs in PDF
+            }
+        }
+    }
+
+    _bhc_footer($pdf, $isFr);
+
+    // ════════════════════════════════════════════════════════════════════════════
+    //  PAGE 3 — Business Improvement Action Plan + CTA
+    // ════════════════════════════════════════════════════════════════════════════
+    $pdf->newPage();
+    _bhc_mini_header($pdf, $bname, $isFr);
+    $y = 62;
+
+    // ── Action Plan ───────────────────────────────────────────────────────────
+    $y = _bhc_section_head($pdf, 36, $y,
+        $isFr ? 'Plan d\'action amelioration' : 'Business Improvement Action Plan');
+
+    $planBuckets = [
+        'immediate' => [$isFr ? 'Actions immediates'       : 'Immediate Actions',    220, 38,  38],
+        '30d'       => [$isFr ? 'Dans 30 jours'            : '30-Day Actions',       180, 90,  20],
+        '60d'       => [$isFr ? 'Dans 60 jours'            : '60-Day Actions',        59,130, 246],
+        '90d'       => [$isFr ? 'Dans 90 jours'            : '90-Day Actions',        34,120,  70],
+    ];
+
+    // Check if we have anything
+    $planHasItems = false;
+    foreach ($actionPlan as $bucket) {
+        if (!empty($bucket)) { $planHasItems = true; break; }
+    }
+
+    if ($planHasItems) {
+        // Header row
+        $colW2  = 100;
+        $rowH2  = 12;
+        $hdrY   = $y;
+
+        $pdf->setFill(50, 60, 80);
+        $pdf->rect(36, $hdrY, 523, $rowH2 + 4);
+        $pdf->text('F1', 8, 42,  $hdrY + 4, $isFr ? 'Periode'      : 'Timeframe', 220,230,240);
+        $pdf->text('F1', 8, 155, $hdrY + 4, $isFr ? 'Domaine'      : 'Area',       220,230,240);
+        $pdf->text('F1', 8, 310, $hdrY + 4, $isFr ? 'Action cle'   : 'Key Action', 220,230,240);
+        $y = $hdrY + $rowH2 + 4;
+
+        $rowFill = [[240,245,252],[248,250,255]]; // alternating rows
+        $ri = 0;
+        foreach ($planBuckets as $key => [$label, $bkR, $bkG, $bkB]) {
+            foreach ($actionPlan[$key] ?? [] as $entry) {
+                if ($y > 790) break 2;
+                $rh = 18;
+                [$fr,$fg,$fb] = $rowFill[$ri % 2];
+                $pdf->setFill($fr,$fg,$fb);
+                $pdf->rect(36, $y, 523, $rh);
+
+                // Period
+                $pdf->setFill($bkR,$bkG,$bkB);
+                $pdf->rect(36, $y, 3, $rh);
+                $pdf->text('F1', 8, 42, $y + 6, $label, $bkR,$bkG,$bkB);
+
+                // Area
+                $areaLbl = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE', $entry['label'] ?? '');
+                $pdf->text('F2', 8, 155, $y + 6, $areaLbl, 50,60,70);
+
+                // Key action
+                $actionTxt = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE', $entry['title'] ?? '');
+                if (strlen($actionTxt) > 55) $actionTxt = substr($actionTxt,0,52).'...';
+                $pdf->text('F2', 8, 310, $y + 6, $actionTxt, 30,40,60);
+
+                $y += $rh;
+                $ri++;
+            }
+        }
         $y += 16;
-
-        if ($y > 760) { // page break guard
-            break;
-        }
     }
 
-    // ── Section: Recommendations ───────────────────────────────────────────
-    if ($recommendations && $y < 700) {
-        $y += 10;
-        $pdf->setFill(0, 168, 120);
-        $pdf->rect(36, $y, 4, 14);
-        $hdr2 = $isFr ? 'Recommandations prioritaires' : 'Priority Recommendations';
-        $pdf->text('F1', 12, 46, $y + 2, $hdr2, 30, 40, 50);
-        $y += 24;
+    // ── CTA box ───────────────────────────────────────────────────────────────
+    if ($y < 760) {
+        $y = _bhc_section_head($pdf, 36, $y,
+            $isFr ? 'Passez a l\'action' : 'Take Action Today');
 
-        foreach (array_slice($recommendations, 0, 4) as $rec) {
-            if ($y > 760) break;
-            $catSlug  = $rec['category_slug'] ?? '';
-            $catLabel = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',
-                $allCategories[$catSlug][$isFr ? 'label_fr' : 'label_en'] ?? $catSlug);
-            $recTitle = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',
-                $rec[$isFr ? 'title_fr' : 'title_en'] ?? '');
-            $recBody  = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',
-                $rec[$isFr ? 'body_fr' : 'body_en'] ?? '');
+        $pdf->setFill(234, 244, 255);
+        $pdf->roundRect(36, $y, 523, 90, 6);
 
-            // Rec card background
-            $pdf->setFill(246, 248, 250);
-            $pdf->rect(36, $y, 523, 50);
-
-            // Category label (green)
-            $pdf->text('F1', 8, 42, $y + 10, strtoupper($catLabel), 0, 150, 100);
-            // Title
-            $pdf->text('F1', 10, 42, $y + 22, $recTitle, 30, 40, 50);
-            // Body (truncated)
-            $bodyShort = substr($recBody, 0, 100);
-            if (strlen($recBody) > 100) $bodyShort .= '...';
-            $pdf->text('F2', 8, 42, $y + 35, $bodyShort, 80, 90, 100);
-
-            $y += 58;
-        }
-    }
-
-    // ── PAGE 2: Next steps + Footer ────────────────────────────────────────
-    if ($y > 700 || $recommendations) {
-        // If we ran out of space, add a second page for CTA
-        $needPage2 = $y > 680;
-    } else {
-        $needPage2 = false;
-    }
-
-    if ($needPage2) {
-        $pdf->newPage();
-        $y = 60;
-
-        // Repeat mini header
-        $pdf->setFill(13, 17, 23);
-        $pdf->rect(0, 0, 595, 44);
-        $pdf->setFill(0, 168, 120);
-        $pdf->rect(0, 44, 595, 3);
-        $pdf->text('F1', 14, 36, 14, '237biz', 255, 255, 255);
-        $bnameSh = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE', $assessment['business_name'] ?? '');
-        $titleSh = $isFr ? 'Bilan de Sante — ' : 'Health Check — ';
-        $pdf->text('F2', 9,  120, 18, $titleSh . $bnameSh, 160, 170, 180);
-    }
-
-    // ── CTA box ────────────────────────────────────────────────────────────
-    $ctaY = $needPage2 ? 80 : $y + 20;
-    if ($ctaY < 760) {
-        $pdf->setFill(242, 247, 253);
-        $pdf->rect(36, $ctaY, 523, 100);
-
-        $ctaHdr = $isFr ? 'Passez a l\'action' : 'Take Action';
-        $pdf->text('F1', 13, 46, $ctaY + 16, $ctaHdr, 20, 30, 50);
-
+        // CTA message based on score
         if ($total >= 80) {
             $ctaMsg = $isFr
-                ? 'Excellente performance ! Continuez et affinez votre strategie de croissance.'
-                : 'Outstanding performance! Keep the momentum and refine your growth strategy.';
+                ? 'Excellente performance ! Continuez sur cette lancee et affinez votre strategie de croissance avec un expert 237biz.'
+                : 'Outstanding performance! Keep the momentum and refine your growth strategy with a 237biz expert.';
         } elseif ($total >= 60) {
             $ctaMsg = $isFr
-                ? 'Bonne base ! Quelques ameliorations peuvent propulser votre entreprise.'
-                : 'Good foundation! A few improvements can take your business further.';
+                ? 'Bonne base ! Quelques ameliorations ciblées peuvent propulser votre entreprise vers un niveau superieur.'
+                : 'Good foundation! A few targeted improvements can take your business to the next level.';
         } elseif ($total >= 40) {
             $ctaMsg = $isFr
-                ? 'Vous progressez. Agissez sur les domaines prioritaires pour accelerer.'
-                : 'You\'re making progress. Act on priority areas to accelerate growth.';
+                ? 'Vous progressez. Agissez sur les domaines prioritaires pour accelerer votre croissance.'
+                : 'You\'re making progress. Act on priority areas to accelerate your growth.';
         } else {
             $ctaMsg = $isFr
-                ? 'Une attention immediate dans les domaines cles transformera vos resultats.'
-                : 'Immediate attention in key areas will quickly transform your results.';
+                ? 'Une attention immediate dans les domaines cles transformera rapidement vos resultats.'
+                : 'Immediate attention in key areas will quickly transform your business results.';
         }
-        $ctaMsg = iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE', $ctaMsg);
-        $pdf->textWrapped('F2', 9, 46, $ctaY + 32, 500, $ctaMsg, 50, 60, 80);
+        $y = $pdf->textWrapped('F2', 10, 46, $y + 14, 500,
+            iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE', $ctaMsg), 30,40,70);
 
-        $ctaLink = 'Visit 237biz.net/contact to speak with a growth expert.';
-        if ($isFr) $ctaLink = 'Visitez 237biz.net/contact pour parler avec un expert.';
-        $pdf->text('F2', 9, 46, $ctaY + 72, $ctaLink, 0, 130, 100);
+        $ctaLink = $isFr
+            ? 'Visitez 237biz.net/contact pour parler avec un expert en croissance.'
+            : 'Visit 237biz.net/contact to speak with a growth expert today.';
+        $pdf->text('F1', 9, 46, $y + 6, $ctaLink, 0, 130, 100);
+        $y += 30;
     }
 
-    // ── Footer ─────────────────────────────────────────────────────────────
-    // Separator line
-    $pdf->setStroke(200, 210, 220);
-    $pdf->setLineWidth(0.5);
-    $pdf->line(36, 790, 559, 790);
+    // ── How to request assistance ─────────────────────────────────────────────
+    if ($y < 750) {
+        $y += 10;
+        $y = _bhc_section_head($pdf, 36, $y,
+            $isFr ? 'Comment obtenir de l\'aide' : 'How to Request Assistance');
 
-    $footerLbl = $isFr
-        ? '237biz — La plateforme numerique des entreprises camerounaises'
-        : '237biz — The digital platform for Cameroonian businesses';
-    $pdf->text('F2', 8, 36,  800, $footerLbl,         120, 130, 140);
-    $pdf->text('F2', 8, 36,  812, 'https://237biz.net | privacy-policy', 150, 160, 170);
-    $year = date('Y');
-    $pdf->text('F2', 8, 450, 806, "(c) $year 237biz / MS IT Solutions", 150, 160, 170);
+        $steps = $isFr ? [
+            '1. Visitez 237biz.net et connectez-vous ou creez un compte.',
+            '2. Accdez a votre tableau de bord et consultez vos recommandations.',
+            '3. Demandez un service ou un devis aupres de nos prestataires verifies.',
+            '4. Recevez des propositions et choisissez le bon partenaire.',
+        ] : [
+            '1. Visit 237biz.net and sign in or create a free account.',
+            '2. Access your dashboard and review your personalised recommendations.',
+            '3. Request a service or quotation from our verified service providers.',
+            '4. Receive proposals and choose the right partner for your business.',
+        ];
+        foreach ($steps as $step) {
+            if ($y > 795) break;
+            $pdf->text('F2', 9, 46, $y, iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',$step), 50,60,80);
+            $y += 15;
+        }
+    }
+
+    _bhc_footer($pdf, $isFr);
 
     return $pdf->output();
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  Private helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-function _bhc_hex2rgb(string $hex): array {
-    $hex = ltrim($hex, '#');
-    if (strlen($hex) === 3) {
-        $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
-    }
-    return [hexdec(substr($hex,0,2)), hexdec(substr($hex,2,2)), hexdec(substr($hex,4,2))];
-}
-
-function _bhc_pct_color(float $pct): array {
-    if ($pct >= 80) return [34, 197, 94];   // green
-    if ($pct >= 60) return [59, 130, 246];  // blue
-    if ($pct >= 40) return [245, 158, 11];  // amber
-    return [239, 68, 68];                    // red
-}
-
-// Approximate a filled circle with a 36-segment polygon
-function _bhc_circle(BHC_PDF_Writer $pdf, float $cx, float $cy, float $r): void {
-    // We draw it via raw stream injection — but BHC_PDF_Writer doesn't expose that.
-    // Use a square as background approximation (PDF circles need Bézier curves).
-    // Draw a rounded rectangle approximation using 4 Bézier arcs.
-    // For simplicity, draw a filled square with the same area.
-    $side = $r * 2;
-    $pdf->rect($cx - $r, $cy - $r, $side, $side);
-}
-
-function _bhc_circle_stroke(BHC_PDF_Writer $pdf, float $cx, float $cy, float $r): void {
-    // Same approximation — draw a stroked square
-    $side = $r * 2;
-    $pdf->setFill(0, 0, 0); // transparent fill
-    $pdf->rect($cx - $r, $cy - $r, $side, $side, false, true);
 }
