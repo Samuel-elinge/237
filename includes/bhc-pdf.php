@@ -271,7 +271,7 @@ function _bhc_mini_header(BHC_PDF_Writer $pdf, string $businessName, bool $isFr)
     $pdf->rect(0, 0, 595, 44);
     $pdf->setFill(0, 168, 120);
     $pdf->rect(0, 44, 595, 3);
-    $pdf->text('F1', 14, 36, 14, '237biz', 255, 255, 255);
+    $pdf->text('F1', 14, 36, 14, '237biz.net', 255, 255, 255);
     $sub = ($isFr ? 'Bilan de Sante — ' : 'Health Check — ')
          . iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE', $businessName);
     $pdf->text('F2', 9, 120, 19, $sub, 160, 170, 180);
@@ -294,7 +294,8 @@ function _bhc_footer(BHC_PDF_Writer $pdf, bool $isFr): void {
         ? '237biz — La plateforme numerique des entreprises camerounaises'
         : '237biz — The digital platform for Cameroonian businesses';
     $pdf->text('F2', 8, 36,  822, $lbl,                            120,130,140);
-    $pdf->text('F2', 8, 36,  832, '237biz.net | privacy-policy',   150,160,170);
+    $pdf->text('F1', 8, 36,  832, 'www.237biz.net',   0,168,120);
+    $pdf->text('F2', 8, 130, 832, '| privacy-policy', 150,160,170);
     $year = date('Y');
     $pdf->text('F2', 8, 450, 827, "(c) $year 237biz / MS IT Solutions", 150,160,170);
 }
@@ -472,6 +473,9 @@ function bhc_generate_pdf(
     $pdf->text('F1', 20, 86, 46, 'Biz', 255, 255, 255);
     // ".net" small below
     $pdf->text('F2', 7, 60, 60, '.net', 130, 160, 140);
+
+    // Website URL below logo pill
+    $pdf->text('F2', 8, 42, 68, 'www.237biz.net', 0, 168, 120);
 
     // Tagline beside logo
     $tagline = $isFr ? 'La plateforme numerique des entreprises camerounaises'
