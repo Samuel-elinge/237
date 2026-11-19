@@ -11,11 +11,10 @@ require_once __DIR__ . '/includes/config.php';
 
 // ── Auth ─── Super Admin only (Ops Managers cannot access financial/commercial terms) ──
 session_start();
-$staffId = (int)($_SESSION['staff_id'] ?? 0);
-$isAdmin = (bool)($_SESSION['is_admin']  ?? false);
+$staffId = (int)($_SESSION['user_id'] ?? 0);
+$isAdmin = ($_SESSION['user_role'] ?? '') === 'admin';
 if (!$staffId || !$isAdmin) {
-    // Ops Manager trying to access: show 403, not redirect, to make the restriction clear
-    if ($staffId && !empty($_SESSION['is_ops_manager'])) {
+    if ($staffId && ($_SESSION['user_role'] ?? '') === 'operations_admin') {
         http_response_code(403);
         die('Access denied. Commercial terms management requires Super Admin access.');
     }

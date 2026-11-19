@@ -14,14 +14,14 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/admin-header.php';
 
 /* ─── Auth ─────────────────────────────────────────────────────────────── */
-if (empty($_SESSION['staff_id'])) {
+if (empty($_SESSION['user_id'])) {
     http_response_code(403);
     echo '<p class="p-4 text-red-400">Access denied — staff login required.</p>';
     exit;
 }
 
-$isSuperAdmin   = !empty($_SESSION['is_admin']);
-$isOpsManager   = !$isSuperAdmin && !empty($_SESSION['is_ops_manager']);
+$isSuperAdmin   = ($_SESSION['user_role'] ?? '') === 'admin';
+$isOpsManager   = !$isSuperAdmin && ($_SESSION['user_role'] ?? '') === 'operations_admin';
 $canManage      = $isSuperAdmin || $isOpsManager;
 
 if (!$canManage) {
@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                    ->execute([$status, $eid]);
                 // log the change
                 $db->prepare('INSERT INTO bhc_enquiry_followups (enquiry_id,actor_id,actor_type,activity,summary) VALUES (?,?,?,?,?)')
-                   ->execute([$eid, $_SESSION['staff_id'], 'staff', 'status_change', 'Status changed to: ' . $status]);
+                   ->execute([$eid, $_SESSION['user_id'], 'staff', 'status_change', 'Status changed to: ' . $status]);
                 $msg = '<p class="admin-notice success">Status updated.</p>';
             }
         }
@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pid = (int)($_POST['provider_id'] ?? 0);
             if ($eid) {
                 $db->prepare('UPDATE bhc_enquiries SET assigned_provider_id=?,assigned_by=?,assigned_at=NOW(),status=IF(status="new","assigned",status) WHERE id=?')
-                   ->execute([$pid ?: null, $_SESSION['staff_id'], $eid]);
+                   ->execute([$pid ?: null, $_SESSION['user_id'], $eid]);
                 $msg = '<p class="admin-notice success">Provider assignment saved.</p>';
             }
         }
@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fuAt    = !empty($_POST['follow_up_at']) ? $_POST['follow_up_at'] : null;
             if ($eid && $summary !== '') {
                 $db->prepare('INSERT INTO bhc_enquiry_followups (enquiry_id,actor_id,actor_type,activity,summary,detail,outcome,follow_up_at) VALUES (?,?,?,?,?,?,?,?)')
-                   ->execute([$eid, $_SESSION['staff_id'], 'staff', $activ, $summary, $detail ?: null, $outcome ?: null, $fuAt]);
+                   ->execute([$eid, $_SESSION['user_id'], 'staff', $activ, $summary, $detail ?: null, $outcome ?: null, $fuAt]);
                 $msg = '<p class="admin-notice success">Follow-up activity logged.</p>';
             }
         }
@@ -117,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($eid) {
                 // Insert conversion event
                 $db->prepare('INSERT INTO bhc_conversion_events (enquiry_id,service_id,provider_id,converted_by,conversion_value,currency_code,notes) SELECT id,service_id,assigned_provider_id,?,?,?,? FROM bhc_enquiries WHERE id=?')
-                   ->execute([$_SESSION['staff_id'], $val, $curr ?: 'GBP', $notes ?: null, $eid]);
+                   ->execute([$_SESSION['user_id'], $val, $curr ?: 'GBP', $notes ?: null, $eid]);
                 $db->prepare('UPDATE bhc_enquiries SET status="converted" WHERE id=?')
                    ->execute([$eid]);
                 $msg = '<p class="admin-notice success">Enquiry marked as converted.</p>';

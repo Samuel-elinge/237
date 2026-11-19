@@ -11,7 +11,7 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/admin-header.php';
 
 /* ─── Auth: Super Admin only ────────────────────────────────────────────── */
-if (empty($_SESSION['staff_id']) || empty($_SESSION['is_admin'])) {
+if (empty($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
     http_response_code(403);
     echo '<p class="p-4 text-red-400">Access denied — Super Admin required.</p>';
     exit;

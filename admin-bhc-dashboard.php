@@ -14,8 +14,8 @@
 define('IN_237BIZ', true);
 require_once __DIR__ . '/includes/config.php';
 
-$staffId = isset($_SESSION['staff_id']) ? (int)$_SESSION['staff_id'] : null;
-$isAdmin = isset($_SESSION['is_admin'])  ? (bool)$_SESSION['is_admin']  : false;
+$staffId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
+$isAdmin = in_array($_SESSION['user_role'] ?? '', ['admin', 'operations_admin']);
 if (!$staffId || !$isAdmin) {
     http_response_code(403);
     die('Admin login required.');
