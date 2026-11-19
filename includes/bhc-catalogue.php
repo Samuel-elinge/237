@@ -69,7 +69,7 @@ function bhc_get_services(
          FROM bhc_services s
          JOIN bhc_service_categories c ON c.id = s.category_id
          {$whereSQL}
-         ORDER BY s.sort_order ASC, s.name ASC"
+         ORDER BY s.sort_order ASC, s.name_en ASC"
     );
     $stmt->execute($params);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);

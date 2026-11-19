@@ -18,7 +18,7 @@ function bhc_get_commercial_terms(PDO $pdo, int $providerId, ?int $serviceId = n
     $sql = '
         SELECT t.*,
                s.name_en AS service_name_en, s.name_fr AS service_name_fr,
-               p.name    AS provider_name
+               p.business_name AS provider_name
           FROM bhc_service_commercial_terms t
           JOIN bhc_service_providers p ON p.id = t.provider_id
      LEFT JOIN bhc_services          s ON s.id = t.service_id
@@ -45,7 +45,7 @@ function bhc_get_commercial_term(PDO $pdo, int $id): ?array
     $st = $pdo->prepare('
         SELECT t.*,
                s.name_en AS service_name_en, s.name_fr AS service_name_fr,
-               p.name    AS provider_name
+               p.business_name AS provider_name
           FROM bhc_service_commercial_terms t
           JOIN bhc_service_providers p ON p.id = t.provider_id
      LEFT JOIN bhc_services          s ON s.id = t.service_id
@@ -68,12 +68,12 @@ function bhc_list_commercial_terms(PDO $pdo, array $filters = [], int $limit = 1
     $sql = '
         SELECT t.*,
                s.name_en AS service_name_en, s.name_fr AS service_name_fr,
-               p.name    AS provider_name
+               p.business_name AS provider_name
           FROM bhc_service_commercial_terms t
           JOIN bhc_service_providers p ON p.id = t.provider_id
      LEFT JOIN bhc_services          s ON s.id = t.service_id
     ' . $where . '
-      ORDER BY p.name ASC, s.name_en ASC, t.model ASC
+      ORDER BY p.business_name ASC, s.name_en ASC, t.model ASC
          LIMIT :lim OFFSET :off
     ';
     $params[':lim'] = $limit;
