@@ -133,8 +133,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Delete user
     elseif ($action === 'delete' && $userId) {
-        try { db()->prepare("DELETE FROM users WHERE id=? AND role != 'admin'")->execute([$userId]); } catch (Exception $e) {}
-        flash('success', 'User deleted.');
+        try {
+            $pdo = db();
+            // Check user exists and is not an admin
+            $check = $pdo->prepare("SELECT role FROM users WHERE id=?");
+            $check->execute([$userId]);
+            $target = $check->fetch();
+            if (!$target) {
+                flash('error', 'User not found.');
+            } elseif ($target['role'] === 'admin') {
+                flash('error', 'Admin accounts cannot be deleted.');
+            } else {
+                // Remove related records to allow deletion
+                $pdo->prepare("UPDATE listings SET user_id=NULL WHERE user_id=?")->execute([$userId]);
+                $pdo->prepare("DELETE FROM referral_links WHERE user_id=?")->execute([$userId]);
+                try { $pdo->prepare("DELETE FROM creator_profiles WHERE user_id=?")->execute([$userId]); } catch (Exception $e) {}
+                try { $pdo->prepare("DELETE FROM service_orders WHERE user_id=?")->execute([$userId]); } catch (Exception $e) {}
+                try { $pdo->prepare("DELETE FROM bhc_enquiries WHERE user_id=?")->execute([$userId]); } catch (Exception $e) {}
+                try { $pdo->prepare("DELETE FROM gp_audit_submissions WHERE user_id=?")->execute([$userId]); } catch (Exception $e) {}
+                // Now delete the user
+                $pdo->prepare("DELETE FROM users WHERE id=?")->execute([$userId]);
+                opsAuditLog('user.delete', 'user', $userId, 'User account deleted by admin');
+                flash('success', 'User deleted.');
+            }
+        } catch (Exception $e) {
+            error_log('[237biz admin] user delete failed for id=' . $userId . ': ' . $e->getMessage());
+            flash('error', 'Could not delete user: ' . $e->getMessage());
+        }
     }
 
     // Assign listing
