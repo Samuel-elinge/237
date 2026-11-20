@@ -166,18 +166,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 // Send verification email
                 $verifyUrl = SITE_URL . '/verify.php?token=' . $token;
-                sendMail($email,
-                    t('Verify your 237Biz account', 'Vérifiez votre compte 237Biz'),
-                    '<h2 style="color:#fff;font-family:Georgia,serif;">'. t('Welcome to 237Biz!','Bienvenue sur 237Biz !') .'</h2>
-                     <p style="color:rgba(255,255,255,0.7);">'. t('Hi','Bonjour') .' ' . htmlspecialchars($name) . ',</p>
-                     <p style="color:rgba(255,255,255,0.7);">'. t('Please click the button below to verify your email address and activate your account.','Cliquez sur le bouton ci-dessous pour vérifier votre adresse email et activer votre compte.') .'</p>
-                     <a href="'.$verifyUrl.'" style="display:inline-block;margin:1.5rem 0;background:#00A878;color:#fff;padding:0.85rem 2rem;border-radius:5px;text-decoration:none;font-weight:500;">'.
-                     t('Verify My Email →','Vérifier mon Email →').'</a>
-                     <p style="color:rgba(255,255,255,0.4);font-size:0.8rem;">'.t('Link expires in 24 hours. If you did not register, ignore this email.','Lien expire dans 24 heures. Si vous n\'avez pas créé de compte, ignorez cet email.').'</p>'
-                );
-                flash('success', t('Account created! Please check your email to verify your account before logging in.',
-                                   'Compte créé ! Vérifiez votre email pour activer votre compte avant de vous connecter.'));
-                redirect(SITE_URL . '/login.php?mode=login&verified=pending');
+                $mailSent = false;
+                try {
+                    sendMail($email,
+                        t('Verify your 237Biz account', 'Vérifiez votre compte 237Biz'),
+                        '<h2 style="color:#fff;font-family:Georgia,serif;">'. t('Welcome to 237Biz!','Bienvenue sur 237Biz !') .'</h2>
+                         <p style="color:rgba(255,255,255,0.7);">'. t('Hi','Bonjour') .' ' . htmlspecialchars($name) . ',</p>
+                         <p style="color:rgba(255,255,255,0.7);">'. t('Please click the button below to verify your email address and activate your account.','Cliquez sur le bouton ci-dessous pour vérifier votre adresse email et activer votre compte.') .'</p>
+                         <a href="'.$verifyUrl.'" style="display:inline-block;margin:1.5rem 0;background:#00A878;color:#fff;padding:0.85rem 2rem;border-radius:5px;text-decoration:none;font-weight:500;">'.
+                         t('Verify My Email →','Vérifier mon Email →').'</a>
+                         <p style="color:rgba(255,255,255,0.4);font-size:0.8rem;">'.t('Link expires in 24 hours. If you did not register, ignore this email.','Lien expire dans 24 heures. Si vous n\'avez pas créé de compte, ignorez cet email.').'</p>'
+                    );
+                    $mailSent = true;
+                } catch (Exception $e) {
+                    error_log('[237biz register] sendMail failed for ' . $email . ': ' . $e->getMessage());
+                }
+                if ($mailSent) {
+                    flash('success', t('Account created! Please check your email to verify your account before logging in.',
+                                       'Compte créé ! Vérifiez votre email pour activer votre compte avant de vous connecter.'));
+                    redirect(SITE_URL . '/login.php?mode=login&verified=pending');
+                } else {
+                    // Mail failed — show verify URL directly so user is not locked out
+                    flash('warning', t(
+                        'Account created but we could not send the verification email. <a href="' . htmlspecialchars($verifyUrl) . '">Click here to verify your account directly</a>, or use the resend link on the login page.',
+                        'Compte créé mais l\'email de vérification n\'a pas pu être envoyé. <a href="' . htmlspecialchars($verifyUrl) . '">Cliquez ici pour vérifier directement</a>, ou utilisez le lien de renvoi sur la page de connexion.'
+                    ));
+                    redirect(SITE_URL . '/login.php?mode=login&verified=pending');
+                }
             }
         }
     }

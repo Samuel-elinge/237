@@ -25,13 +25,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 db()->prepare("UPDATE users SET verify_token=? WHERE id=?")->execute([$token, $user['id']]);
             }
             $verifyUrl = SITE_URL . '/verify.php?token=' . $token;
-            sendMail($email,
-                t('Verify your 237Biz account','Vérifiez votre compte 237Biz'),
-                '<h2 style="color:#fff;font-family:Georgia,serif;">'.t('Verify your email','Vérifiez votre email').'</h2>
-                 <p style="color:rgba(255,255,255,0.7);">'.t('Click below to verify your email and activate your account.','Cliquez ci-dessous pour vérifier votre email et activer votre compte.').'</p>
-                 <a href="'.$verifyUrl.'" style="display:inline-block;margin:1.5rem 0;background:#00A878;color:#fff;padding:0.85rem 2rem;border-radius:5px;text-decoration:none;">'.
-                 t('Verify Email →','Vérifier Email →').'</a>'
-            );
+            try {
+                sendMail($email,
+                    t('Verify your 237Biz account','Vérifiez votre compte 237Biz'),
+                    '<h2 style="color:#fff;font-family:Georgia,serif;">'.t('Verify your email','Vérifiez votre email').'</h2>
+                     <p style="color:rgba(255,255,255,0.7);">'.t('Click below to verify your email and activate your account.','Cliquez ci-dessous pour vérifier votre email et activer votre compte.').'</p>
+                     <a href="'.$verifyUrl.'" style="display:inline-block;margin:1.5rem 0;background:#00A878;color:#fff;padding:0.85rem 2rem;border-radius:5px;text-decoration:none;">'.
+                     t('Verify Email →','Vérifier Email →').'</a>'
+                );
+            } catch (Exception $e) {
+                error_log('[237biz resend-verify] sendMail failed for ' . $email . ': ' . $e->getMessage());
+            }
         }
         // Always show success (don't reveal if email exists)
         $sent = true;
