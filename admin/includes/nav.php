@@ -293,10 +293,12 @@ function adminNavAssets(): void {
 
   // Delete confirm modal
   window._adminModalForm = null;
+  window._adminModalSubmitter = null;
   window._adminModalHref = null;
-  window.adminConfirm = function(msg, form) {
+  window.adminConfirm = function(msg, form, submitter) {
     document.getElementById('admin-modal-msg').textContent = msg || 'This action cannot be undone.';
     window._adminModalForm = form;
+    window._adminModalSubmitter = submitter || null;
     window._adminModalHref = null;
     document.getElementById('admin-confirm-modal').classList.add('open');
     document.getElementById('admin-modal-confirm-btn').focus();
@@ -304,34 +306,47 @@ function adminNavAssets(): void {
   window.adminModalClose = function() {
     document.getElementById('admin-confirm-modal').classList.remove('open');
     window._adminModalForm = null;
+    window._adminModalSubmitter = null;
     window._adminModalHref = null;
   };
   window.adminConfirmHref = function(linkEl, msg) {
     window._adminModalHref = linkEl.href;
     window._adminModalForm = null;
+    window._adminModalSubmitter = null;
     document.getElementById('admin-modal-msg').textContent = msg || 'This action cannot be undone.';
     document.getElementById('admin-confirm-modal').classList.add('open');
     document.getElementById('admin-modal-confirm-btn').focus();
   };
   document.getElementById('admin-modal-confirm-btn').addEventListener('click', function() {
     if (window._adminModalForm) {
-      window._adminModalForm.submit();
+      var form = window._adminModalForm;
+      var sub = window._adminModalSubmitter;
+      // form.submit() skips the submitter button's name/value — inject it as a hidden input
+      if (sub && sub.name) {
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = sub.name;
+        hidden.value = sub.value;
+        form.appendChild(hidden);
+      }
+      adminModalClose();
+      form.submit();
     } else if (window._adminModalHref) {
       window.location.href = window._adminModalHref;
+      adminModalClose();
     }
-    adminModalClose();
   });
   document.getElementById('admin-confirm-modal').addEventListener('click', function(e) {
     if (e.target === this) adminModalClose();
   });
 
-  // Auto-wire data-confirm forms
+  // Auto-wire data-confirm forms — capture the submitter button too
   document.addEventListener('submit', function(e) {
     var form = e.target;
     var msg = form.getAttribute('data-confirm');
     if (msg !== null) {
       e.preventDefault();
-      adminConfirm(msg, form);
+      adminConfirm(msg, form, e.submitter);
     }
   }, true);
 })();
