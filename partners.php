@@ -1,330 +1,325 @@
 <?php
 /**
- * partners.php — Public Partner Discovery Marketplace (Task 45)
- *
- * Publicly browsable directory of approved Growth Partners.
- * Filter by region, specialism, capacity, tier.
- * Links to individual partner profile pages.
+ * partners.php — Growth Partner landing page
+ * Traffic from: Professional networks, LinkedIn, referrals
+ * Primary CTA: /join?path=growth_partner
  */
+define('IN_237BIZ', true);
 require_once __DIR__ . '/includes/config.php';
-require_once __DIR__ . '/includes/partner-lang.php';
 
-$pdo = db();
-
-// ── Filters ───────────────────────────────────────────────
-$filterRegion   = trim($_GET['region']   ?? '');
-$filterSpecial  = trim($_GET['specialism'] ?? '');
-$filterTier     = trim($_GET['tier']     ?? '');
-$filterCapacity = trim($_GET['capacity'] ?? '');
-$search         = trim($_GET['q']        ?? '');
-$page           = max(1, (int)($_GET['page'] ?? 1));
-$perPage        = 12;
-$offset         = ($page - 1) * $perPage;
-
-// ── Build query ───────────────────────────────────────────
-$where  = ["pp.status IN ('approved','active')", "pp.public_profile = 1"];
-$params = [];
-
-if ($filterRegion) {
-    $where[]  = "EXISTS (SELECT 1 FROM partner_locations pl WHERE pl.partner_id=pp.id AND pl.region=?)";
-    $params[] = $filterRegion;
-}
-if ($filterSpecial) {
-    $where[]  = "JSON_SEARCH(pp.specialisms, 'one', ?) IS NOT NULL";
-    $params[] = $filterSpecial;
-}
-if ($filterTier) {
-    $where[]  = "t.slug = ?";
-    $params[] = $filterTier;
-}
-if ($filterCapacity === 'available') {
-    $where[]  = "pp.capacity_status IN ('accepting','limited')";
-}
-if ($search) {
-    $where[]  = "(pp.display_name LIKE ? OR pp.tagline LIKE ? OR pp.organisation LIKE ? OR pp.specialisms LIKE ?)";
-    $s = "%$search%";
-    array_push($params, $s, $s, $s, $s);
-}
-
-$whereSQL = 'WHERE ' . implode(' AND ', $where);
-
-// Count
-$countStmt = $pdo->prepare("
-    SELECT COUNT(DISTINCT pp.id)
-    FROM partner_profiles pp
-    LEFT JOIN partner_tiers t ON t.id = pp.tier_id
-    $whereSQL
-");
-$countStmt->execute($params);
-$totalCount = (int)$countStmt->fetchColumn();
-$totalPages = max(1, (int)ceil($totalCount / $perPage));
-
-// Partners
-$stmt = $pdo->prepare("
-    SELECT pp.id, pp.display_name, pp.avatar_url, pp.tagline, pp.specialisms,
-           pp.referral_code, pp.capacity_status, pp.max_businesses, pp.rating, pp.rating_count,
-           pp.verified, pp.profile_views,
-           t.name AS tier_name, t.slug AS tier_slug,
-           (SELECT GROUP_CONCAT(pl.region ORDER BY pl.is_primary DESC SEPARATOR ', ')
-            FROM partner_locations pl WHERE pl.partner_id=pp.id LIMIT 3) AS regions,
-           (SELECT COUNT(*) FROM partner_business_assignments pba WHERE pba.partner_id=pp.id AND pba.status='active') AS active_biz,
-           (SELECT COUNT(*) FROM partner_cert_awards pca WHERE pca.partner_id=pp.id AND pca.revoked_at IS NULL) AS cert_count
-    FROM partner_profiles pp
-    LEFT JOIN partner_tiers t ON t.id = pp.tier_id
-    $whereSQL
-    ORDER BY pp.rating DESC, pp.profile_views DESC, pp.id ASC
-    LIMIT $perPage OFFSET $offset
-");
-$stmt->execute($params);
-$partners = $stmt->fetchAll();
-
-// Filter options
-$regions = $pdo->query("
-    SELECT DISTINCT region FROM partner_locations
-    WHERE partner_id IN (SELECT id FROM partner_profiles WHERE status IN ('approved','active') AND public_profile=1)
-    ORDER BY region
-")->fetchAll(\PDO::FETCH_COLUMN);
-
-$tiers = $pdo->query("SELECT id, name, slug FROM partner_tiers ORDER BY id")->fetchAll();
-
-// All specialisms (aggregate from JSON columns)
-$allSpecs = [];
-$specRows = $pdo->query("SELECT specialisms FROM partner_profiles WHERE status IN ('approved','active') AND public_profile=1 AND specialisms IS NOT NULL")->fetchAll(\PDO::FETCH_COLUMN);
-foreach ($specRows as $row) {
-    $arr = json_decode($row, true) ?: [];
-    foreach ($arr as $s) {
-        $s = trim($s);
-        if ($s) $allSpecs[$s] = ($allSpecs[$s] ?? 0) + 1;
-    }
-}
-arsort($allSpecs);
-$topSpecs = array_slice(array_keys($allSpecs), 0, 20);
-
-$pageTitle = pt('find_a_growth_partner');
+$pageTitle = t('Become a Growth Partner — 237Biz', 'Devenez Partenaire de Croissance — 237Biz');
+$pageDesc  = t(
+    'Manage business accounts. Close deals. Earn 20–25% commission on every order — the highest tier on the platform.',
+    'Gérez des comptes d\'entreprise. Concluez des deals. Gagnez 20–25% de commission sur chaque commande — le niveau le plus élevé de la plateforme.'
+);
 require_once __DIR__ . '/includes/header.php';
 ?>
+
 <style>
-.hero{background:linear-gradient(135deg,#1e40af 0%,#3b82f6 100%);color:#fff;padding:3rem 1rem 2rem;text-align:center}
-.hero h1{margin:0 0 .5rem;font-size:2rem;font-weight:800}
-.hero p{margin:0 0 1.5rem;opacity:.85;font-size:1rem}
-.hero-search{display:flex;gap:.5rem;max-width:520px;margin:0 auto}
-.hero-search input{flex:1;border:none;border-radius:.5rem;padding:.65rem 1rem;font-size:.95rem}
-.hero-search button{background:#f59e0b;color:#fff;border:none;border-radius:.5rem;padding:.65rem 1.25rem;font-size:.9rem;font-weight:700;cursor:pointer;white-space:nowrap}
-.main-wrap{max-width:1100px;margin:0 auto;padding:1.5rem 1rem;display:grid;grid-template-columns:220px 1fr;gap:1.5rem}
-@media(max-width:760px){.main-wrap{grid-template-columns:1fr}}
-.sidebar{position:sticky;top:1rem;align-self:start}
-.filter-card{background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;padding:1rem;margin-bottom:1rem}
-.filter-card h3{margin:0 0 .75rem;font-size:.85rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em}
-.filter-option{display:flex;align-items:center;gap:.4rem;padding:.25rem 0;font-size:.82rem;color:#374151;cursor:pointer}
-.filter-option input[type=radio]{accent-color:#2563eb}
-.filter-option label{cursor:pointer}
-.filter-link{display:block;padding:.2rem 0;font-size:.82rem;color:#6b7280;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.filter-link:hover,.filter-link.active{color:#2563eb}
-.filter-link.active{font-weight:600}
-.results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
-.results-count{font-size:.875rem;color:#6b7280}
-.partner-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
-.partner-card{background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;overflow:hidden;transition:box-shadow .15s;text-decoration:none;display:flex;flex-direction:column}
-.partner-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.1);border-color:#d1d5db}
-.card-top{padding:1.25rem 1.25rem .75rem;flex:1}
-.card-avatar{width:56px;height:56px;border-radius:50%;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:700;margin-bottom:.75rem;flex-shrink:0;overflow:hidden}
-.card-avatar img{width:100%;height:100%;object-fit:cover}
-.card-name{font-size:.95rem;font-weight:700;color:#111827;margin-bottom:.15rem}
-.card-tagline{font-size:.8rem;color:#6b7280;margin-bottom:.5rem;line-height:1.4}
-.card-badges{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.5rem}
-.badge{font-size:.68rem;font-weight:600;padding:.15rem .5rem;border-radius:99px}
-.badge-tier-standard{background:#dbeafe;color:#1d4ed8}
-.badge-tier-silver{background:#e5e7eb;color:#374151}
-.badge-tier-gold{background:#fef3c7;color:#92400e}
-.badge-tier-platinum{background:#ede9fe;color:#6d28d9}
-.badge-verified{background:#d1fae5;color:#065f46}
-.badge-capacity-accepting{background:#d1fae5;color:#065f46}
-.badge-capacity-limited{background:#fef3c7;color:#92400e}
-.badge-capacity-full{background:#fee2e2;color:#991b1b}
-.badge-capacity-paused{background:#f3f4f6;color:#6b7280}
-.card-specs{display:flex;gap:.25rem;flex-wrap:wrap;margin-bottom:.5rem}
-.spec-pill{background:#eff6ff;color:#1d4ed8;font-size:.68rem;padding:.1rem .4rem;border-radius:99px}
-.card-meta{display:flex;gap:.75rem;font-size:.75rem;color:#9ca3af}
-.card-bottom{padding:.6rem 1.25rem;background:#f9fafb;border-top:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between}
-.btn-view{font-size:.78rem;font-weight:600;color:#2563eb;text-decoration:none}
-.stars{color:#f59e0b;font-size:.75rem}
-.pagination{display:flex;gap:.35rem;justify-content:center;margin-top:1.5rem;flex-wrap:wrap}
-.pag-btn{padding:.4rem .75rem;border:1px solid #e5e7eb;border-radius:.4rem;font-size:.8rem;color:#374151;text-decoration:none;background:#fff}
-.pag-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
-.pag-btn:hover:not(.active){background:#f9fafb}
-.empty{text-align:center;padding:3rem;color:#9ca3af}
-.empty .icon{font-size:2.5rem;margin-bottom:.5rem}
-.active-filters{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.75rem}
-.af-pill{display:inline-flex;align-items:center;gap:.3rem;background:#eff6ff;color:#1d4ed8;font-size:.75rem;padding:.2rem .5rem;border-radius:99px;font-weight:500}
-.af-pill a{color:#1d4ed8;text-decoration:none;font-weight:700}
+:root {
+  --gp: #00A878;
+  --gp-dim: rgba(0,168,120,0.10);
+  --gp-glow: rgba(0,168,120,0.22);
+  --dark: #07190d;
+  --card-bg: rgba(255,255,255,0.04);
+  --card-border: rgba(255,255,255,0.08);
+}
+.lp { background: var(--dark); color: #fff; overflow-x: hidden; }
+
+.hero {
+  min-height: 92vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 80px 20px 60px;
+  background: radial-gradient(ellipse 80% 60% at 50% 10%, rgba(0,168,120,0.14) 0%, transparent 70%),
+              var(--dark);
+}
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--gp-dim); border: 1px solid var(--gp-glow);
+  border-radius: 20px; padding: 6px 16px;
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--gp); margin-bottom: 24px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif; font-weight: 900;
+  font-size: clamp(2rem, 7vw, 3.4rem);
+  line-height: 1.1; margin: 0 0 20px; max-width: 700px;
+}
+.hero h1 em { color: var(--gp); font-style: normal; }
+.hero-sub {
+  font-size: clamp(15px, 2.5vw, 18px); color: rgba(255,255,255,0.65);
+  line-height: 1.65; max-width: 560px; margin: 0 auto 36px;
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--gp); color: #fff;
+  padding: 16px 32px; border-radius: 14px;
+  font-size: 16px; font-weight: 800; text-decoration: none;
+  transition: transform .15s, box-shadow .15s;
+  box-shadow: 0 0 32px rgba(0,168,120,0.35);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 40px rgba(0,168,120,0.5); }
+
+.hero-visual {
+  margin-top: 48px;
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 20px; padding: 24px 28px;
+  display: inline-flex; gap: 20px; align-items: center;
+}
+.hero-stat { text-align: center; }
+.hero-stat .num { font-family: 'Fraunces', serif; font-size: 1.9rem; font-weight: 900; color: var(--gp); }
+.hero-stat .lbl { font-size: 11px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: .07em; margin-top: 2px; }
+.hero-divider { width: 1px; height: 40px; background: var(--card-border); }
+
+.section { padding: 72px 20px; max-width: 900px; margin: 0 auto; }
+.section-label {
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--gp); margin-bottom: 12px;
+}
+.section h2 {
+  font-family: 'Fraunces', serif; font-weight: 900;
+  font-size: clamp(1.6rem, 4vw, 2.4rem); margin: 0 0 14px;
+}
+.section-sub { font-size: 16px; color: rgba(255,255,255,0.55); line-height: 1.6; margin: 0 0 44px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.card {
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 16px; padding: 24px 20px; transition: border-color .2s;
+}
+.card:hover { border-color: var(--gp-glow); }
+.card-icon { font-size: 2rem; margin-bottom: 14px; }
+.card h3 { font-size: 16px; font-weight: 800; margin: 0 0 8px; }
+.card p  { font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.6; margin: 0; }
+
+.steps { display: flex; flex-direction: column; }
+.step { display: flex; gap: 20px; align-items: flex-start; padding: 28px 0; border-bottom: 1px solid var(--card-border); }
+.step:last-child { border-bottom: none; }
+.step-num {
+  flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--gp-dim); border: 1px solid var(--gp-glow);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fraunces', serif; font-weight: 900; font-size: 1.1rem; color: var(--gp);
+}
+.step-body h3 { font-size: 16px; font-weight: 700; margin: 6px 0 6px; }
+.step-body p  { font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.6; margin: 0; }
+
+/* Commission tier table */
+.tier-table {
+  width: 100%; border-collapse: collapse; margin-top: 32px;
+  font-size: 14px;
+}
+.tier-table th {
+  text-align: left; padding: 12px 16px;
+  background: var(--gp-dim); color: var(--gp);
+  font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
+  border-bottom: 1px solid var(--gp-glow);
+}
+.tier-table td { padding: 14px 16px; border-bottom: 1px solid var(--card-border); }
+.tier-table tr:last-child td { border-bottom: none; }
+.tier-table .tier-rate {
+  font-family: 'Fraunces', serif; font-weight: 900; font-size: 1.3rem; color: var(--gp);
+}
+.tier-table tr.highlight td { background: var(--gp-dim); }
+
+.testi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.testi {
+  background: var(--gp-dim); border: 1px dashed var(--gp-glow);
+  border-radius: 14px; padding: 20px 18px;
+  font-size: 13.5px; color: rgba(255,255,255,0.4); font-style: italic; line-height: 1.6;
+}
+
+.footer-cta {
+  background: linear-gradient(135deg, #031208 0%, #04170a 100%);
+  border-top: 1px solid var(--gp-glow);
+  text-align: center; padding: 72px 20px 80px;
+}
+.footer-cta h2 {
+  font-family: 'Fraunces', serif; font-weight: 900;
+  font-size: clamp(1.8rem, 4vw, 2.6rem); margin: 0 0 14px;
+}
+.footer-cta p { font-size: 16px; color: rgba(255,255,255,0.55); margin: 0 0 36px; }
+
+.sticky-cta {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 999;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: rgba(7,25,13,0.95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--gp-glow);
+}
+.sticky-cta a {
+  display: block; text-align: center;
+  background: var(--gp); color: #fff;
+  padding: 15px; border-radius: 12px;
+  font-size: 15px; font-weight: 800; text-decoration: none;
+}
+@media (max-width: 768px) {
+  .sticky-cta { display: block; }
+  .testi-row { grid-template-columns: 1fr; }
+  .footer-cta { padding-bottom: 100px; }
+  .tier-table { font-size: 13px; }
+  .tier-table th, .tier-table td { padding: 10px 12px; }
+}
+.divider { border: none; border-top: 1px solid var(--card-border); margin: 0; }
 </style>
 
-<!-- Hero -->
-<div class="hero">
-    <h1><?= pt('find_a_growth_partner') ?></h1>
-    <p><?= pt('partners_hero_sub') ?></p>
-    <form method="get" class="hero-search">
-        <?php foreach (['region','specialism','tier','capacity'] as $f):
-            if (!empty($_GET[$f])): ?>
-        <input type="hidden" name="<?= $f ?>" value="<?= e($_GET[$f]) ?>">
-        <?php endif; endforeach ?>
-        <input type="text" name="q" value="<?= e($search) ?>" placeholder="<?= pt('search_by_name_specialism') ?>">
-        <button type="submit"><?= pt('search') ?></button>
-    </form>
+<div class="lp">
+
+<!-- ══ HERO ══════════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-eyebrow">🤝 <?= t('Growth Partner Program','Programme Partenaire de Croissance') ?></div>
+  <h1><?= t('Manage businesses. Close deals. <em>Earn 25%.</em>','Gérez des entreprises. Concluez des deals. <em>Gagnez 25%.</em>') ?></h1>
+  <p class="hero-sub">
+    <?= t(
+      'This isn\'t just affiliate marketing — it\'s B2B sales. Take ownership of business accounts, place orders on their behalf, and earn the highest commission tier on the platform.',
+      'Ce n\'est pas du simple marketing d\'affiliation — c\'est de la vente B2B. Prenez en charge des comptes d\'entreprise, passez des commandes en leur nom, et gagnez le niveau de commission le plus élevé de la plateforme.'
+    ) ?>
+  </p>
+  <a href="<?= SITE_URL ?>/join?path=growth_partner" class="btn-primary">
+    <?= t('Apply as a Growth Partner →','Postuler comme Partenaire de Croissance →') ?>
+  </a>
+
+  <div class="hero-visual">
+    <div class="hero-stat">
+      <div class="num">20%</div>
+      <div class="lbl"><?= t('New orders','Nouvelles commandes') ?></div>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="hero-stat">
+      <div class="num">25%</div>
+      <div class="lbl"><?= t('Above 1M XAF','Au-dessus de 1M XAF') ?></div>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="hero-stat">
+      <div class="num">10%</div>
+      <div class="lbl"><?= t('On renewals','Sur les renouvellements') ?></div>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="hero-stat">
+      <div class="num">📱</div>
+      <div class="lbl"><?= t('MoMo payout','Paiement MoMo') ?></div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ══ WHY 237BIZ ═════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-label"><?= t('Why join','Pourquoi rejoindre') ?></div>
+  <h2><?= t('The highest-paid role on the platform.','Le rôle le mieux payé de la plateforme.') ?></h2>
+  <p class="section-sub"><?= t('Growth Partners aren\'t just resellers — they\'re account managers who own their client relationships and earn recurring income.','Les Partenaires de Croissance ne sont pas de simples revendeurs — ce sont des gestionnaires de comptes qui possèdent leurs relations clients et gagnent des revenus récurrents.') ?></p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">🤝</div>
+      <h3><?= t('Account Ownership','Propriété des comptes') ?></h3>
+      <p><?= t('You manage the businesses. You place their orders for websites, emails, and spotlight content — acting as their dedicated digital manager.','Vous gérez les entreprises. Vous passez leurs commandes pour les sites web, emails et contenu vedette — agissant comme leur gestionnaire numérique dédié.') ?></p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🏆</div>
+      <h3><?= t('Highest Payouts','Les meilleurs paiements') ?></h3>
+      <p><?= t('20% commission on new orders, jumping to 25% once you pass 1M XAF/month in managed sales. The more you grow your clients, the more you earn.','20% de commission sur les nouvelles commandes, passant à 25% une fois que vous dépassez 1M XAF/mois en ventes gérées.') ?></p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔄</div>
+      <h3><?= t('Renewal Income','Revenus de renouvellement') ?></h3>
+      <p><?= t('Earn 10% every time your managed businesses renew their listings or services. Build a book of clients that generates monthly recurring income.','Gagnez 10% chaque fois que vos entreprises gérées renouvellent leurs annonces ou services. Constituez un portefeuille de clients qui génère des revenus récurrents mensuels.') ?></p>
+    </div>
+  </div>
+
+  <!-- Commission tier table -->
+  <div style="overflow-x:auto; margin-top: 40px;">
+    <table class="tier-table">
+      <thead>
+        <tr>
+          <th><?= t('Monthly Sales Volume','Volume de ventes mensuel') ?></th>
+          <th><?= t('Commission Rate','Taux de commission') ?></th>
+          <th><?= t('Type','Type') ?></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><?= t('Any amount','Tout montant') ?></td>
+          <td class="tier-rate">20%</td>
+          <td><?= t('New orders','Nouvelles commandes') ?></td>
+        </tr>
+        <tr class="highlight">
+          <td><?= t('Above 1,000,000 XAF/mo','Au-dessus de 1 000 000 XAF/mois') ?></td>
+          <td class="tier-rate">25%</td>
+          <td><?= t('New orders','Nouvelles commandes') ?></td>
+        </tr>
+        <tr>
+          <td><?= t('Any amount','Tout montant') ?></td>
+          <td class="tier-rate">10%</td>
+          <td><?= t('Renewals (recurring)','Renouvellements (récurrents)') ?></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ══ HOW IT WORKS ══════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-label"><?= t('Getting started','Comment commencer') ?></div>
+  <h2><?= t('From your first client to recurring income.','De votre premier client aux revenus récurrents.') ?></h2>
+  <p class="section-sub"><?= t('Growth Partners are approved individually — we want to make sure you\'re set up for success.','Les Partenaires de Croissance sont approuvés individuellement — nous voulons nous assurer que vous êtes prêt pour le succès.') ?></p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3><?= t('Find local businesses that need an online presence','Trouvez des entreprises locales qui ont besoin d\'une présence en ligne') ?></h3>
+        <p><?= t('Think restaurants, salons, schools, medical clinics — any business not yet on 237Biz. Your local knowledge is your biggest asset.','Pensez aux restaurants, salons, écoles, cliniques médicales — toute entreprise pas encore sur 237Biz. Votre connaissance locale est votre plus grand atout.') ?></p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3><?= t('Create their 237Biz account and place orders on their behalf','Créez leur compte 237Biz et passez des commandes en leur nom') ?></h3>
+        <p><?= t('As their Growth Partner, you manage everything — their listing, website, email, and any promotions. They get a great online presence; you earn on every order.','En tant que leur Partenaire de Croissance, vous gérez tout — leur annonce, site web, email et toute promotion. Ils obtiennent une excellente présence en ligne ; vous gagnez sur chaque commande.') ?></p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3><?= t('Earn your commission instantly on your real-time dashboard','Gagnez votre commission instantanément sur votre tableau de bord en temps réel') ?></h3>
+        <p><?= t('Watch your earnings grow as you build your managed-accounts portfolio. Payouts go directly to your MTN or Orange Money wallet monthly.','Regardez vos gains croître à mesure que vous construisez votre portefeuille de comptes gérés. Les paiements vont directement sur votre portefeuille MTN ou Orange Money mensuellement.') ?></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ══ SOCIAL PROOF ══════════════════════════════════════════ -->
+<section class="section" style="padding-bottom: 20px;">
+  <div class="section-label"><?= t('Partner stories','Témoignages de partenaires') ?></div>
+  <h2><?= t('Partners already closing deals.','Des partenaires qui concluent déjà des deals.') ?></h2>
+  <div class="testi-row">
+    <div class="testi"><?= t('"Your testimonial here — coming soon as our partner network grows."','"Votre témoignage ici — bientôt disponible à mesure que notre réseau de partenaires grandit."') ?></div>
+    <div class="testi"><?= t('"Share your 237Biz partner story and inspire the next generation of business developers."','"Partagez votre histoire de partenaire 237Biz et inspirez la prochaine génération de développeurs d\'affaires."') ?></div>
+  </div>
+</section>
+
+<!-- ══ FOOTER CTA ═════════════════════════════════════════════ -->
+<div class="footer-cta">
+  <div class="section-label" style="margin-bottom:16px;"><?= t('Ready to start?','Prêt à commencer ?') ?></div>
+  <h2><?= t('Join the Partner Program.','Rejoignez le Programme Partenaire.') ?></h2>
+  <p><?= t('Applications reviewed within 48 hours. Limited spots per region.','Candidatures examinées sous 48 heures. Places limitées par région.') ?></p>
+  <a href="<?= SITE_URL ?>/join?path=growth_partner" class="btn-primary">
+    <?= t('Apply as a Growth Partner →','Postuler comme Partenaire de Croissance →') ?>
+  </a>
 </div>
 
-<div class="main-wrap">
-    <!-- Sidebar Filters -->
-    <aside class="sidebar" style="display:none;display:block">
-        <div class="filter-card">
-            <h3><?= pt('region') ?></h3>
-            <a href="?<?= http_build_query(array_merge($_GET, ['region'=>'','page'=>1])) ?>"
-               class="filter-link<?= !$filterRegion ? ' active' : '' ?>"><?= pt('all_regions') ?></a>
-            <?php foreach ($regions as $r): ?>
-            <a href="?<?= http_build_query(array_merge($_GET, ['region'=>$r,'page'=>1])) ?>"
-               class="filter-link<?= $filterRegion===$r ? ' active' : '' ?>"><?= e($r) ?></a>
-            <?php endforeach ?>
-        </div>
+</div><!-- /.lp -->
 
-        <div class="filter-card">
-            <h3><?= pt('tier') ?></h3>
-            <a href="?<?= http_build_query(array_merge($_GET, ['tier'=>'','page'=>1])) ?>"
-               class="filter-link<?= !$filterTier ? ' active' : '' ?>"><?= pt('all_tiers') ?></a>
-            <?php foreach ($tiers as $t): ?>
-            <a href="?<?= http_build_query(array_merge($_GET, ['tier'=>$t['slug'],'page'=>1])) ?>"
-               class="filter-link<?= $filterTier===$t['slug'] ? ' active' : '' ?>"><?= e($t['name']) ?></a>
-            <?php endforeach ?>
-        </div>
-
-        <div class="filter-card">
-            <h3><?= pt('availability') ?></h3>
-            <a href="?<?= http_build_query(array_merge($_GET, ['capacity'=>'','page'=>1])) ?>"
-               class="filter-link<?= !$filterCapacity ? ' active' : '' ?>"><?= pt('any') ?></a>
-            <a href="?<?= http_build_query(array_merge($_GET, ['capacity'=>'available','page'=>1])) ?>"
-               class="filter-link<?= $filterCapacity==='available' ? ' active' : '' ?>"><?= pt('available_now') ?></a>
-        </div>
-
-        <?php if ($topSpecs): ?>
-        <div class="filter-card">
-            <h3><?= pt('specialism') ?></h3>
-            <a href="?<?= http_build_query(array_merge($_GET, ['specialism'=>'','page'=>1])) ?>"
-               class="filter-link<?= !$filterSpecial ? ' active' : '' ?>"><?= pt('all') ?></a>
-            <?php foreach ($topSpecs as $sp): ?>
-            <a href="?<?= http_build_query(array_merge($_GET, ['specialism'=>$sp,'page'=>1])) ?>"
-               class="filter-link<?= $filterSpecial===$sp ? ' active' : '' ?>"><?= e($sp) ?></a>
-            <?php endforeach ?>
-        </div>
-        <?php endif ?>
-
-        <?php if ($filterRegion || $filterTier || $filterCapacity || $filterSpecial || $search): ?>
-        <a href="/partners" style="display:block;text-align:center;font-size:.8rem;color:#dc2626;text-decoration:none;padding:.5rem">✕ <?= pt('clear_all_filters') ?></a>
-        <?php endif ?>
-    </aside>
-
-    <!-- Results -->
-    <main>
-        <div class="results-header">
-            <div class="results-count">
-                <?= number_format($totalCount) ?> <?= $totalCount != 1 ? pt('partners_found_plural') : pt('partner_found_singular') ?>
-            </div>
-        </div>
-
-        <!-- Active filters display -->
-        <?php
-        $activeFilters = [];
-        if ($search)        $activeFilters[] = [pt('search') . ': ' . e($search), 'q'];
-        if ($filterRegion)  $activeFilters[] = [e($filterRegion), 'region'];
-        if ($filterSpecial) $activeFilters[] = [e($filterSpecial), 'specialism'];
-        if ($filterTier)    $activeFilters[] = [e($filterTier), 'tier'];
-        if ($filterCapacity) $activeFilters[] = [pt('available_now'), 'capacity'];
-        ?>
-        <?php if ($activeFilters): ?>
-        <div class="active-filters">
-            <?php foreach ($activeFilters as [$label, $param]): ?>
-            <span class="af-pill">
-                <?= $label ?>
-                <a href="?<?= http_build_query(array_merge($_GET, [$param=>'','page'=>1])) ?>" title="<?= pt('remove_filter') ?>">✕</a>
-            </span>
-            <?php endforeach ?>
-        </div>
-        <?php endif ?>
-
-        <?php if (!$partners): ?>
-        <div class="empty">
-            <div class="icon">🔍</div>
-            <p><?= pt('no_partners_match') ?></p>
-            <a href="/partners" style="color:#2563eb;font-size:.875rem"><?= pt('clear_filters') ?> →</a>
-        </div>
-        <?php else: ?>
-        <div class="partner-grid">
-            <?php foreach ($partners as $p):
-                $initials   = strtoupper(substr($p['display_name'] ?? 'P', 0, 1));
-                $specs      = array_slice(json_decode($p['specialisms'] ?? '[]', true) ?: [], 0, 3);
-                $tierSlug   = $p['tier_slug'] ?? 'standard';
-                $tierLabel  = $p['tier_name'] ?? 'Standard';
-                $capStatus  = $p['capacity_status'] ?? 'accepting';
-                $stars      = $p['rating'] ? str_repeat('★', round($p['rating'])) . str_repeat('☆', 5 - round($p['rating'])) : '';
-            ?>
-            <a href="<?= SITE_URL ?>/partner/profile?code=<?= urlencode($p['referral_code']) ?>" class="partner-card">
-                <div class="card-top">
-                    <div class="card-avatar">
-                        <?php if ($p['avatar_url']): ?>
-                        <img src="<?= e($p['avatar_url']) ?>" alt="<?= e($p['display_name']) ?>">
-                        <?php else: ?>
-                        <?= e($initials) ?>
-                        <?php endif ?>
-                    </div>
-                    <div class="card-name"><?= e($p['display_name']) ?></div>
-                    <?php if ($p['tagline']): ?>
-                    <div class="card-tagline"><?= e(mb_substr($p['tagline'], 0, 80)) ?></div>
-                    <?php endif ?>
-                    <div class="card-badges">
-                        <span class="badge badge-tier-<?= e($tierSlug) ?>"><?= e($tierLabel) ?></span>
-                        <?php if ($p['verified']): ?>
-                        <span class="badge badge-verified">✓ <?= pt('verified') ?></span>
-                        <?php endif ?>
-                        <span class="badge badge-capacity-<?= e($capStatus) ?>"><?= pt('capacity_' . $capStatus) ?: ucfirst($capStatus) ?></span>
-                    </div>
-                    <?php if ($specs): ?>
-                    <div class="card-specs">
-                        <?php foreach ($specs as $sp): ?><span class="spec-pill"><?= e($sp) ?></span><?php endforeach ?>
-                    </div>
-                    <?php endif ?>
-                    <div class="card-meta">
-                        <?php if ($p['regions']): ?><span>📍 <?= e(mb_substr($p['regions'], 0, 40)) ?></span><?php endif ?>
-                        <?php if ($p['active_biz']): ?><span>🏢 <?= (int)$p['active_biz'] ?> <?= pt('businesses') ?></span><?php endif ?>
-                        <?php if ($p['cert_count']): ?><span>🏅 <?= (int)$p['cert_count'] ?> <?= pt('certs') ?></span><?php endif ?>
-                    </div>
-                </div>
-                <div class="card-bottom">
-                    <?php if ($stars): ?>
-                    <span class="stars"><?= $stars ?> <span style="color:#9ca3af">(<?= (int)$p['rating_count'] ?>)</span></span>
-                    <?php else: ?>
-                    <span style="font-size:.75rem;color:#9ca3af"><?= pt('no_reviews_yet') ?></span>
-                    <?php endif ?>
-                    <span class="btn-view"><?= pt('view_profile') ?> →</span>
-                </div>
-            </a>
-            <?php endforeach ?>
-        </div>
-
-        <!-- Pagination -->
-        <?php if ($totalPages > 1): ?>
-        <div class="pagination">
-            <?php if ($page > 1): ?>
-            <a href="?<?= http_build_query(array_merge($_GET, ['page'=>$page-1])) ?>" class="pag-btn">‹</a>
-            <?php endif ?>
-            <?php for ($p = max(1,$page-2); $p <= min($totalPages,$page+2); $p++): ?>
-            <a href="?<?= http_build_query(array_merge($_GET, ['page'=>$p])) ?>"
-               class="pag-btn<?= $p===$page ? ' active' : '' ?>"><?= $p ?></a>
-            <?php endfor ?>
-            <?php if ($page < $totalPages): ?>
-            <a href="?<?= http_build_query(array_merge($_GET, ['page'=>$page+1])) ?>" class="pag-btn">›</a>
-            <?php endif ?>
-        </div>
-        <?php endif ?>
-        <?php endif ?>
-    </main>
+<div class="sticky-cta">
+  <a href="<?= SITE_URL ?>/join?path=growth_partner">
+    🤝 <?= t('Apply as a Growth Partner →','Postuler comme Partenaire →') ?>
+  </a>
 </div>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
