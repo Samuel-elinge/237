@@ -232,9 +232,11 @@ RewriteRule ^admin/bhc-questions/?$         admin/bhc-questions.php             
 RewriteRule ^admin/bhc-leads/?$             admin/bhc-leads.php                 [L,QSA]
 RewriteRule ^admin/bhc-settings/?$          admin/bhc-settings.php              [L,QSA]
 
-# Join & Partners
-RewriteRule ^join/?$       join.php      [L,QSA]
-RewriteRule ^partners/?$   partners.php  [L,QSA]
+# Join & Role Landing Pages
+RewriteRule ^join/?$        join.php        [L,QSA]
+RewriteRule ^creators/?$    creators.php    [L,QSA]
+RewriteRule ^affiliates/?$  affiliates.php  [L,QSA]
+RewriteRule ^partners/?$    partners.php    [L,QSA]
 
 # Business Hub & Online Presence
 RewriteRule ^business-hub/?$      business-hub.php      [L,QSA]
