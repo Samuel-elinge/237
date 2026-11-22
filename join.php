@@ -8,13 +8,13 @@ require_once __DIR__ . '/includes/config.php';
 
 if (isLoggedIn()) { redirect(SITE_URL . '/dashboard'); }
 
-$defaultPath = in_array($_GET['path']??'', ['find','list','agent','creator','growth_partner']) ? $_GET['path'] : 'find';
+$defaultPath = in_array($_GET['path']??'', ['list','agent','creator','growth_partner']) ? $_GET['path'] : 'list';
 $errors = [];
 $success = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
-    $path     = in_array($_POST['path']??'', ['find','list','agent','creator','growth_partner']) ? $_POST['path'] : 'find';
+    $path     = in_array($_POST['path']??'', ['list','agent','creator','growth_partner']) ? $_POST['path'] : 'list';
     $name     = trim($_POST['name']  ?? '');
     $email    = strtolower(trim($_POST['email']  ?? ''));
     $password = trim($_POST['password'] ?? '');
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($chk->fetch()) {
             $errors[] = t('Email already registered. Sign in instead.','Email déjà enregistré. Connectez-vous.');
         } else {
-            $role = ['agent'=>'sales_staff','creator'=>'creator','list'=>'user','find'=>'user','growth_partner'=>'user'][$path];
+            $role = ['agent'=>'sales_staff','creator'=>'creator','list'=>'user','growth_partner'=>'user'][$path];
             $hash        = password_hash($password, PASSWORD_BCRYPT);
             $verifyToken = bin2hex(random_bytes(32));
             // Insert with verify_token_created_at if column exists, else without
@@ -97,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'agent'          => SITE_URL . '/agent/dashboard',
                 'creator'        => SITE_URL . '/creator/profile?setup=1',
                 'list'           => SITE_URL . '/add-listing',
-                'find'           => SITE_URL . '/listings',
                 'growth_partner' => SITE_URL . '/partner/pending',
             ];
             // ── Referral attribution ────────────────────────────────────────
@@ -124,32 +123,20 @@ require_once __DIR__ . '/includes/header.php';
 
 // Benefit panels per path
 $benefits = [
-    'find' => [
-        'icon'    => '🔍',
-        'title'   => t('Find Businesses Near You','Trouvez des entreprises près de vous'),
-        'color'   => '#00A878',
-        'tagline' => t('Discover the best of Cameroon business.','Découvrez le meilleur des entreprises camerounaises.'),
-        'items'   => [
-            ['🏪', t('Browse 1,000+ Cameroonian businesses','Parcourez +1000 entreprises camerounaises')],
-            ['📍', t('Find businesses in your city','Trouvez des entreprises dans votre ville')],
-            ['⭐', t('Read verified customer reviews','Lisez des avis clients vérifiés')],
-            ['💬', t('Contact businesses via WhatsApp','Contactez via WhatsApp')],
-            ['📅', t('Book appointments instantly','Réservez des rendez-vous instantanément')],
-            ['🆓', t('Completely free — no subscription','Totalement gratuit')],
-        ],
-    ],
     'list' => [
-        'icon'    => '🏪',
-        'title'   => t('List Your Business','Listez votre Entreprise'),
+        'icon'    => '🪪',
+        'title'   => t('Your Electronic Business Card','Votre Carte de Visite Électronique'),
         'color'   => '#fcd116',
-        'tagline' => t('Put your business in front of thousands of customers.','Mettez votre entreprise devant des milliers de clients.'),
+        'tagline' => t('Get found by thousands of customers — start free, grow with paid features.','Soyez trouvé par des milliers de clients — commencez gratuitement, évoluez avec les fonctionnalités payantes.'),
         'items'   => [
-            ['✅', t('Free listing — published within 24h','Annonce gratuite — publiée dans les 24h')],
-            ['📊', t('Analytics dashboard to track views','Tableau analytique pour suivre vos vues')],
-            ['📅', t('Accept online appointment bookings','Acceptez les prises de rendez-vous')],
-            ['📢', t('Post promotions and announcements','Publiez des promotions et annonces')],
-            ['📱', t('WhatsApp chat widget on your listing','Widget WhatsApp sur votre annonce')],
-            ['📱', t('Downloadable QR code for your listing','Code QR téléchargeable')],
+            ['🆓', t('FREE — Your listing goes live within 24 hours','GRATUIT — Votre annonce est en ligne dans les 24h')],
+            ['📱', t('WhatsApp button so customers reach you instantly','Bouton WhatsApp pour que les clients vous contactent')],
+            ['📲', t('Downloadable QR code — print it, share it anywhere','QR code téléchargeable — imprimez-le, partagez-le')],
+            ['📊', t('Analytics: see how many people view your listing','Analytiques : voyez combien de personnes visitent votre annonce')],
+            ['⬆️', t('PAID: Appear higher in search results','PAYANT : Apparaître plus haut dans les résultats')],
+            ['📅', t('PAID: Accept online appointment bookings','PAYANT : Acceptez les réservations en ligne')],
+            ['📝', t('PAID: Longer description — tell your full story','PAYANT : Description longue — racontez toute votre histoire')],
+            ['🛍️', t('PAID: Showcase your products & services with photos','PAYANT : Présentez vos produits & services avec photos')],
         ],
     ],
     'agent' => [
@@ -206,7 +193,11 @@ $benefits = [
 
 /* Path selector */
 .path-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:28px; }
-.path-grid.five-paths { grid-template-columns:1fr 1fr 1fr; }
+.path-grid.four-paths { grid-template-columns:1fr 1fr; }
+
+/* Paid upsell badge in benefit items */
+.benefit-item .bi-paid { font-size:0.65rem; background:#fcd116; color:#1a1200; border-radius:3px; padding:1px 5px; font-weight:800; vertical-align:middle; margin-right:2px; letter-spacing:.02em; }
+.benefit-item.paid-feature .bt { color:rgba(255,255,255,0.65); }
 .path-card {
   border:2px solid rgba(255,255,255,0.1); border-radius:12px;
   padding:14px 16px; cursor:pointer; text-align:center;
@@ -260,12 +251,11 @@ $benefits = [
     <p class="join-sub"><?= t('Choose your path to get started','Choisissez votre parcours pour commencer') ?></p>
 
     <!-- Path selector -->
-    <div class="path-grid five-paths" id="path-grid">
+    <div class="path-grid four-paths" id="path-grid">
       <?php
       $paths = [
-          'find'           => ['🔍', t('Find Businesses','Trouver des entreprises')],
           'list'           => ['🏪', t('List My Business','Lister mon Entreprise')],
-          'agent'          => ['👔', t('Become an Agent','Devenir Agent')],
+          'agent'          => ['👔', t('Become an Affiliate','Devenir Affilié')],
           'creator'        => ['🎬', t('Become a Creator','Devenir Créateur')],
           'growth_partner' => ['🤝', t('Growth Partner','Partenaire de Croissance')],
       ];
@@ -348,14 +338,20 @@ $benefits = [
     <div class="benefit-title" id="b-title"><?= $b['title'] ?></div>
     <div class="benefit-tag"   id="b-tag"><?= $b['tagline'] ?></div>
     <div class="benefit-list"  id="b-list">
-      <?php foreach ($b['items'] as [$icon, $text]): ?>
-      <div class="benefit-item">
+      <?php foreach ($b['items'] as [$icon, $text]):
+        $isPaid = str_starts_with($text, 'PAID') || str_starts_with($text, 'PAYANT');
+        $cleanText = preg_replace('/^(PAID|PAYANT):\s*/','',$text);
+      ?>
+      <div class="benefit-item<?= $isPaid ? ' paid-feature' : '' ?>">
         <span class="bi"><?= $icon ?></span>
-        <span class="bt"><?= $text ?></span>
+        <span class="bt"><?= $isPaid ? '<span class="bi-paid">PAID</span> ' : '' ?><?= $cleanText ?></span>
       </div>
       <?php endforeach; ?>
     </div>
-    <div style="margin-top:32px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.1);">
+    <div id="b-upsell" style="margin-top:20px;padding:14px 16px;background:rgba(252,209,22,0.08);border:1px solid rgba(252,209,22,0.25);border-radius:10px;font-size:13px;color:rgba(255,255,255,0.75);line-height:1.5;display:none;">
+      💡 <?= t('Start free — upgrade anytime to unlock paid features and get more customers.','Commencez gratuitement — passez à la version payante à tout moment pour débloquer plus de fonctionnalités.') ?>
+    </div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);">
       <div style="font-size:12px;color:rgba(255,255,255,0.4);">
         🔒 <?= t('237Biz is free to join. No credit card required.','237Biz est gratuit. Aucune carte bancaire requise.') ?>
       </div>
@@ -369,15 +365,13 @@ $benefits = [
 var benefits = <?= json_encode($benefits, JSON_UNESCAPED_UNICODE) ?>;
 
 var btnColors = {
-  find:           '#00A878',
   list:           '#c9a700',
   agent:          '#3d6fbf',
   creator:        '#9b4fad',
   growth_partner: '#00A878',
 };
 var btnLabels = {
-  find:           '<?= t('Find Businesses →','Trouver des entreprises →') ?>',
-  list:           '<?= t('Create Account & List Business →','Créer un compte et lister →') ?>',
+  list:           '<?= t('Create Account & List My Business →','Créer un compte et lister →') ?>',
   agent:          '<?= t('Become an Affiliate →','Devenir Affilié →') ?>',
   creator:        '<?= t('Become a Creator →','Devenir Créateur →') ?>',
   growth_partner: '<?= t('Apply as Growth Partner →','Postuler comme Partenaire de Croissance →') ?>',
@@ -407,8 +401,11 @@ function selectPath(path) {
   list.innerHTML = '';
   b.items.forEach(function(item) {
     var div = document.createElement('div');
-    div.className = 'benefit-item';
-    div.innerHTML = '<span class="bi">'+item[0]+'</span><span class="bt">'+item[1]+'</span>';
+    var isPaid = item[1].indexOf('PAID') === 0 || item[1].indexOf('PAYANT') === 0;
+    div.className = 'benefit-item' + (isPaid ? ' paid-feature' : '');
+    var text = item[1].replace(/^(PAID|PAYANT):\s*/,'');
+    var badge = isPaid ? '<span class="bi-paid">PAID</span> ' : '';
+    div.innerHTML = '<span class="bi">'+item[0]+'</span><span class="bt">'+badge+text+'</span>';
     list.appendChild(div);
   });
 
@@ -420,6 +417,10 @@ function selectPath(path) {
   // Show/hide growth partner extra fields
   var gpFields = document.getElementById('gp-fields');
   if (gpFields) gpFields.style.display = (path === 'growth_partner') ? 'block' : 'none';
+
+  // Show upsell nudge for list path
+  var upsell = document.getElementById('b-upsell');
+  if (upsell) upsell.style.display = (path === 'list') ? 'block' : 'none';
 }
 
 // Init
