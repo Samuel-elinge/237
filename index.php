@@ -121,7 +121,7 @@ try {
 
 $pageTitle = t("237Biz — Cameroon's Business Hub", "237Biz — Le Hub des Entreprises du Cameroun");
 $pageDesc  = t(
-    "Discover, connect and grow with Cameroon's Business Hub. Find local businesses, book services, or earn as a Sales Agent.",
+    "Discover, connect and grow with Cameroon's Business Hub. Find local businesses, book services, or earn as a Affiliate.",
     "Découvrez, connectez et grandissez avec le Hub des Entreprises du Cameroun."
 );
 
@@ -979,13 +979,13 @@ require_once __DIR__ . '/includes/header.php';
         🤝 <?= t('PARTNER PROGRAMME', 'PROGRAMME PARTENAIRES') ?>
       </div>
       <h2 class="section-title"><?= t('Earn by helping Cameroon businesses grow', 'Gagnez en aidant les entreprises camerounaises à grandir') ?></h2>
-      <p class="section-sub"><?= t('Join as a Sales Agent, Content Creator, or Growth Partner and earn commissions.', 'Rejoignez en tant qu\'Agent de Vente, Créateur de Contenu ou Growth Partner et gagnez des commissions.') ?></p>
+      <p class="section-sub"><?= t('Join as an Affiliate (10% commission), Content Creator (15% new, 10% renewal), or Growth Partner and earn commissions.', 'Rejoignez en tant qu\'Affilié, Créateur de Contenu ou Growth Partner et gagnez des commissions.') ?></p>
     </div>
     <div class="partner-split">
-      <!-- Sales Agents -->
+      <!-- Affiliates -->
       <div class="partner-card agent">
         <div style="font-size:2.5rem;margin-bottom:8px;">👔</div>
-        <h3 style="color:#8ab4f8;"><?= t('Sales Agents', 'Agents de Vente') ?></h3>
+        <h3 style="color:#8ab4f8;"><?= t('Affiliates', 'Affiliés') ?></h3>
         <p><?= t('Actively approach local businesses, encourage them to join 237Biz and earn a commission for every featured listing you refer.', 'Approchez activement les entreprises locales et gagnez une commission pour chaque annonce vedette que vous référez.') ?></p>
         <div class="journey-mini">
           <?php foreach ([t('Find Businesses','Trouvez'), t('Refer','Référez'), t('They Join','Ils Rejoignent'), t('Earn','Gagnez')] as $i => $step): ?>
@@ -995,10 +995,10 @@ require_once __DIR__ . '/includes/header.php';
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:auto;">
           <a href="<?= SITE_URL ?>/join?path=agent" style="padding:11px 22px;background:#8ab4f8;color:#0a1a2e;border-radius:9px;font-size:13.5px;font-weight:700;text-decoration:none;">
-            <?= t('Become a Sales Agent', 'Devenir Agent de Vente') ?>
+            <?= t('Become an Affiliate', 'Devenir Affilié') ?>
           </a>
           <a href="<?= SITE_URL ?>/login" style="padding:11px 22px;border:1.5px solid rgba(138,180,248,0.3);color:#8ab4f8;border-radius:9px;font-size:13.5px;font-weight:600;text-decoration:none;">
-            <?= t('Agent Login', 'Connexion Agent') ?>
+            <?= t('Affiliate Login', 'Connexion Affilié') ?>
           </a>
         </div>
       </div>

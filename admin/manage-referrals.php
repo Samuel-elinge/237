@@ -195,7 +195,7 @@ adminNav('manage-referrals'); adminNavAssets();
   <!-- Settings -->
   <div class="rate-card">
     <h3>⚙️ Commission Rates</h3>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Set how much (in XAF) is earned for each type of referral conversion. Applies to both agents and creators using the default programme.</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Set how much (in XAF) is earned for each type of referral conversion. Applies to both affiliates and creators using the default programme.</p>
     <form method="POST">
       <input type="hidden" name="csrf" value="<?= csrf() ?>">
       <input type="hidden" name="action" value="update_programme">
@@ -252,7 +252,7 @@ adminNav('manage-referrals'); adminNavAssets();
 
   <?php elseif ($tab === 'summary'): ?>
   <!-- By person summary -->
-  <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Showing all agents and creators with commission entries.</p>
+  <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Showing all affiliates and creators with commission entries.</p>
   <?php if (empty($summary)): ?>
   <p style="color:var(--muted);">No commission entries yet.</p>
   <?php else: ?>

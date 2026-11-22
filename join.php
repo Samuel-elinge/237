@@ -154,11 +154,11 @@ $benefits = [
     ],
     'agent' => [
         'icon'    => '👔',
-        'title'   => t('Become a Sales Agent','Devenez Agent de Vente'),
+        'title'   => t('Become an Affiliate','Devenez Affilié'),
         'color'   => '#8ab4f8',
-        'tagline' => t('Earn commission by helping Cameroon businesses grow.','Gagnez des commissions en aidant les entreprises à grandir.'),
+        'tagline' => t('Earn 10% commission by helping Cameroon businesses grow.','Gagnez 10% de commission en aidant les entreprises à grandir.'),
         'items'   => [
-            ['💰', t('Earn commission per featured listing referral','Gagnez des commissions par parrainage')],
+            ['💰', t('Earn 10% commission per featured listing referral','Gagnez 10% de commission par parrainage')],
             ['🔗', t('Your unique referral link — /r/yourname','Lien de parrainage unique')],
             ['📊', t('Dashboard: clicks, conversions, earnings','Tableau : clics, conversions, gains')],
             ['📋', t('Get leads assigned directly by admin','Recevez des leads assignés par l\'admin')],
@@ -190,7 +190,7 @@ $benefits = [
             ['🔗', t('Unique referral link to share anywhere','Lien de parrainage unique à partager')],
             ['📊', t('Track every click and conversion in real time','Suivez chaque clic et conversion')],
             ['🎯', t('Join paid campaigns with content briefs','Rejoignez des campagnes payantes')],
-            ['💰', t('Earn per featured listing signup via your link','Gagnez par inscription vedette')],
+            ['💰', t('Earn 15% on new listings, 10% on renewals','Gagnez 15% sur nouvelles inscriptions, 10% sur renouvellements')],
             ['🏆', t('Top performer bonuses on campaigns','Bonus top performer sur les campagnes')],
         ],
     ],
@@ -378,7 +378,7 @@ var btnColors = {
 var btnLabels = {
   find:           '<?= t('Find Businesses →','Trouver des entreprises →') ?>',
   list:           '<?= t('Create Account & List Business →','Créer un compte et lister →') ?>',
-  agent:          '<?= t('Become a Sales Agent →','Devenir Agent de Vente →') ?>',
+  agent:          '<?= t('Become an Affiliate →','Devenir Affilié →') ?>',
   creator:        '<?= t('Become a Creator →','Devenir Créateur →') ?>',
   growth_partner: '<?= t('Apply as Growth Partner →','Postuler comme Partenaire de Croissance →') ?>',
 };

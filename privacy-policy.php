@@ -51,7 +51,7 @@ $updated = 'January 2025';
     <li><?= t('To create and manage your account and business listings','Pour créer et gérer votre compte et vos annonces') ?></li>
     <li><?= t('To process and verify payments for featured listings','Pour traiter et vérifier les paiements pour les annonces vedettes') ?></li>
     <li><?= t('To send email verification links, booking confirmations and important account notices','Pour envoyer des liens de vérification, des confirmations de réservation et des avis importants') ?></li>
-    <li><?= t('To calculate and track referral commissions for Sales Agents and Content Creators','Pour calculer et suivre les commissions de parrainage pour les Agents de Vente et Créateurs de Contenu') ?></li>
+    <li><?= t('To calculate and track referral commissions for Affiliates and Content Creators','Pour calculer et suivre les commissions de parrainage pour les Affiliés et Créateurs de Contenu') ?></li>
     <li><?= t('To improve and develop our services','Pour améliorer et développer nos services') ?></li>
     <li><?= t('To comply with legal obligations','Pour respecter nos obligations légales') ?></li>
   </ul>

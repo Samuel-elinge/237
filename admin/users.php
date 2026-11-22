@@ -225,7 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // ────────────────────────────────────────────────────
 
                 // Welcome email
-                $roleLabel = ['sales_staff'=>'Sales Agent','creator'=>'Creator','admin'=>'Admin','user'=>'User'][$role] ?? 'User';
+                $roleLabel = ['sales_staff'=>'Affiliate','creator'=>'Creator','admin'=>'Admin','user'=>'User'][$role] ?? 'User';
                 if ($role === 'sales_staff') {
                     $portalLink = SITE_URL . '/agent/dashboard';
                 } elseif ($role === 'creator') {
@@ -379,7 +379,7 @@ adminNav('users'); adminNavAssets();
             <label>Role</label>
             <select name="role" id="role-select" onchange="handleRoleChange(this.value)">
               <option value="user">👤 User</option>
-              <option value="sales_staff">👔 Sales Agent</option>
+              <option value="sales_staff">👔 Affiliate</option>
               <option value="creator">🎬 Creator</option>
               <option value="growth_partner">🤝 Growth Partner</option>
               <option value="operations_admin">🛠️ Operations Admin</option>
@@ -622,7 +622,7 @@ function handleRoleChange(role) {
   refWrap.style.display = (role === 'sales_staff') ? 'block' : 'none';
 
   var msgs = {
-    sales_staff: { text: '👔 A referral link (/r/code) will be created automatically. The agent can access their portal at /agent/dashboard.', bg: 'rgba(138,180,248,0.08)', color: '#8ab4f8', border: 'rgba(138,180,248,0.25)' },
+    sales_staff: { text: '👔 A referral link (/r/code) will be created automatically. The affiliate earns 10% commission. They can access their portal at /agent/dashboard.', bg: 'rgba(138,180,248,0.08)', color: '#8ab4f8', border: 'rgba(138,180,248,0.25)' },
     creator:     { text: '🎬 A creator profile (pending approval) will be created. Once approved by admin, they get a referral link at /creator/dashboard.', bg: 'rgba(245,130,245,0.08)', color: '#e07be0', border: 'rgba(245,130,245,0.25)' },
     admin:       { text: '🔑 This user will have full admin access to the control panel.', bg: 'rgba(206,17,38,0.08)', color: '#ff6b7a', border: 'rgba(206,17,38,0.25)' },
   };

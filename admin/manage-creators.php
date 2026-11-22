@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $code = generateReferralCode($nr->fetchColumn() ?: 'agent');
                     $pdo->prepare("INSERT INTO referral_links (user_id,programme_id,code) VALUES (?,1,?)")->execute([$uid,$code]);
                 }
-                flash('success', 'User converted to Sales Agent.');
+                flash('success', 'User converted to Affiliate.');
             } catch (Exception $e) { flash('error', 'Could not switch role.'); }
         }
         redirect(SITE_URL . '/admin/manage-creators.php?tab=creators');
@@ -414,7 +414,7 @@ adminNav('manage-creators'); adminNavAssets();
           <input type="hidden" name="csrf" value="<?= csrf() ?>">
           <input type="hidden" name="action" value="switch_to_agent">
           <input type="hidden" name="user_id" value="<?= $cr['id'] ?>">
-          <button type="submit" style="background:rgba(138,180,248,0.08);border:1px solid rgba(138,180,248,0.2);color:#8ab4f8;border-radius:6px;padding:5px 14px;font-size:12px;cursor:pointer;font-family:inherit;" onclick="adminConfirm('Convert <?= e($cr["name"]) ?> to Sales Agent? They will lose their Creator role.', this.closest('form')); return false;">👔 Switch to Agent</button>
+          <button type="submit" style="background:rgba(138,180,248,0.08);border:1px solid rgba(138,180,248,0.2);color:#8ab4f8;border-radius:6px;padding:5px 14px;font-size:12px;cursor:pointer;font-family:inherit;" onclick="adminConfirm('Convert <?= e($cr["name"]) ?> to Affiliate? They will lose their Creator role.', this.closest('form')); return false;">👔 Switch to Affiliate</button>
         </form>
         <?php endif; ?>
         <form method="POST">

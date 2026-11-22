@@ -1,6 +1,6 @@
 <?php
 /**
- * agent/dashboard.php — 237Biz Sales Agent Portal
+ * agent/dashboard.php — 237Biz Affiliate Portal
  */
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/referral-helpers.php';

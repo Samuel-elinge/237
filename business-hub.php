@@ -245,7 +245,7 @@ require_once __DIR__ . '/includes/header.php';
             ['💬', t('WhatsApp First','WhatsApp en premier'),           t('Direct WhatsApp button on every listing.','Bouton WhatsApp direct sur chaque annonce.')],
             ['📅', t('Online Booking','Réservation en ligne'),          t('Real appointment booking built in — not an afterthought.','Réservation réelle intégrée — pas une réflexion après coup.')],
             ['📊', t('Business Dashboard','Tableau de bord Entreprise'), t('Analytics, announcements, reviews and more in one place.','Analytiques, annonces, avis et plus en un seul endroit.')],
-            ['🤝', t('Partner Network','Réseau de Partenaires'),        t('Sales Agents and Creators actively promote your business.','Des Agents et Créateurs font activement la promotion de votre entreprise.')],
+            ['🤝', t('Partner Network','Réseau de Partenaires'),        t('Affiliates and Creators actively promote your business.','Des Agents et Créateurs font activement la promotion de votre entreprise.')],
           ] as [$icon,$title,$desc]): ?>
           <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
             <span style="font-size:1.2rem;flex-shrink:0;"><?= $icon ?></span>

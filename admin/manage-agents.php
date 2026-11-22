@@ -195,7 +195,7 @@ adminNav('manage-agents'); adminNavAssets();
 <div class="page-header">
   <div class="container">
     <nav class="breadcrumb"><a href="<?= SITE_URL ?>/admin/">Admin</a> › <span>Manage Agents</span></nav>
-    <h1 style="font-family:'Fraunces',serif;font-weight:900;font-size:clamp(1.5rem,3vw,2rem);">👔 Manage Sales Agents</h1>
+    <h1 style="font-family:'Fraunces',serif;font-weight:900;font-size:clamp(1.5rem,3vw,2rem);">👔 Manage Affiliates</h1>
   </div>
 </div>
 
@@ -209,13 +209,13 @@ adminNav('manage-agents'); adminNavAssets();
   <div class="filter-tabs" style="margin-bottom:1.5rem;flex-wrap:wrap;">
     <a href="?tab=agents" class="filter-tab <?= $tab==='agents'?'active':'' ?>">👔 Agents (<?= count($agents) ?>)</a>
     <a href="?tab=leads"  class="filter-tab <?= $tab==='leads' ?'active':'' ?>">📋 Lead Assignments</a>
-    <?php if (isSuperAdmin()): ?><a href="?tab=create" class="filter-tab <?= $tab==='create'?'active':'' ?>">+ New Agent</a><?php endif; ?>
+    <?php if (isSuperAdmin()): ?><a href="?tab=create" class="filter-tab <?= $tab==='create'?'active':'' ?>">+ New Affiliate</a><?php endif; ?>
   </div>
 
   <?php if ($tab === 'create' && isSuperAdmin()): ?>
   <!-- Create agent form (super admin only) -->
   <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:24px;max-width:520px;">
-    <h3 style="margin-top:0;font-size:1.05rem;">+ New Sales Agent</h3>
+    <h3 style="margin-top:0;font-size:1.05rem;">+ New Affiliate</h3>
     <form method="POST">
       <input type="hidden" name="csrf" value="<?= csrf() ?>">
       <input type="hidden" name="action" value="create_agent">

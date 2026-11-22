@@ -67,7 +67,7 @@
         </div>
         <?php foreach ([
           [SITE_URL.'/partners',                    t('Partner Programme','Programme Partenaires')],
-          [SITE_URL.'/partners#agents',             t('Sales Agents','Agents de Vente')],
+          [SITE_URL.'/partners#agents',             t('Affiliates','Affiliés')],
           [SITE_URL.'/partners#creators',           t('Content Creators','Créateurs de Contenu')],
           [SITE_URL.'/join?path=agent',             t('Become an Agent','Devenir Agent')],
           [SITE_URL.'/join?path=creator',           t('Become a Creator','Devenir Créateur')],

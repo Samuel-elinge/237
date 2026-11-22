@@ -194,7 +194,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="ci">👔</div>
         <div>
           <h3><?= t('Become a Partner','Devenir Partenaire') ?></h3>
-          <p><?= t('Interested in joining as a Sales Agent or Content Creator?','Intéressé à rejoindre en tant qu\'Agent de Vente ou Créateur de Contenu ?') ?><br>
+          <p><?= t('Interested in joining as a Affiliate or Content Creator?','Intéressé à rejoindre en tant qu\'Affilié ou Créateur de Contenu ?') ?><br>
           <a href="<?= SITE_URL ?>/partners"><?= t('See Partner Programme','Voir Programme Partenaires') ?> →</a></p>
         </div>
       </div>

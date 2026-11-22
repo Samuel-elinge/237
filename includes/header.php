@@ -29,7 +29,7 @@ $cuRole = $cu['role'] ?? 'guest';
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title><?= e($pageTitle ?? t('237Biz — Cameroon\'s Business Hub','237Biz — Le Hub des Entreprises du Cameroun')) ?></title>
-<meta name="description" content="<?= e($pageDesc ?? t('Discover, connect and grow with Cameroon\'s Business Hub. Find businesses, list your company, or earn as a Sales Agent or Creator.','Découvrez, connectez et grandissez avec le Hub des Entreprises du Cameroun.')) ?>">
+<meta name="description" content="<?= e($pageDesc ?? t('Discover, connect and grow with Cameroon\'s Business Hub. Find businesses, list your company, or earn as a Affiliate or Creator.','Découvrez, connectez et grandissez avec le Hub des Entreprises du Cameroun.')) ?>">
 
 <!-- Open Graph / WhatsApp / Facebook -->
 <meta property="og:type"        content="website">

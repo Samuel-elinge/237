@@ -310,7 +310,7 @@ adminNav('dashboard'); adminNavAssets();
     <!-- Top agents -->
     <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:18px 20px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <h3 style="margin:0;font-size:14px;font-weight:700;">👔 Top Sales Agents</h3>
+        <h3 style="margin:0;font-size:14px;font-weight:700;">👔 Top Affiliates</h3>
         <a href="<?= SITE_URL ?>/admin/manage-agents.php" style="font-size:12px;color:var(--green);">Manage →</a>
       </div>
       <?php if (empty($topAgents)): ?>
