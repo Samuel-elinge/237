@@ -475,6 +475,25 @@ $cuRole = $cu['role'] ?? 'guest';
       </div>
     </div>
 
+    <!-- Earn with Us -->
+    <div class="nav-item">
+      <button class="nav-link" aria-haspopup="true">💰 <?= t('Earn with Us','Gagner avec Nous') ?> <span class="caret">▾</span></button>
+      <div class="mega-menu align-right" style="min-width:460px;">
+        <div class="mega-col">
+          <div class="mega-col-title"><?= t('Join & Earn','Rejoindre & Gagner') ?></div>
+          <a href="<?= SITE_URL ?>/join?path=agent" class="mega-link"><span class="icon">👔</span><span><?= t('Become an Affiliate','Devenez Affilié') ?><small><?= t('Earn 10% on every IT sale you refer','Gagnez 10% sur chaque vente IT') ?></small></span></a>
+          <a href="<?= SITE_URL ?>/join?path=creator" class="mega-link"><span class="icon">🎬</span><span><?= t('Become a Creator','Devenez Créateur') ?><small><?= t('50,000 XAF/month + 15% commission','50 000 XAF/mois + 15% commission') ?></small></span></a>
+          <a href="<?= SITE_URL ?>/join?path=growth_partner" class="mega-link"><span class="icon">🤝</span><span><?= t('Growth Partner','Partenaire de Croissance') ?><small><?= t('20–25% commission, manage business accounts','20–25% commission, gérer des comptes') ?></small></span></a>
+        </div>
+        <div class="mega-col">
+          <div class="mega-col-title"><?= t('Why 237Biz?','Pourquoi 237Biz ?') ?></div>
+          <a href="<?= SITE_URL ?>/join" class="mega-link"><span class="icon">📲</span><span><?= t('Paid via MTN MoMo / Orange Money','Payé via MTN MoMo / Orange Money') ?></span></a>
+          <a href="<?= SITE_URL ?>/join" class="mega-link"><span class="icon">📊</span><span><?= t('Real-time earnings dashboard','Tableau de bord temps réel') ?></span></a>
+          <a href="<?= SITE_URL ?>/join" class="mega-link" style="color:#fcd116;margin-top:8px;"><span class="icon">→</span><?= t('See all opportunities','Voir toutes les opportunités') ?></a>
+        </div>
+      </div>
+    </div>
+
     <!-- Offers & Events (hidden until populated) -->
     <?php /* Uncomment when offers/events have live content:
     <div class="nav-item">
@@ -642,6 +661,22 @@ $cuRole = $cu['role'] ?? 'guest';
           <a href="<?= SITE_URL ?>/booking" onclick="closeDrawer()"><span class="icon">📅</span><?= t('Bookings Tool','Outil Réservations') ?></a>
           <a href="<?= SITE_URL ?>/services" onclick="closeDrawer()"><span class="icon">🛠️</span><?= t('Reviews & QR Code','Avis & QR Code') ?></a>
           <a href="<?= SITE_URL ?>/business-hub" onclick="closeDrawer()" style="color:#00A878;"><span class="icon">→</span><?= t('Why 237Biz?','Pourquoi 237Biz ?') ?></a>
+        </div>
+      </li>
+
+      <!-- 3. Earn with Us -->
+      <li>
+        <button class="drawer-nav-item" aria-expanded="false" data-target="sub-earn">
+          <span class="icon">💰</span>
+          <span class="label"><?= t('Earn with Us','Gagner avec Nous') ?></span>
+          <span class="chevron">›</span>
+        </button>
+        <div class="drawer-sub" id="sub-earn">
+          <div class="drawer-sub-title"><?= t('Join & Earn','Rejoindre & Gagner') ?></div>
+          <a href="<?= SITE_URL ?>/join?path=agent" onclick="closeDrawer()"><span class="icon">👔</span><?= t('Become an Affiliate','Devenez Affilié') ?></a>
+          <a href="<?= SITE_URL ?>/join?path=creator" onclick="closeDrawer()"><span class="icon">🎬</span><?= t('Become a Creator','Devenez Créateur') ?></a>
+          <a href="<?= SITE_URL ?>/join?path=growth_partner" onclick="closeDrawer()"><span class="icon">🤝</span><?= t('Growth Partner','Partenaire de Croissance') ?></a>
+          <a href="<?= SITE_URL ?>/join" onclick="closeDrawer()" style="color:#fcd116;margin-top:4px;"><span class="icon">→</span><?= t('See all opportunities','Voir toutes les opportunités') ?></a>
         </div>
       </li>
 

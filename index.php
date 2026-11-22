@@ -718,6 +718,35 @@ require_once __DIR__ . '/includes/header.php';
   </div>
 </section>
 
+<!-- ══ GROW WITH 237BIZ BANNER ════════════════════════════ -->
+<section style="background:linear-gradient(135deg,#06231a 0%,#0a2e1e 60%,#07190d 100%);border-top:1px solid rgba(0,168,120,0.15);border-bottom:1px solid rgba(0,168,120,0.1);padding:40px 20px;">
+  <div class="container" style="max-width:860px;display:flex;flex-wrap:wrap;align-items:center;gap:24px;justify-content:space-between;">
+    <div style="flex:1;min-width:260px;">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#00A878;margin-bottom:8px;">
+        💰 <?= t('EARN WITH 237BIZ','GAGNEZ AVEC 237BIZ') ?>
+      </div>
+      <h3 style="font-family:'Fraunces',serif;font-weight:900;font-size:clamp(1.2rem,3vw,1.6rem);color:#fff;margin:0 0 6px;line-height:1.25;">
+        <?= t('Grow with 237Biz','Grandissez avec 237Biz') ?>
+      </h3>
+      <p style="font-size:14px;color:rgba(255,255,255,0.55);margin:0;line-height:1.6;">
+        <?= t('Create content or manage accounts. Earn commissions via MTN MoMo or Orange Money.','Créez du contenu ou gérez des comptes. Gagnez des commissions via MTN MoMo ou Orange Money.') ?>
+      </p>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <a href="<?= SITE_URL ?>/join?path=creator"
+         style="display:inline-flex;align-items:center;gap:7px;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:700;background:#e07be0;color:#fff;text-decoration:none;white-space:nowrap;transition:opacity .15s;"
+         onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        🎬 <?= t('Become a Creator','Devenez Créateur') ?>
+      </a>
+      <a href="<?= SITE_URL ?>/join?path=growth_partner"
+         style="display:inline-flex;align-items:center;gap:7px;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:700;background:#00A878;color:#fff;text-decoration:none;white-space:nowrap;transition:opacity .15s;"
+         onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        🤝 <?= t('Become a Growth Partner','Devenir Partenaire de Croissance') ?>
+      </a>
+    </div>
+  </div>
+</section>
+
 <!-- ══ SPECIAL OFFERS & PROMOTIONS ═══════════════════════ -->
 <?php if ($offers): ?>
 <section class="hp-section" style="background:rgba(252,209,22,0.01);border-top:1px solid rgba(252,209,22,0.06) !important;">

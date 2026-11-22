@@ -60,19 +60,19 @@
         <?php endforeach; ?>
       </div>
 
-      <!-- Partners -->
+      <!-- Work With Us -->
       <div>
-        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#8ab4f8;margin-bottom:14px;">
-          🤝 <?= t('Partners','Partenaires') ?>
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#fcd116;margin-bottom:14px;">
+          💰 <?= t('Work With Us','Travaillez avec Nous') ?>
         </div>
         <?php foreach ([
-          [SITE_URL.'/partners',                    t('Partner Programme','Programme Partenaires')],
-          [SITE_URL.'/partners#agents',             t('Affiliates','Affiliés')],
-          [SITE_URL.'/partners#creators',           t('Content Creators','Créateurs de Contenu')],
-          [SITE_URL.'/join?path=agent',             t('Become an Agent','Devenir Agent')],
-          [SITE_URL.'/join?path=creator',           t('Become a Creator','Devenir Créateur')],
-          [SITE_URL.'/agent/dashboard',             t('Agent Login','Connexion Agent')],
-          [SITE_URL.'/creator/dashboard',           t('Creator Login','Connexion Créateur')],
+          [SITE_URL.'/join?path=agent',          t('Become an Affiliate','Devenez Affilié')],
+          [SITE_URL.'/join?path=creator',        t('Become a Creator','Devenez Créateur')],
+          [SITE_URL.'/join?path=growth_partner', t('Growth Partner','Partenaire de Croissance')],
+          [SITE_URL.'/join',                     t('See All Opportunities','Toutes les Opportunités')],
+          [SITE_URL.'/agent/dashboard',          t('Affiliate Login','Connexion Affilié')],
+          [SITE_URL.'/creator/dashboard',        t('Creator Login','Connexion Créateur')],
+          [SITE_URL.'/partner/dashboard',        t('Partner Login','Connexion Partenaire')],
         ] as [$url,$label]): ?>
         <a href="<?= $url ?>" style="display:block;font-size:13px;color:rgba(255,255,255,0.55);text-decoration:none;padding:4px 0;transition:color .15s;line-height:1.5;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.55)'"><?= $label ?></a>
         <?php endforeach; ?>
