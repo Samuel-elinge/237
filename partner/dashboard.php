@@ -93,11 +93,12 @@ $st->execute([$pid]); $urgentAlertsCount = (int)$st->fetchColumn();
 /* ── Attention queue ────────────────────────────────────────────── */
 $attentionQueue = getAttentionQueue($pid);
 
-/* ── Audit link ─────────────────────────────────────────────────── */
+/* ── Referral / audit links ──────────────────────────────────────── */
 $slugSt = $pdo->prepare("SELECT slug FROM partner_profiles WHERE id=?");
 $slugSt->execute([$pid]);
 $partnerSlug = $slugSt->fetchColumn() ?: $pid;
 $auditUrl = SITE_URL . '/audit/' . urlencode($partnerSlug);
+$bhcUrl   = SITE_URL . '/business-health-check?gp=' . rawurlencode((string)$partnerSlug);
 
 /* ── Active leads list ──────────────────────────────────────────── */
 $leadSt = $pdo->prepare("
@@ -345,19 +346,19 @@ body { background: var(--gbg); color: var(--text); }
   <a href="<?= SITE_URL ?>/partner/marketplace" class="btn-sm btn-primary">🛍️ <?= pt('Order Services') ?></a>
 </div>
 
-<!-- ── Audit Link Banner ── -->
+<!-- ── BHC Referral Link Banner ── -->
 <div style="background:linear-gradient(135deg,#003d2a,#005a3a);border:1px solid rgba(0,168,120,.4);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
   <div>
-    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#00d49a;font-weight:700;margin-bottom:4px;">📋 Business Visibility Audit</div>
-    <div style="font-size:.88rem;color:#8db8a8;">Share this link with leads — they fill in the audit and appear instantly as a lead on your dashboard.</div>
+    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#00d49a;font-weight:700;margin-bottom:4px;">🔗 BHC Referral Link</div>
+    <div style="font-size:.88rem;color:#8db8a8;">Share this link — when a business completes the Health Check, it's attributed to you.</div>
     <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-      <code style="background:rgba(0,0,0,.35);border:1px solid rgba(0,168,120,.3);border-radius:6px;padding:5px 10px;font-size:.82rem;color:#e8f4ee;word-break:break-all;"><?= e($auditUrl) ?></code>
+      <code style="background:rgba(0,0,0,.35);border:1px solid rgba(0,168,120,.3);border-radius:6px;padding:5px 10px;font-size:.82rem;color:#e8f4ee;word-break:break-all;"><?= e($bhcUrl) ?></code>
     </div>
   </div>
   <div style="display:flex;gap:8px;flex-shrink:0;">
-    <button onclick="navigator.clipboard.writeText('<?= e($auditUrl) ?>').then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='📋 Copy Link',2000)})" style="background:#00A878;color:#fff;border:none;border-radius:7px;padding:9px 16px;font-size:.82rem;font-weight:700;cursor:pointer;">📋 Copy Link</button>
-    <a href="https://wa.me/?text=<?= urlencode('Hi! Please fill in this quick Business Visibility Audit so I can understand your needs: ' . $auditUrl) ?>" target="_blank" style="background:#25D366;color:#fff;border-radius:7px;padding:9px 16px;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;">💬 WhatsApp</a>
-    <a href="<?= e($auditUrl) ?>" target="_blank" style="background:rgba(255,255,255,.1);color:#e8f4ee;border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:9px 16px;font-size:.82rem;font-weight:700;text-decoration:none;">Preview</a>
+    <button onclick="navigator.clipboard.writeText('<?= e($bhcUrl) ?>').then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='🔗 Copy Link',2000)})" style="background:#00A878;color:#fff;border:none;border-radius:7px;padding:9px 16px;font-size:.82rem;font-weight:700;cursor:pointer;">🔗 Copy Link</button>
+    <a href="https://wa.me/?text=<?= urlencode('Hi! Check out this free Business Health Check — it only takes a few minutes: ' . $bhcUrl) ?>" target="_blank" style="background:#25D366;color:#fff;border-radius:7px;padding:9px 16px;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;">💬 WhatsApp</a>
+    <a href="<?= SITE_URL ?>/partner/bhc-send" style="background:rgba(255,255,255,.1);color:#e8f4ee;border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:9px 16px;font-size:.82rem;font-weight:700;text-decoration:none;">Full Page →</a>
   </div>
 </div>
 
@@ -624,7 +625,7 @@ body { background: var(--gbg); color: var(--text); }
       <a href="<?= SITE_URL ?>/partner/saleskit"           class="quick-link">🗂️ <?= pt('Sales Kit') ?></a>
       <a href="<?= SITE_URL ?>/partner/tasks"              class="quick-link">✅ <?= pt('Tasks') ?></a>
       <a href="<?= SITE_URL ?>/partner/reports"            class="quick-link">📈 <?= pt('Reports') ?></a>
-      <a href="<?= e($auditUrl) ?>" target="_blank"        class="quick-link">🔍 <?= pt('My Audit Link') ?></a>
+      <a href="<?= SITE_URL ?>/partner/bhc-send"            class="quick-link">🔗 <?= pt('BHC Link') ?></a>
     </div>
   </div>
 
