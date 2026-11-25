@@ -1,8 +1,11 @@
 <?php
 /**
- * creator/campaigns.php — Browse and join campaigns
+ * creator/campaigns.php — Browse campaigns, join, and get a per-campaign
+ * tracked link. Also hosts the standing "General 237Biz Promotion" campaign
+ * so every creator always has an active link to use.
  */
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/referral-helpers.php';
 $u = currentUser();
 if (!$u || !in_array($u['role'],['creator','admin'])) redirect(SITE_URL . '/login');
 $uid = (int)$u['id'];
@@ -16,24 +19,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action']??'') === 'join') 
         $check->execute([$cid,$uid]);
         if (!$check->fetch()) {
             $pdo->prepare("INSERT INTO campaign_participants (campaign_id,user_id) VALUES (?,?)")->execute([$cid,$uid]);
-            flash('success', 'You\'ve joined the campaign! Submit your content from the Submissions page.');
+
+            // Auto-create this creator's tracked link for the campaign.
+            $camp = $pdo->prepare("SELECT title FROM campaigns WHERE id=?");
+            $camp->execute([$cid]);
+            $campTitle = $camp->fetchColumn() ?: 'Campaign';
+            createCreatorLink($uid, $campTitle, $cid, 'campaign');
+
+            flash('success', 'You\'ve joined the campaign! Your tracked link is ready below — submit content from the Submissions page.');
         }
     }
     redirect(SITE_URL . '/creator/campaigns');
 }
 
-// Campaigns
-$myCampaignIds = array_column(
-    $pdo->prepare("SELECT campaign_id FROM campaign_participants WHERE user_id=?")->execute([$uid]) ? $pdo->query("SELECT campaign_id FROM campaign_participants WHERE user_id={$uid}")->fetchAll() : [],
-    'campaign_id'
-);
+// Ensure the standing general campaign + link exist for this creator.
+ensureGeneralCampaignAndLink($uid);
 
 $myIds = $pdo->prepare("SELECT campaign_id FROM campaign_participants WHERE user_id=?");
 $myIds->execute([$uid]);
 $myIds = array_column($myIds->fetchAll(), 'campaign_id');
 
-$active = $pdo->query("SELECT c.*,(SELECT COUNT(*) FROM campaign_participants cp WHERE cp.campaign_id=c.id) AS participants FROM campaigns c WHERE c.status='active' ORDER BY c.created_at DESC")->fetchAll();
-$past   = $pdo->query("SELECT c.* FROM campaigns c WHERE c.status IN ('completed','cancelled') ORDER BY c.created_at DESC LIMIT 10")->fetchAll();
+// This creator's own links keyed by campaign_id (for showing the tracked link per card).
+$myLinksByCampaign = [];
+foreach (getCreatorLinks($uid) as $l) {
+    if ($l['campaign_id']) $myLinksByCampaign[(int)$l['campaign_id']] = $l;
+}
+
+$active = $pdo->query("
+    SELECT c.*,(SELECT COUNT(*) FROM campaign_participants cp WHERE cp.campaign_id=c.id) AS participants
+    FROM campaigns c WHERE c.status='active'
+    ORDER BY c.is_general DESC, c.created_at DESC
+")->fetchAll();
+
+// Target-audience filter: a 'selected' campaign only shows to creators listed in campaign_targets.
+$active = array_filter($active, function($c) use ($uid, $pdo) {
+    if ($c['audience'] !== 'selected') return true;
+    $chk = $pdo->prepare("SELECT id FROM campaign_targets WHERE campaign_id=? AND user_id=?");
+    $chk->execute([$c['id'], $uid]);
+    return (bool)$chk->fetch();
+});
 
 $pageTitle = 'Campaigns — 237Biz Creator';
 require_once __DIR__ . '/../includes/header.php';
@@ -44,6 +68,10 @@ require_once __DIR__ . '/includes/nav.php';
 
 <style>
 .camp-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px 22px;margin-bottom:12px;}
+.camp-link-box{background:rgba(0,168,120,0.06);border:1px solid rgba(0,168,120,0.25);border-radius:9px;padding:10px 14px;margin-top:12px;}
+.camp-stat{text-align:center;}
+.camp-stat .v{font-size:1.1rem;font-weight:900;font-family:'Fraunces',serif;}
+.camp-stat .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;}
 </style>
 
 <div class="page-header"><div class="container">
@@ -59,12 +87,14 @@ require_once __DIR__ . '/includes/nav.php';
   <?php else: ?>
   <?php foreach ($active as $c):
     $joined = in_array($c['id'], $myIds);
+    $myLink = $myLinksByCampaign[(int)$c['id']] ?? null;
   ?>
   <div class="camp-card" style="<?= $joined?'border-color:rgba(0,168,120,0.3);':'' ?>">
     <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;">
       <div style="flex:1;min-width:220px;">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
           <strong style="font-size:15px;"><?= e($c['title']) ?></strong>
+          <?php if ($c['is_general']): ?><span style="font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:99px;background:rgba(138,180,248,0.15);color:#8ab4f8;">🌐 Always-on</span><?php endif; ?>
           <?php if ($joined): ?><span style="font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:99px;background:rgba(0,168,120,0.15);color:#00A878;">✅ Joined</span><?php endif; ?>
         </div>
         <?php if ($c['description']): ?>
@@ -81,6 +111,23 @@ require_once __DIR__ . '/includes/nav.php';
           <span>👥 <?= (int)$c['participants'] ?> creator<?= $c['participants']!=1?'s':'' ?> joined</span>
           <?php if ($c['max_participants']): ?><span>Max <?= (int)$c['max_participants'] ?></span><?php endif; ?>
         </div>
+
+        <!-- My tracked link for this campaign + per-campaign stats -->
+        <?php if ($joined && $myLink): ?>
+        <div class="camp-link-box">
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:4px;">🔗 Your tracked link for this campaign</div>
+          <div style="font-family:monospace;font-size:13px;color:#00A878;margin-bottom:8px;word-break:break-all;"><?= SITE_URL ?>/r/<?= e($myLink['code']) ?></div>
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+            <button onclick="navigator.clipboard.writeText('<?= SITE_URL ?>/r/<?= e($myLink['code']) ?>').then(()=>this.textContent='✅ Copied!')"
+                    style="background:rgba(0,168,120,0.2);border:1px solid rgba(0,168,120,0.4);color:#00A878;border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;">📋 Copy</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+            <div class="camp-stat"><div class="v"><?= (int)$myLink['clicks'] ?></div><div class="l">Clicks</div></div>
+            <div class="camp-stat"><div class="v" style="color:#00A878;"><?= (int)$myLink['conversions'] ?></div><div class="l">Sales</div></div>
+            <div class="camp-stat"><div class="v" style="color:#fcd116;"><?= formatXaf((int)$myLink['commission_xaf']) ?></div><div class="l">Commission</div></div>
+          </div>
+        </div>
+        <?php endif; ?>
       </div>
       <div style="text-align:center;min-width:140px;">
         <div style="font-size:1.6rem;font-weight:900;font-family:'Fraunces',serif;color:#00A878;"><?= formatXaf((int)$c['commission_xaf']) ?></div>

@@ -226,7 +226,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (file_exists(__DIR__ . '/includes/referral-helpers.php')) {
             require_once __DIR__ . '/includes/referral-helpers.php';
             $convType = ($packageId > 1) ? 'featured_listing' : 'free_listing';
-            attributeReferralConversion((int)$newListingId, (int)$_SESSION['user_id'], $convType);
+            $orderValueXaf = ($packageId > 1) ? (int)($finalAmountXaf ?? 0) : 0;
+            attributeReferralConversion((int)$newListingId, (int)$_SESSION['user_id'], $convType, $orderValueXaf);
         }
         // ─────────────────────────────────────────────────────────────────────────
 

@@ -34,22 +34,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $starts      = trim($_POST['starts_at'] ?? '') ?: null;
         $ends        = trim($_POST['ends_at']   ?? '') ?: null;
         $status      = in_array($_POST['status']??'',['draft','active','completed','cancelled']) ? $_POST['status'] : 'draft';
+        $audience    = ($_POST['audience'] ?? 'all') === 'selected' ? 'selected' : 'all';
+        $targetIds   = array_map('intval', $_POST['target_creators'] ?? []);
 
         if (!$title) $errors[] = 'Title required.';
+        if ($audience === 'selected' && empty($targetIds)) $errors[] = 'Select at least one creator, or switch audience to "All Creators".';
 
         if (!$errors) {
             try {
                 if ($action === 'create_campaign') {
-                    $pdo->prepare("INSERT INTO campaigns (title,description,brief,target_city,target_category,commission_xaf,bonus_xaf,max_participants,starts_at,ends_at,status,created_by)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
-                        ->execute([$title,$description,$brief,$city,$category,$commission,$bonus,$maxP,$starts,$ends,$status,$u['id']]);
+                    $pdo->prepare("INSERT INTO campaigns (title,description,brief,target_city,target_category,commission_xaf,bonus_xaf,max_participants,starts_at,ends_at,status,audience,created_by)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)")
+                        ->execute([$title,$description,$brief,$city,$category,$commission,$bonus,$maxP,$starts,$ends,$status,$audience,$u['id']]);
+                    $cid = (int)$pdo->lastInsertId();
                     flash('success', 'Campaign created.');
                 } else {
                     $cid = (int)($_POST['campaign_id'] ?? 0);
-                    $pdo->prepare("UPDATE campaigns SET title=?,description=?,brief=?,target_city=?,target_category=?,commission_xaf=?,bonus_xaf=?,max_participants=?,starts_at=?,ends_at=?,status=?,updated_at=NOW() WHERE id=?")
-                        ->execute([$title,$description,$brief,$city,$category,$commission,$bonus,$maxP,$starts,$ends,$status,$cid]);
+                    $pdo->prepare("UPDATE campaigns SET title=?,description=?,brief=?,target_city=?,target_category=?,commission_xaf=?,bonus_xaf=?,max_participants=?,starts_at=?,ends_at=?,status=?,audience=?,updated_at=NOW() WHERE id=?")
+                        ->execute([$title,$description,$brief,$city,$category,$commission,$bonus,$maxP,$starts,$ends,$status,$audience,$cid]);
                     flash('success', 'Campaign updated.');
                 }
+
+                // Sync targeted creators
+                $pdo->prepare("DELETE FROM campaign_targets WHERE campaign_id=?")->execute([$cid]);
+                if ($audience === 'selected' && $targetIds) {
+                    $ins = $pdo->prepare("INSERT IGNORE INTO campaign_targets (campaign_id,user_id) VALUES (?,?)");
+                    foreach ($targetIds as $tid) { if ($tid) $ins->execute([$cid, $tid]); }
+                }
+
                 redirect(SITE_URL . '/admin/manage-campaigns.php?tab=campaigns');
             } catch (Exception $e) {
                 $errors[] = 'Could not save campaign. Ensure the campaigns table exists (run referral-system-db.sql).';
@@ -72,13 +84,53 @@ try {
 
 $editId = (int)($_GET['edit'] ?? 0);
 $editCampaign = null;
+$editTargetIds = [];
 if ($editId) {
     try {
         $es = $pdo->prepare("SELECT * FROM campaigns WHERE id=?");
         $es->execute([$editId]);
         $editCampaign = $es->fetch();
         $tab = 'form';
+        if ($editCampaign) {
+            $ts = $pdo->prepare("SELECT user_id FROM campaign_targets WHERE campaign_id=?");
+            $ts->execute([$editId]);
+            $editTargetIds = array_column($ts->fetchAll(), 'user_id');
+        }
     } catch (Exception $e) {}
+}
+
+// All approved creators, for the target-audience picker
+$allCreators = [];
+try {
+    $allCreators = $pdo->query("
+        SELECT u.id, u.name FROM users u
+        JOIN creator_profiles cp ON cp.user_id=u.id
+        WHERE u.role='creator' AND cp.status='approved'
+        ORDER BY u.name
+    ")->fetchAll();
+} catch (Exception $e) { $allCreators = []; }
+
+// Leaderboard view: which creators drove the most sales for a given campaign
+$leaderboardCampaignId = (int)($_GET['leaderboard'] ?? 0);
+$leaderboard = [];
+if ($leaderboardCampaignId) {
+    try {
+        $lb = $pdo->prepare("
+            SELECT u.id, u.name,
+                COUNT(rc.id) AS conversions,
+                COALESCE(SUM(rc.order_value_xaf),0) AS revenue_xaf,
+                COALESCE(SUM(rc.commission_xaf),0) AS commission_xaf
+            FROM referral_links rl
+            JOIN users u ON u.id = rl.user_id
+            LEFT JOIN referral_conversions rc ON rc.link_id = rl.id
+            WHERE rl.campaign_id = ?
+            GROUP BY u.id, u.name
+            ORDER BY revenue_xaf DESC
+        ");
+        $lb->execute([$leaderboardCampaignId]);
+        $leaderboard = $lb->fetchAll();
+    } catch (Exception $e) { $leaderboard = []; }
+    $tab = 'leaderboard';
 }
 
 $pageTitle = 'Manage Campaigns — Admin — 237Biz';
@@ -165,12 +217,75 @@ adminNav('manage-campaigns'); adminNavAssets();
           <?php endforeach; ?>
         </select></div>
 
+      <div class="form-group">
+        <label>Target Audience</label>
+        <div style="display:flex;gap:16px;margin-bottom:8px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:400;cursor:pointer;">
+            <input type="radio" name="audience" value="all" <?= ($editCampaign['audience']??'all')==='all'?'checked':'' ?> onchange="document.getElementById('targetCreatorsBox').style.display='none'"> All Creators
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:400;cursor:pointer;">
+            <input type="radio" name="audience" value="selected" <?= ($editCampaign['audience']??'all')==='selected'?'checked':'' ?> onchange="document.getElementById('targetCreatorsBox').style.display='block'"> Specific Creators
+          </label>
+        </div>
+        <div id="targetCreatorsBox" style="<?= ($editCampaign['audience']??'all')==='selected'?'':'display:none;' ?>background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 14px;max-height:180px;overflow-y:auto;">
+          <?php if (empty($allCreators)): ?>
+          <p style="font-size:12.5px;color:var(--muted);margin:0;">No approved creators yet.</p>
+          <?php else: ?>
+          <?php foreach ($allCreators as $ac): ?>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;padding:4px 0;cursor:pointer;">
+            <input type="checkbox" name="target_creators[]" value="<?= $ac['id'] ?>" <?= in_array($ac['id'],$editTargetIds)?'checked':'' ?>>
+            <?= e($ac['name']) ?>
+          </label>
+          <?php endforeach; ?>
+          <?php endif; ?>
+        </div>
+      </div>
+
       <div style="display:flex;gap:10px;margin-top:6px;">
         <button type="submit" class="btn btn-primary"><?= $editCampaign ? '💾 Update Campaign' : '+ Create Campaign' ?></button>
         <a href="?tab=campaigns" class="btn btn-outline">Cancel</a>
       </div>
     </form>
   </div>
+
+  <?php elseif ($tab === 'leaderboard'): ?>
+  <!-- Campaign leaderboard -->
+  <?php
+    $lbCampaign = null;
+    foreach ($campaigns as $c) { if ((int)$c['id'] === $leaderboardCampaignId) { $lbCampaign = $c; break; } }
+  ?>
+  <div style="margin-bottom:1rem;">
+    <a href="?tab=campaigns" style="font-size:13px;color:var(--green);">← Back to campaigns</a>
+  </div>
+  <h3 style="margin-top:0;">📊 Leaderboard — <?= e($lbCampaign['title'] ?? 'Campaign #'.$leaderboardCampaignId) ?></h3>
+  <?php if (empty($leaderboard)): ?>
+  <p style="color:var(--muted);padding:20px 0;">No creators have a tracked link for this campaign yet.</p>
+  <?php else: ?>
+  <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:6px 10px 10px;overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.1);">#</th>
+          <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.1);">Creator</th>
+          <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.1);">Sales</th>
+          <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.1);">Revenue</th>
+          <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.1);">Commission</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($leaderboard as $i => $row): ?>
+        <tr>
+          <td style="padding:10px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.05);"><?= $i===0?'🥇':($i===1?'🥈':($i===2?'🥉':$i+1)) ?></td>
+          <td style="padding:10px;font-size:13px;font-weight:700;border-bottom:1px solid rgba(255,255,255,0.05);"><?= e($row['name']) ?></td>
+          <td style="padding:10px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.05);"><?= (int)$row['conversions'] ?></td>
+          <td style="padding:10px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.05);"><?= formatXaf((int)$row['revenue_xaf']) ?></td>
+          <td style="padding:10px;font-size:13px;color:#00A878;font-weight:700;border-bottom:1px solid rgba(255,255,255,0.05);"><?= formatXaf((int)$row['commission_xaf']) ?></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+  <?php endif; ?>
 
   <?php else: ?>
   <!-- Campaigns list -->
@@ -204,9 +319,13 @@ adminNav('manage-campaigns'); adminNavAssets();
           <div style="font-size:11px;color:var(--muted);"><?= $lbl ?></div>
         </div>
         <?php endforeach; ?>
+        <a href="?leaderboard=<?= $c['id'] ?>" class="btn btn-outline" style="font-size:12px;padding:5px 14px;">📊 Leaderboard</a>
         <a href="?edit=<?= $c['id'] ?>" class="btn btn-outline" style="font-size:12px;padding:5px 14px;">✏️ Edit</a>
       </div>
     </div>
+    <?php if ($c['audience'] === 'selected'): ?>
+    <div style="margin-top:8px;font-size:11.5px;color:#8ab4f8;">🎯 Targeted to specific creators only</div>
+    <?php endif; ?>
   </div>
   <?php endforeach; ?>
   <?php endif; ?>

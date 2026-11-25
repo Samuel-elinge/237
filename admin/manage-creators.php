@@ -162,6 +162,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect(SITE_URL . '/admin/manage-creators.php?tab=creators');
     }
 
+    // Toggle base rate active/paused
+    if ($action === 'toggle_base_rate') {
+        $uid = (int)($_POST['user_id'] ?? 0);
+        $active = !empty($_POST['active']) ? 1 : 0;
+        if ($uid) {
+            $pdo->prepare("UPDATE creator_profiles SET base_rate_active=? WHERE user_id=?")->execute([$active, $uid]);
+            opsAuditLog('creator.base_rate_toggle', 'user', $uid);
+            flash('success', $active ? 'Base rate activated.' : 'Base rate paused.');
+        }
+        redirect(SITE_URL . '/admin/manage-creators.php?tab=creators');
+    }
+
+    // Manual tier override
+    if ($action === 'set_tier_override') {
+        $uid = (int)($_POST['user_id'] ?? 0);
+        $tier = in_array($_POST['tier_override'] ?? '', ['auto','15','20','25'], true) ? $_POST['tier_override'] : 'auto';
+        if ($uid) {
+            $pdo->prepare("UPDATE creator_profiles SET tier_override=? WHERE user_id=?")->execute([$tier, $uid]);
+            opsAuditLog('creator.tier_override', 'user', $uid);
+            flash('success', $tier === 'auto' ? 'Tier set back to automatic.' : "Tier manually set to {$tier}%.");
+        }
+        redirect(SITE_URL . '/admin/manage-creators.php?tab=payouts');
+    }
+
+    // Set base rate amount
+    if ($action === 'set_base_rate') {
+        $uid = (int)($_POST['user_id'] ?? 0);
+        $amount = max(0, (int)($_POST['base_rate_xaf'] ?? 0));
+        if ($uid) {
+            $pdo->prepare("UPDATE creator_profiles SET base_rate_xaf=? WHERE user_id=?")->execute([$amount, $uid]);
+            flash('success', 'Base rate updated to ' . formatXaf($amount) . '.');
+        }
+        redirect(SITE_URL . '/admin/manage-creators.php?tab=payouts');
+    }
+
+    // Manually log a renewal commission (flat 10% of the renewal amount)
+    if ($action === 'log_renewal') {
+        $uid    = (int)($_POST['user_id'] ?? 0);
+        $amount = max(0, (int)($_POST['renewal_amount_xaf'] ?? 0));
+        $note   = trim($_POST['renewal_note'] ?? '');
+        if ($uid && $amount > 0) {
+            $commission = (int)round($amount * 0.10);
+            createCommission($uid, 'referral_renewal', $commission,
+                'Renewal commission (10%)' . ($note ? " — {$note}" : ''), null, 'manual_renewal');
+            opsAuditLog('creator.log_renewal', 'user', $uid);
+            flash('success', 'Renewal commission of ' . formatXaf($commission) . ' logged.');
+        }
+        redirect(SITE_URL . '/admin/manage-creators.php?tab=payouts');
+    }
+
     // Review content submission
     if ($action === 'review_submission') {
         $sid     = (int)($_POST['submission_id'] ?? 0);
@@ -199,16 +249,49 @@ try {
         SELECT u.id, u.name, u.email, u.created_at,
             cp.niche, cp.city, COALESCE(cp.status,'pending') AS creator_status, cp.audience_size,
             cp.tiktok_url, cp.instagram_url, cp.bio,
-            rl.code AS ref_code, rl.clicks, rl.unique_clicks,
+            cp.base_rate_xaf, cp.base_rate_active, cp.tier_override,
+            (SELECT SUM(rl2.clicks) FROM referral_links rl2 WHERE rl2.user_id=u.id) AS clicks,
+            (SELECT SUM(rl2.unique_clicks) FROM referral_links rl2 WHERE rl2.user_id=u.id) AS unique_clicks,
             (SELECT COUNT(*) FROM referral_conversions rc JOIN referral_links rl2 ON rl2.id=rc.link_id WHERE rl2.user_id=u.id) AS conversions,
             (SELECT SUM(c.amount_xaf) FROM commissions c WHERE c.user_id=u.id AND c.status='approved') AS approved_xaf
         FROM users u
         LEFT JOIN creator_profiles cp ON cp.user_id=u.id
-        LEFT JOIN referral_links rl ON rl.user_id=u.id
         WHERE u.role='creator'
         ORDER BY COALESCE(cp.status,'pending')='pending' DESC, u.created_at DESC
     ")->fetchAll();
 } catch (Exception $e) { $creators = []; }
+
+// ── Payout ledger (approved creators only) ──────────────────────────────
+$payoutLedger = [];
+if ($tab === 'payouts') {
+    try {
+        $approvedCreators = array_values(array_filter($creators, fn($c) => $c['creator_status'] === 'approved'));
+        foreach ($approvedCreators as $cr) {
+            $monthKey = (int)date('Ym');
+            $baseSt = $pdo->prepare("SELECT COALESCE(SUM(amount_xaf),0) FROM commissions WHERE user_id=? AND type='base_rate' AND reference_type='base_rate_month' AND reference_id=? AND status<>'cancelled'");
+            $baseSt->execute([$cr['id'], $monthKey]);
+            $baseOwed = (int)$baseSt->fetchColumn();
+
+            $newSt = $pdo->prepare("SELECT COALESCE(SUM(amount_xaf),0) FROM commissions WHERE user_id=? AND type IN ('referral_featured','referral_upgrade') AND status='pending'");
+            $newSt->execute([$cr['id']]);
+            $newSalesOwed = (int)$newSt->fetchColumn();
+
+            $renSt = $pdo->prepare("SELECT COALESCE(SUM(amount_xaf),0) FROM commissions WHERE user_id=? AND type='referral_renewal' AND status='pending'");
+            $renSt->execute([$cr['id']]);
+            $renewalOwed = (int)$renSt->fetchColumn();
+
+            $tier = getCreatorTier((int)$cr['id']);
+
+            $payoutLedger[] = $cr + [
+                'base_owed'     => $baseOwed,
+                'new_sales_owed'=> $newSalesOwed,
+                'renewal_owed'  => $renewalOwed,
+                'total_owed'    => $baseOwed + $newSalesOwed + $renewalOwed,
+                'current_tier'  => $tier,
+            ];
+        }
+    } catch (Exception $e) { $payoutLedger = []; }
+}
 
 $submissions = [];
 try {
@@ -255,6 +338,7 @@ adminNav('manage-creators'); adminNavAssets();
 
   <div class="filter-tabs" style="margin-bottom:1.5rem;flex-wrap:wrap;">
     <a href="?tab=creators"    class="filter-tab <?= $tab==='creators'   ?'active':'' ?>">🎬 Creators (<?= count($creators) ?>)</a>
+    <a href="?tab=payouts"     class="filter-tab <?= $tab==='payouts'    ?'active':'' ?>">💰 Payout Ledger</a>
     <a href="?tab=submissions" class="filter-tab <?= $tab==='submissions'?'active':'' ?>">📤 Pending Submissions (<?= count($submissions) ?>)</a>
     <?php if (isSuperAdmin()): ?><a href="?tab=create" class="filter-tab <?= $tab==='create'?'active':'' ?>">+ New Creator</a><?php endif; ?>
   </div>
@@ -290,6 +374,78 @@ adminNav('manage-creators'); adminNavAssets();
       <button type="submit" class="btn btn-primary">Create Creator</button>
     </form>
   </div>
+
+  <?php elseif ($tab === 'payouts'): ?>
+  <!-- Payout ledger: Base Rate + New Sales Commission + Renewal Commission -->
+  <?php if (empty($payoutLedger)): ?>
+  <p style="color:var(--muted);padding:40px 0;text-align:center;">No approved creators yet.</p>
+  <?php else: ?>
+  <?php foreach ($payoutLedger as $pl): ?>
+  <div class="creator-card">
+    <div class="top">
+      <div style="flex:1;min-width:220px;">
+        <strong style="font-size:15px;"><?= e($pl['name']) ?></strong>
+        <div style="font-size:12px;color:var(--muted);"><?= e($pl['email']) ?></div>
+        <div style="margin-top:8px;display:flex;gap:16px;flex-wrap:wrap;">
+          <div class="camp-stat" style="text-align:left;">
+            <div style="font-size:11px;color:var(--muted);">Base Rate owed</div>
+            <div style="font-size:1.05rem;font-weight:900;font-family:'Fraunces',serif;color:#00A878;"><?= formatXaf($pl['base_owed']) ?></div>
+          </div>
+          <div class="camp-stat" style="text-align:left;">
+            <div style="font-size:11px;color:var(--muted);">New Sales Commission</div>
+            <div style="font-size:1.05rem;font-weight:900;font-family:'Fraunces',serif;color:#fcd116;"><?= formatXaf($pl['new_sales_owed']) ?></div>
+          </div>
+          <div class="camp-stat" style="text-align:left;">
+            <div style="font-size:11px;color:var(--muted);">Renewal Commission</div>
+            <div style="font-size:1.05rem;font-weight:900;font-family:'Fraunces',serif;color:#8ab4f8;"><?= formatXaf($pl['renewal_owed']) ?></div>
+          </div>
+          <div class="camp-stat" style="text-align:left;border-left:1px solid rgba(255,255,255,0.1);padding-left:16px;">
+            <div style="font-size:11px;color:var(--muted);">Total Owed</div>
+            <div style="font-size:1.15rem;font-weight:900;font-family:'Fraunces',serif;">💰 <?= formatXaf($pl['total_owed']) ?></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end;min-width:260px;">
+        <!-- Tier override -->
+        <form method="POST" style="display:flex;align-items:center;gap:6px;">
+          <input type="hidden" name="csrf" value="<?= csrf() ?>">
+          <input type="hidden" name="action" value="set_tier_override">
+          <input type="hidden" name="user_id" value="<?= $pl['id'] ?>">
+          <span style="font-size:11.5px;color:var(--muted);">Tier (currently <?= $pl['current_tier'] ?>%):</span>
+          <select name="tier_override" onchange="this.form.submit()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);color:var(--white);border-radius:6px;padding:4px 8px;font-size:12px;font-family:inherit;">
+            <?php foreach (['auto'=>'Auto','15'=>'15%','20'=>'20%','25'=>'25%'] as $v=>$l): ?>
+            <option value="<?= $v ?>" <?= ($pl['tier_override']??'auto')===$v?'selected':'' ?>><?= $l ?></option>
+            <?php endforeach; ?>
+          </select>
+        </form>
+
+        <!-- Base rate amount -->
+        <form method="POST" style="display:flex;align-items:center;gap:6px;">
+          <input type="hidden" name="csrf" value="<?= csrf() ?>">
+          <input type="hidden" name="action" value="set_base_rate">
+          <input type="hidden" name="user_id" value="<?= $pl['id'] ?>">
+          <input type="number" name="base_rate_xaf" value="<?= (int)$pl['base_rate_xaf'] ?>" min="0" step="1000"
+                 style="width:110px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);color:var(--white);border-radius:6px;padding:4px 8px;font-size:12px;font-family:inherit;">
+          <button type="submit" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:var(--white);border-radius:6px;padding:4px 10px;font-size:11.5px;cursor:pointer;font-family:inherit;">Set base</button>
+        </form>
+
+        <!-- Log renewal commission -->
+        <form method="POST" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+          <input type="hidden" name="csrf" value="<?= csrf() ?>">
+          <input type="hidden" name="action" value="log_renewal">
+          <input type="hidden" name="user_id" value="<?= $pl['id'] ?>">
+          <input type="number" name="renewal_amount_xaf" min="1" step="500" placeholder="Renewal XAF" required
+                 style="width:120px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);color:var(--white);border-radius:6px;padding:4px 8px;font-size:12px;font-family:inherit;">
+          <input type="text" name="renewal_note" placeholder="Business name (optional)"
+                 style="width:150px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);color:var(--white);border-radius:6px;padding:4px 8px;font-size:12px;font-family:inherit;">
+          <button type="submit" style="background:rgba(138,180,248,0.15);border:1px solid rgba(138,180,248,0.3);color:#8ab4f8;border-radius:6px;padding:4px 10px;font-size:11.5px;cursor:pointer;font-family:inherit;font-weight:700;">+ Log Renewal (10%)</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <?php endforeach; ?>
+  <?php endif; ?>
 
   <?php elseif ($tab === 'submissions'): ?>
   <!-- Pending content submissions -->
@@ -401,6 +557,19 @@ adminNav('manage-creators'); adminNavAssets();
           <input type="hidden" name="action" value="approve_creator">
           <input type="hidden" name="user_id" value="<?= $cr['id'] ?>">
           <button type="submit" class="btn btn-primary" style="font-size:13px;padding:7px 16px;">✅ Approve Creator</button>
+        </form>
+        <?php endif; ?>
+        <?php if ($isApproved): ?>
+        <!-- Base rate toggle -->
+        <form method="POST" style="display:flex;align-items:center;gap:6px;">
+          <input type="hidden" name="csrf" value="<?= csrf() ?>">
+          <input type="hidden" name="action" value="toggle_base_rate">
+          <input type="hidden" name="user_id" value="<?= $cr['id'] ?>">
+          <input type="hidden" name="active" value="<?= $cr['base_rate_active'] ? 0 : 1 ?>">
+          <span style="font-size:11.5px;color:var(--muted);"><?= formatXaf((int)$cr['base_rate_xaf']) ?> base</span>
+          <button type="submit" style="background:<?= $cr['base_rate_active']?'rgba(0,168,120,0.15)':'rgba(255,255,255,0.06)' ?>;border:1px solid <?= $cr['base_rate_active']?'rgba(0,168,120,0.4)':'rgba(255,255,255,0.15)' ?>;color:<?= $cr['base_rate_active']?'#00A878':'var(--muted)' ?>;border-radius:6px;padding:4px 10px;font-size:11.5px;cursor:pointer;font-family:inherit;font-weight:700;">
+            <?= $cr['base_rate_active'] ? '✅ Active' : '⏸ Paused' ?>
+          </button>
         </form>
         <?php endif; ?>
         <?php if ($isApproved): ?>

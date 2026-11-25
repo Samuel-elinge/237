@@ -50,6 +50,14 @@ if (!$link && $profile && $profile['status'] === 'approved') {
 // Commission summary
 $commSummary = getUserCommissionSummary($uid);
 
+// Base rate + tier (creator program)
+if ($profile['status'] === 'approved') {
+    ensureCreatorBaseRateCommission($uid);
+    ensureGeneralCampaignAndLink($uid);
+}
+$tierProgress = getCreatorTierProgress($uid);
+$earningsBreakdown = getCreatorEarningsBreakdown($uid);
+
 // Recent commissions
 $commissions = $pdo->prepare("SELECT * FROM commissions WHERE user_id=? ORDER BY created_at DESC LIMIT 10");
 $commissions->execute([$uid]);
@@ -138,6 +146,23 @@ require_once __DIR__ . '/includes/nav.php';
 <div class="container">
 
 
+  <!-- Creator status banner -->
+  <?php if ($profile['status'] === 'approved'): ?>
+  <div style="background:rgba(0,168,120,0.08);border:1px solid rgba(0,168,120,0.3);border-radius:12px;padding:16px 20px;margin-bottom:1.5rem;display:flex;align-items:center;gap:12px;">
+    <div style="font-size:1.5rem;">✅</div>
+    <div>
+      <div style="font-weight:700;font-size:14px;color:#00A878;">Creator Status: Active</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.6);">
+        <?php if ($profile['base_rate_active']): ?>
+        Your <?= formatXaf((int)$profile['base_rate_xaf']) ?> Base Rate is guaranteed for <?= date('F Y') ?>.
+        <?php else: ?>
+        Your account is active. Base rate is currently paused — contact the admin if you believe this is an error.
+        <?php endif; ?>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
+
   <!-- Pending approval banner -->
   <?php if ($profile['status'] === 'pending'): ?>
   <div style="background:rgba(252,209,22,0.08);border:1px solid rgba(252,209,22,0.3);border-radius:12px;padding:16px 20px;margin-bottom:1.5rem;display:flex;align-items:center;gap:12px;">
@@ -157,7 +182,15 @@ require_once __DIR__ . '/includes/nav.php';
   <?php endif; ?>
 
   <!-- Stats -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:1.5rem;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:1rem;">
+    <div class="creator-stat">
+      <div class="lbl">Base rate</div>
+      <div class="val" style="color:#00A878;"><?= $profile['base_rate_active'] ? formatXaf((int)$profile['base_rate_xaf']) : '—' ?></div>
+    </div>
+    <div class="creator-stat">
+      <div class="lbl">Current tier</div>
+      <div class="val" style="color:#fcd116;"><?= (int)$tierProgress['tier'] ?>%</div>
+    </div>
     <div class="creator-stat">
       <div class="lbl">Link clicks</div>
       <div class="val"><?= $link ? (int)$link['clicks'] : 0 ?></div>
@@ -183,6 +216,28 @@ require_once __DIR__ . '/includes/nav.php';
       <div class="val"><?= count($myCampaigns) ?></div>
     </div>
   </div>
+
+  <!-- Tier progress bar -->
+  <?php if ($isApproved): ?>
+  <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px 20px;margin-bottom:1.5rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+      <div style="font-weight:700;font-size:13.5px;">📈 Monthly Sales Volume</div>
+      <div style="font-size:12.5px;color:var(--muted);">
+        <?= formatXaf($tierProgress['volume']) ?><?php if ($tierProgress['next_threshold']): ?> / <?= formatXaf($tierProgress['next_threshold']) ?><?php endif; ?>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,0.06);border-radius:99px;height:10px;overflow:hidden;">
+      <div style="background:linear-gradient(90deg,#00A878,#00d49a);height:100%;width:<?= (int)$tierProgress['pct_complete'] ?>%;transition:width .3s;"></div>
+    </div>
+    <div style="font-size:12.5px;color:rgba(255,255,255,0.65);margin-top:8px;">
+      <?php if ($tierProgress['next_tier']): ?>
+      Earn <?= formatXaf($tierProgress['remaining']) ?> more to unlock the <?= $tierProgress['next_tier'] ?>% Commission Tier!
+      <?php else: ?>
+      🏆 You're in the top commission tier (25%) this month.
+      <?php endif; ?>
+    </div>
+  </div>
+  <?php endif; ?>
 
   <div style="display:grid;grid-template-columns:1fr 300px;gap:1.5rem;align-items:start;" class="creator-layout">
 
@@ -283,7 +338,21 @@ require_once __DIR__ . '/includes/nav.php';
     <!-- Right: commissions -->
     <div>
       <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px 18px;margin-bottom:12px;">
-        <h3 style="margin:0 0 12px;font-size:14px;font-weight:700;">💰 Earnings</h3>
+        <h3 style="margin:0 0 12px;font-size:14px;font-weight:700;">💰 Earnings — <?= date('F Y') ?></h3>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;">
+            <span style="color:var(--muted);">Base Rate</span>
+            <span style="font-weight:700;color:#00A878;"><?= formatXaf($earningsBreakdown['base_xaf']) ?></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;">
+            <span style="color:var(--muted);">Commission</span>
+            <span style="font-weight:700;color:#fcd116;"><?= formatXaf($earningsBreakdown['commission_xaf']) ?></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:14px;border-top:1px solid rgba(255,255,255,0.08);padding-top:6px;margin-top:2px;">
+            <span style="font-weight:700;">Total</span>
+            <span style="font-weight:900;color:#fff;"><?= formatXaf($earningsBreakdown['total_xaf']) ?></span>
+          </div>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
           <div style="background:rgba(252,209,22,0.08);border-radius:8px;padding:10px 12px;">
             <div style="font-size:11px;color:var(--muted);">Pending</div>

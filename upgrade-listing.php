@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // upgrade conversion to the referring agent or creator automatically.
         if (file_exists(__DIR__ . '/includes/referral-helpers.php')) {
             require_once __DIR__ . '/includes/referral-helpers.php';
-            attributeReferralConversion($listingId, $u['id'], 'upgrade');
+            attributeReferralConversion($listingId, $u['id'], 'upgrade', (int)$pkg['price_xaf']);
         }
         // ─────────────────────────────────────────────────────────────────────────
 
